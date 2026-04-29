@@ -32,6 +32,23 @@ struct FaceDetector: Sendable {
         }
     }
 
+    /// Returns all pairwise distances between photoFaces and enrolled embeddings, sorted ascending.
+    func pairwiseDistances(
+        photoFaces: [VNFeaturePrintObservation],
+        enrolled: [VNFeaturePrintObservation]
+    ) -> [Float] {
+        var distances: [Float] = []
+        for face in photoFaces {
+            for ref in enrolled {
+                var distance: Float = 0
+                if (try? face.computeDistance(&distance, to: ref)) != nil {
+                    distances.append(distance)
+                }
+            }
+        }
+        return distances.sorted()
+    }
+
     /// True if any face in `photoFaces` is within `threshold` of any embedding in `enrolled`.
     func isMatch(
         photoFaces: [VNFeaturePrintObservation],
