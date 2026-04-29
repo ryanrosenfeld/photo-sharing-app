@@ -21,7 +21,7 @@ final class FriendsViewModel: ObservableObject {
         do {
             pendingRequests = try await supabase
                 .from("links")
-                .select("*, sender:profiles!sender_id(display_name, avatar_url)")
+                .select("*, sender:profiles!sender_id(display_name, avatar_url, face_profile_enabled)")
                 .eq("recipient_id", value: userId)
                 .eq("status", value: "pending")
                 .order("created_at", ascending: false)
@@ -36,7 +36,7 @@ final class FriendsViewModel: ObservableObject {
         do {
             outgoingLinks = try await supabase
                 .from("links")
-                .select("*, recipient:profiles!recipient_id(display_name, avatar_url)")
+                .select("*, recipient:profiles!recipient_id(display_name, avatar_url, face_profile_enabled)")
                 .eq("sender_id", value: userId)
                 .in("status", values: ["active", "paused"])
                 .order("created_at", ascending: false)

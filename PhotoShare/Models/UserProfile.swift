@@ -5,6 +5,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var displayName: String
     var avatarUrl: String?
     var plan: Plan
+    var faceProfileEnabled: Bool
     let createdAt: Date
 
     enum Plan: String, Codable {
@@ -22,9 +23,10 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case id
-        case displayName = "display_name"
-        case avatarUrl   = "avatar_url"
+        case displayName       = "display_name"
+        case avatarUrl         = "avatar_url"
         case plan
-        case createdAt   = "created_at"
+        case faceProfileEnabled = "face_profile_enabled"
+        case createdAt         = "created_at"
     }
 }

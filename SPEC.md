@@ -53,8 +53,17 @@ A **link** is a directional, opt-in connection from one user to another that ena
 - When new photos are added to the user's camera roll, the app processes them (on next app foreground if not running) to detect faces
 - Detected faces are matched against the enrolled face profiles of the user's linked friends
 - Matching happens on-device to preserve privacy; only matched friend IDs and the photo are sent to the server
-- Each linked friend must complete **face enrollment**: provide 3–5 reference photos from which a face embedding is generated and stored locally on the capturing user's device
 - Face enrollment is re-prompted if matching accuracy degrades (e.g., after significant appearance changes)
+
+### Face Enrollment Modes
+
+Each linked friend must complete **face enrollment** before their face can be detected. There are two modes:
+
+**Auto-enrollment** (when the friend has a face profile): If a friend has opted in to sharing their face profile, their reference photos are downloaded from the server to the capturing user's device, embeddings are generated locally, and enrollment completes automatically — no action required from the capturing user.
+
+**Manual enrollment** (default): The capturing user selects 3–5 photos of the friend from their own photo library. A face embedding is generated on-device and stored locally. This is always available regardless of whether the friend has a face profile.
+
+Embeddings are always generated on-device and never uploaded, regardless of which enrollment mode is used.
 
 ### Matching threshold
 - A face must meet a confidence threshold (tunable server-side) to trigger a share
@@ -137,10 +146,22 @@ All permissions are requested contextually (not all at once on launch). Each req
 
 ---
 
+## Face Profile (Optional)
+
+Users can opt in to uploading a **face profile** — 3–5 reference photos of themselves stored in Supabase Storage. This enables auto-enrollment: when a friend links with them, the friend's device downloads these photos and generates face embeddings locally without any manual selection step.
+
+- Opt-in is explicit and off by default; users can enable or disable it at any time from the Profile tab
+- Disabling deletes all uploaded reference photos from the server immediately
+- Friends who previously auto-enrolled from the face profile retain their local embeddings; to remove those, the link must be broken (which already triggers local enrollment data deletion per existing link-removal behavior)
+- If a user has both a face profile and a friend who has manually enrolled them, the manual enrollment takes precedence (it is not overwritten by auto-enrollment)
+
+---
+
 ## Privacy & Data
 
 - Face embeddings (vector representations) are stored **locally on the capturing user's device only** — not uploaded to servers
-- The server never receives raw face data
+- Users may opt in to uploading reference photos of themselves as a **face profile**; these photos are stored in Supabase Storage and used solely so friends' devices can generate embeddings locally — the server does not process or analyze them
+- The server never receives face embeddings or performs any face analysis
 - Photos are encrypted in transit (TLS) and at rest
 - Users can delete their account, which purges all their sent and received photos from servers within 24 hours
 - A user's face enrollment data is deleted from a friend's device when the link is broken
@@ -168,12 +189,13 @@ All permissions are requested contextually (not all at once on launch). Each req
 1. **Welcome screen** — value prop: "Photos with your friends, automatically delivered"
 2. **Phone number entry** → SMS verification
 3. **Profile setup** — name, profile photo
-4. **Photo Library permission prompt** — required to monitor camera roll for new photos to share
-5. **Contacts permission prompt** — find friends on the app
-6. **First link** — guided flow to send first link request or skip
-7. **Face enrollment** — prompted after first link is accepted (can defer)
-8. **Notifications permission** — contextual prompt
-9. **Home screen** (Photos tab, empty state with call to action)
+4. **Face profile setup** — opt-in prompt: "Make it easy for friends to find you in their photos" with two explicit choices: "Share my face profile" (upload 3–5 photos) or "Keep it private" (manual enrollment only); both are presented as equally valid choices, not as "easy vs. hard"
+5. **Photo Library permission prompt** — required to monitor camera roll for new photos to share
+6. **Contacts permission prompt** — find friends on the app
+7. **First link** — guided flow to send first link request or skip
+8. **Face enrollment** — prompted after first link is accepted (can defer); auto-enrolls immediately if the friend has a face profile
+9. **Notifications permission** — contextual prompt
+10. **Home screen** (Photos tab, empty state with call to action)
 
 ---
 
@@ -181,7 +203,7 @@ All permissions are requested contextually (not all at once on launch). Each req
 
 - **Photos** — chronological feed of all received photos; each photo shows a badge if already saved to camera roll (default tab)
 - **Friends** — list of people you are currently sending photos to (outgoing links); surfaces pending incoming link requests as a card/banner with badge count on the tab; tap a friend to remove a link or manage face enrollment
-- **Profile** — account settings, plan status, permissions, face enrollment
+- **Profile** — account settings, plan status, permissions; includes **My Face Profile** section to enable/disable face profile upload and manage reference photos
 
 ---
 
