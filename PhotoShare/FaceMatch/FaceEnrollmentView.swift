@@ -5,8 +5,12 @@ struct FaceEnrollmentView: View {
     @StateObject private var vm: FaceEnrollmentViewModel
     @Environment(\.dismiss) var dismiss
 
-    init(friendId: UUID, friendName: String) {
-        _vm = StateObject(wrappedValue: FaceEnrollmentViewModel(friendId: friendId, friendName: friendName))
+    init(friendId: UUID, friendName: String, friendHasFaceProfile: Bool) {
+        _vm = StateObject(wrappedValue: FaceEnrollmentViewModel(
+            friendId: friendId,
+            friendName: friendName,
+            friendHasFaceProfile: friendHasFaceProfile
+        ))
     }
 
     var body: some View {
@@ -17,28 +21,14 @@ struct FaceEnrollmentView: View {
                         alreadyEnrolledBanner
                     }
 
-                    instructions
-
-                    PhotosPicker(
-                        selection: $vm.selectedItems,
-                        maxSelectionCount: 5,
-                        matching: .images
-                    ) {
-                        Label(
-                            "Select Photos (\(vm.selectedItems.count) of 5)",
-                            systemImage: "photo.badge.plus"
-                        )
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color(.secondarySystemFill))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .onChange(of: vm.selectedItems) {
-                        Task { await vm.loadPreviews() }
+                    if vm.friendHasFaceProfile {
+                        modePicker
                     }
 
-                    if !vm.previewImages.isEmpty {
-                        previewGrid
+                    if vm.mode == .fromProfile {
+                        profileModeContent
+                    } else {
+                        manualModeContent
                     }
 
                     if vm.enrollmentComplete {
@@ -81,6 +71,58 @@ struct FaceEnrollmentView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private var modePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Enrollment method")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Picker("Enrollment method", selection: $vm.mode) {
+                Text("Use \(vm.friendName)'s photos").tag(EnrollmentMode.fromProfile)
+                Text("Choose my own").tag(EnrollmentMode.manual)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    private var profileModeContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Auto-enroll from \(vm.friendName)'s face profile")
+                .font(.headline)
+            Text("\(vm.friendName) has shared their face profile. Tap Enroll below to download their reference photos and generate a face embedding on your device — no photo selection needed.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var manualModeContent: some View {
+        VStack(spacing: 16) {
+            instructions
+
+            PhotosPicker(
+                selection: $vm.selectedItems,
+                maxSelectionCount: 5,
+                matching: .images
+            ) {
+                Label(
+                    "Select Photos (\(vm.selectedItems.count) of 5)",
+                    systemImage: "photo.badge.plus"
+                )
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.secondarySystemFill))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .onChange(of: vm.selectedItems) {
+                Task { await vm.loadPreviews() }
+            }
+
+            if !vm.previewImages.isEmpty {
+                previewGrid
+            }
+        }
+    }
+
     private var instructions: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Select 3–5 photos of \(vm.friendName)")
@@ -105,7 +147,8 @@ struct FaceEnrollmentView: View {
     }
 
     private var enrollButton: some View {
-        Button {
+        let isReady = vm.mode == .fromProfile || vm.canEnroll
+        return Button {
             Task { await vm.enroll() }
         } label: {
             Group {
@@ -118,11 +161,11 @@ struct FaceEnrollmentView: View {
             }
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(vm.canEnroll && !vm.isEnrolling ? Color.accentColor : Color.secondary.opacity(0.3))
-            .foregroundStyle(vm.canEnroll && !vm.isEnrolling ? Color.white : Color.secondary)
+            .background(isReady && !vm.isEnrolling ? Color.accentColor : Color.secondary.opacity(0.3))
+            .foregroundStyle(isReady && !vm.isEnrolling ? Color.white : Color.secondary)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        .disabled(!vm.canEnroll || vm.isEnrolling)
+        .disabled(!isReady || vm.isEnrolling)
     }
 
     private var successView: some View {

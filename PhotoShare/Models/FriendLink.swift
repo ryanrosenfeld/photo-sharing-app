@@ -33,9 +33,11 @@ struct OutgoingLink: Codable, Identifiable {
 struct LinkedProfile: Codable {
     let displayName: String
     let avatarUrl: String?
+    let faceProfileEnabled: Bool
 
     enum CodingKeys: String, CodingKey {
-        case displayName = "display_name"
-        case avatarUrl = "avatar_url"
+        case displayName        = "display_name"
+        case avatarUrl          = "avatar_url"
+        case faceProfileEnabled = "face_profile_enabled"
     }
 }

@@ -73,13 +73,18 @@ App launch
 See `supabase/migrations/20260425000000_initial_schema.sql` for the full schema with RLS policies.
 
 ```
-profiles         id (→ auth.users), display_name, avatar_url, plan (free|pro)
+profiles         id (→ auth.users), display_name, avatar_url, plan (free|pro),
+                 face_profile_enabled (bool, default false)
 links            id, sender_id, recipient_id, status (pending|active|paused|declined)
                  unique(sender_id, recipient_id) — directional, one row per direction
 photos           id, sender_id, storage_path, taken_at, location_lat/lng, expires_at
 photo_recipients (photo_id, recipient_id) PK, delivered_at, viewed_at
 device_tokens    id, user_id, apns_token (unique)
 ```
+
+**Supabase Storage buckets:**
+- `photos` — shared photos (existing)
+- `face-profiles` — optional user reference photos at path `{user_id}/{uuid}.jpg`; readable by authenticated users, writable only by the owner
 
 **Key RLS rules:**
 - `links` INSERT enforces the free tier 3-link limit via a count subquery in the policy
@@ -107,7 +112,7 @@ Photo captured on device
 
 ## Key Constraints
 
-- **Face embeddings are never uploaded.** All face matching is on-device only. The server only receives matched friend IDs + the photo.
+- **Face embeddings are never uploaded.** All face matching is on-device only. The server only receives matched friend IDs + the photo. Users may opt in to uploading **reference photos** (not embeddings) to Supabase Storage so friends' devices can generate embeddings locally — no server-side face processing occurs.
 - **Free tier limit is 3 active outgoing links.** Enforced server-side via Postgres RLS / Edge Function validation, not just client-side.
 - **Links are directional.** A → B and B → A are independent rows in the `links` table.
 
@@ -173,6 +178,24 @@ See [ARCHITECTURE.md — Decision Log](#decision-log) section below.
 **Reasoning:**
 - The Photos tab is optimized for quickly reviewing and saving received photos — a more focused UX.
 - Link requests are relationship-management actions; Friends is the natural home.
+
+---
+
+### 2026-04-28 — Face enrollment: dual-mode (auto from face profile vs. manual)
+
+**Decision:** Support two face enrollment paths: auto-enrollment via the friend's uploaded face profile, and manual enrollment where the capturing user selects photos themselves.
+
+**Reasoning:**
+- Manual enrollment (original design) puts the burden on every user to find and upload photos of each friend they link with. This doesn't scale as the friend graph grows.
+- A face profile (opt-in server-side reference photos) lets each user enroll themselves once; any friend who links with them gets automatic enrollment without any action.
+- Opt-in is essential: storing photos of yourself server-side is a meaningfully different privacy decision than purely on-device processing. The choice must be explicit and reversible.
+
+**Privacy model:**
+- Reference photos are stored in Supabase Storage (`face-profiles/{user_id}/`), readable by authenticated users.
+- Embeddings are always generated on the downloading friend's device — the server never processes or analyzes the photos.
+- Disabling the face profile deletes all reference photos from Storage immediately.
+
+**Trade-off accepted:** Users who opt out of the face profile still require friends to manually enroll them. The two-path model adds UI complexity (mode picker in FaceEnrollmentView, face profile management in ProfileView) but avoids social pressure to opt in by presenting both modes as equally valid.
 
 ---
 
