@@ -10,7 +10,7 @@ struct FaceMatchSandboxView: View {
         List {
             enrollmentSection
             testSection
-            if !vm.distances.isEmpty {
+            if !vm.distanceResults.isEmpty {
                 resultsSection
             }
         }
@@ -123,24 +123,49 @@ struct FaceMatchSandboxView: View {
 
                 Divider()
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Pairwise Distances (sorted)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
-                    ForEach(Array(vm.distances.enumerated()), id: \.offset) { index, dist in
-                        HStack {
-                            Text(String(format: "%.4f", dist))
-                                .font(.system(.body, design: .monospaced))
-                                .fontWeight(index == 0 ? .bold : .regular)
+                    ForEach(Array(vm.distanceResults.enumerated()), id: \.element.id) { index, result in
+                        HStack(spacing: 10) {
+                            // Enrollment photo thumbnail
+                            if let img = vm.enrollmentImages[safe: result.enrollmentImageIndex] {
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 36, height: 36)
+                                    .clipped()
+                                    .cornerRadius(5)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .strokeBorder(.secondary.opacity(0.3), lineWidth: 0.5)
+                                    )
+                            }
+
+                            VStack(alignment: .leading, spacing: 1) {
+                                // Only show face index label when there are multiple test faces
+                                if vm.testFaceCount > 1 {
+                                    Text("Face \(result.testFaceIndex + 1)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text(String(format: "%.4f", result.distance))
+                                    .font(.system(.body, design: .monospaced))
+                                    .fontWeight(index == 0 ? .bold : .regular)
+                            }
+
                             if index == 0 {
                                 Text("← min")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+
                             Spacer()
-                            Image(systemName: dist < vm.threshold ? "checkmark.circle.fill" : "xmark.circle")
-                                .foregroundStyle(dist < vm.threshold ? .green : .secondary)
+
+                            Image(systemName: result.distance < vm.threshold ? "checkmark.circle.fill" : "xmark.circle")
+                                .foregroundStyle(result.distance < vm.threshold ? .green : .secondary)
                         }
                     }
                 }

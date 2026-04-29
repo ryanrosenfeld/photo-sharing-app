@@ -2,6 +2,13 @@
 import PhotosUI
 import SwiftUI
 
+struct FaceDistanceResult: Identifiable {
+    let id = UUID()
+    let enrollmentImageIndex: Int  // index into enrollmentImages
+    let testFaceIndex: Int         // index of face detected in test photo (0 = largest)
+    let distance: Float
+}
+
 @MainActor
 final class FaceMatchSandboxViewModel: ObservableObject {
 
@@ -19,12 +26,12 @@ final class FaceMatchSandboxViewModel: ObservableObject {
 
     @Published var enrollmentFaceCounts: [Int] = []
     @Published var testFaceCount: Int = 0
-    @Published var distances: [Float] = []
+    @Published var distanceResults: [FaceDistanceResult] = []
     @Published var threshold: Float = FaceDetector.defaultMatchThreshold
     @Published var isProcessing = false
     @Published var errorMessage: String?
 
-    var minDistance: Float? { distances.first }
+    var minDistance: Float? { distanceResults.first?.distance }
 
     func isMatch(at threshold: Float) -> Bool {
         guard let min = minDistance else { return false }
@@ -33,7 +40,8 @@ final class FaceMatchSandboxViewModel: ObservableObject {
 
     // MARK: - Private state
 
-    private var enrolledEmbeddings: [[Float]] = []
+    // Tuples preserve which enrollment image each embedding came from.
+    private var enrolledEmbeddings: [(imageIndex: Int, embedding: [Float])] = []
     private var testEmbeddings: [[Float]] = []
     private let detector = FaceDetector()
 
@@ -43,7 +51,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         enrollmentImages = []
         enrolledEmbeddings = []
         enrollmentFaceCounts = []
-        distances = []
+        distanceResults = []
         errorMessage = nil
 
         var images: [UIImage] = []
@@ -55,7 +63,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         }
         enrollmentImages = images
         await computeEnrollmentEmbeddings()
-        await recomputeDistances()
+        recomputeDistances()
     }
 
     func removeEnrollmentImage(at index: Int) async {
@@ -66,7 +74,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
             enrollmentFaceCounts.remove(at: index)
         }
         await computeEnrollmentEmbeddings()
-        await recomputeDistances()
+        recomputeDistances()
     }
 
     func removeTestImage() {
@@ -74,13 +82,13 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         testImage = nil
         testEmbeddings = []
         testFaceCount = 0
-        distances = []
+        distanceResults = []
     }
 
     func loadTestImage() async {
         testImage = nil
         testEmbeddings = []
-        distances = []
+        distanceResults = []
         errorMessage = nil
 
         guard let item = testPickerItem.first,
@@ -88,7 +96,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
               let image = UIImage(data: data) else { return }
         testImage = image
         await computeTestEmbeddings()
-        await recomputeDistances()
+        recomputeDistances()
     }
 
     // MARK: - Private helpers
@@ -97,15 +105,15 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
 
-        var embeddings: [[Float]] = []
+        var embeddings: [(imageIndex: Int, embedding: [Float])] = []
         var counts: [Int] = []
-        for image in enrollmentImages {
+        for (imageIndex, image) in enrollmentImages.enumerated() {
             do {
                 let embedding = try await Task.detached(priority: .userInitiated) { [detector, image] in
                     try detector.largestFaceEmbedding(in: image)
                 }.value
                 counts.append(embedding != nil ? 1 : 0)
-                if let e = embedding { embeddings.append(e) }
+                if let e = embedding { embeddings.append((imageIndex: imageIndex, embedding: e)) }
             } catch {
                 counts.append(0)
                 errorMessage = "Detection error: \(error.localizedDescription)"
@@ -133,12 +141,27 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         }
     }
 
-    private func recomputeDistances() async {
+    private func recomputeDistances() {
         guard !enrolledEmbeddings.isEmpty, !testEmbeddings.isEmpty else {
-            distances = []
+            distanceResults = []
             return
         }
-        distances = detector.pairwiseDistances(photoFaces: testEmbeddings, enrolled: enrolledEmbeddings)
+        var results: [FaceDistanceResult] = []
+        for (testIdx, testFace) in testEmbeddings.enumerated() {
+            for enrolled in enrolledEmbeddings {
+                let dist = euclidean(testFace, enrolled.embedding)
+                results.append(FaceDistanceResult(
+                    enrollmentImageIndex: enrolled.imageIndex,
+                    testFaceIndex: testIdx,
+                    distance: dist
+                ))
+            }
+        }
+        distanceResults = results.sorted { $0.distance < $1.distance }
+    }
+
+    private func euclidean(_ a: [Float], _ b: [Float]) -> Float {
+        zip(a, b).reduce(0) { $0 + ($1.0 - $1.1) * ($1.0 - $1.1) }.squareRoot()
     }
 }
 #endif
