@@ -61,9 +61,9 @@ def main():
         onnx_model,
         inputs=[
             ct.ImageType(
-                # "input" matches the ONNX input name for most MobileFaceNet variants.
-                # If conversion fails, replace "input" with the ONNX input name printed above.
-                name="face",
+                # Must match the ONNX input name (printed above).
+                # CoreML sanitizes dots: "input.1" → "input_1" in the saved model.
+                name="input.1",
                 shape=(1, 3, 112, 112),
                 # Normalize [0,255] BGR → [-1, 1]: pixel * (1/127.5) + (-1.0)
                 scale=1 / 127.5,

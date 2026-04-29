@@ -79,7 +79,7 @@ struct FaceDetector: Sendable {
               let resized = crop.resized(to: CGSize(width: 112, height: 112)),
               let pixelBuffer = resized.pixelBuffer(width: 112, height: 112) else { return nil }
 
-        let input = try MLDictionaryFeatureProvider(dictionary: ["face": pixelBuffer])
+        let input = try MLDictionaryFeatureProvider(dictionary: ["input_1": pixelBuffer])
         let output = try model.prediction(from: input)
 
         guard let array = output.featureValue(for: "embedding")?.multiArrayValue else { return nil }
