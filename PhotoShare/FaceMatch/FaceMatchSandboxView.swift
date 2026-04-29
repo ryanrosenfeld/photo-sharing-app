@@ -1,0 +1,208 @@
+#if DEBUG
+import PhotosUI
+import SwiftUI
+
+struct FaceMatchSandboxView: View {
+
+    @StateObject private var vm = FaceMatchSandboxViewModel()
+
+    var body: some View {
+        List {
+            enrollmentSection
+            testSection
+            if !vm.distances.isEmpty {
+                resultsSection
+            }
+        }
+        .navigationTitle("Face Match Sandbox")
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay {
+            if vm.isProcessing {
+                ProgressView()
+                    .padding()
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var enrollmentSection: some View {
+        Section {
+            PhotosPicker(
+                selection: $vm.enrollmentPickerItems,
+                maxSelectionCount: 5,
+                matching: .images
+            ) {
+                Label("Select Enrollment Photos (1–5)", systemImage: "person.crop.square.fill")
+            }
+            .onChange(of: vm.enrollmentPickerItems) {
+                Task { await vm.loadEnrollmentImages() }
+            }
+
+            if !vm.enrollmentImages.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(vm.enrollmentImages.enumerated()), id: \.offset) { index, image in
+                            imageThumbnail(image, faceCount: vm.enrollmentFaceCounts[safe: index])
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        } header: {
+            Text("Enrollment Photos")
+        } footer: {
+            if !vm.enrollmentImages.isEmpty {
+                let detected = vm.enrollmentFaceCounts.filter { $0 > 0 }.count
+                Text("\(detected)/\(vm.enrollmentImages.count) photos have a detectable face")
+            }
+        }
+    }
+
+    private var testSection: some View {
+        Section {
+            PhotosPicker(
+                selection: $vm.testPickerItem,
+                maxSelectionCount: 1,
+                matching: .images
+            ) {
+                Label("Select Test Photo", systemImage: "photo")
+            }
+            .onChange(of: vm.testPickerItem) {
+                Task { await vm.loadTestImage() }
+            }
+
+            if let testImage = vm.testImage {
+                HStack(spacing: 12) {
+                    imageThumbnail(testImage, faceCount: vm.testFaceCount)
+                    VStack(alignment: .leading) {
+                        Text("\(vm.testFaceCount) face(s) detected")
+                            .font(.subheadline)
+                        if vm.testFaceCount == 0 {
+                            Text("No faces found — matching won't run.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text("Test Photo")
+        }
+    }
+
+    private var resultsSection: some View {
+        Section {
+            VStack(spacing: 16) {
+                matchLabel
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Threshold")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("0.1")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Slider(value: $vm.threshold, in: 0.1...1.0, step: 0.01)
+                        Text("1.0")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(String(format: "Current: %.2f  (default: %.2f)", vm.threshold, FaceDetector.defaultMatchThreshold))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pairwise Distances (sorted)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    ForEach(Array(vm.distances.enumerated()), id: \.offset) { index, dist in
+                        HStack {
+                            Text(String(format: "%.4f", dist))
+                                .font(.system(.body, design: .monospaced))
+                                .fontWeight(index == 0 ? .bold : .regular)
+                            if index == 0 {
+                                Text("← min")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: dist < vm.threshold ? "checkmark.circle.fill" : "xmark.circle")
+                                .foregroundStyle(dist < vm.threshold ? .green : .secondary)
+                        }
+                    }
+                }
+
+                Text("Lower distance = closer match. Values < threshold trigger a share.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("Results")
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var matchLabel: some View {
+        let matched = vm.isMatch(at: vm.threshold)
+        return HStack {
+            Image(systemName: matched ? "checkmark.seal.fill" : "xmark.seal")
+                .font(.title)
+                .foregroundStyle(matched ? .green : .red)
+            Text(matched ? "MATCH" : "NO MATCH")
+                .font(.title2.bold())
+                .foregroundStyle(matched ? .green : .red)
+            if let min = vm.minDistance {
+                Spacer()
+                Text(String(format: "min dist: %.4f", min))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func imageThumbnail(_ image: UIImage, faceCount: Int?) -> some View {
+        let count = faceCount ?? 0
+        return ZStack(alignment: .topTrailing) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 80, height: 80)
+                .clipped()
+                .cornerRadius(8)
+
+            Text("\(count)")
+                .font(.caption2.bold())
+                .padding(4)
+                .background(count > 0 ? Color.green : Color.red, in: Circle())
+                .foregroundStyle(.white)
+                .offset(x: 6, y: -6)
+        }
+    }
+}
+
+// MARK: - Safe subscript
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
+
+#Preview {
+    NavigationStack {
+        FaceMatchSandboxView()
+    }
+}
+#endif

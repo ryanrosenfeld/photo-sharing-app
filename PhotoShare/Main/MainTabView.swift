@@ -84,6 +84,14 @@ struct ProfileView: View {
                         Task { await authManager.signOut() }
                     }
                 }
+
+                #if DEBUG
+                Section("Debug") {
+                    NavigationLink("Face Match Sandbox") {
+                        FaceMatchSandboxView()
+                    }
+                }
+                #endif
             }
             .navigationTitle("Profile")
             .sheet(isPresented: $showEditName) {
