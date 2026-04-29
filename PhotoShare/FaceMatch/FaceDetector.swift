@@ -19,36 +19,46 @@ struct FaceDetector: Sendable {
     // Same person across varied lighting/pose: ~0.3–0.4. Different people: >0.6.
     static let defaultMatchThreshold: Float = 0.35
 
+    // Fraction of the bounding box size added as padding on each side.
+    // MobileFaceNet was trained with some context around the face, not a tight crop.
+    private static let cropPadding: CGFloat = 0.25
+
     // MARK: - Public API
 
     /// Returns the 128-D MobileFaceNet embedding for the largest detected face in `image`.
     /// Used during enrollment: the friend is assumed to be the primary subject.
     func largestFaceEmbedding(in image: UIImage) throws -> [Float]? {
-        let faces = try detectFaces(in: image)
+        let normalized = image.orientationNormalized()
+        let faces = try detectFaces(in: normalized)
         guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else {
             return nil
         }
-        return try embedding(croppingTo: largest.boundingBox, in: image)
+        return try embedding(croppingTo: largest.boundingBox.padded(by: Self.cropPadding), in: normalized)
     }
 
     /// Returns 128-D embeddings for every detected face in `image`.
     /// Used when scanning camera-roll photos to find matching friends.
     func allFaceEmbeddings(in image: UIImage) throws -> [[Float]] {
-        try detectFaces(in: image).compactMap { face in
-            try embedding(croppingTo: face.boundingBox, in: image)
+        let normalized = image.orientationNormalized()
+        return try detectFaces(in: normalized).compactMap { face in
+            try embedding(croppingTo: face.boundingBox.padded(by: Self.cropPadding), in: normalized)
         }
     }
 
     /// Returns the cropped face image used for the largest-face embedding (mirrors enrollment logic).
     func largestFaceCrop(in image: UIImage) throws -> UIImage? {
-        let faces = try detectFaces(in: image)
+        let normalized = image.orientationNormalized()
+        let faces = try detectFaces(in: normalized)
         guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else { return nil }
-        return image.croppingToVisionRect(largest.boundingBox)
+        return normalized.croppingToVisionRect(largest.boundingBox.padded(by: Self.cropPadding))
     }
 
     /// Returns cropped face images for every detected face in `image` (mirrors allFaceEmbeddings order).
     func allFaceCrops(in image: UIImage) throws -> [UIImage] {
-        try detectFaces(in: image).compactMap { image.croppingToVisionRect($0.boundingBox) }
+        let normalized = image.orientationNormalized()
+        return try detectFaces(in: normalized).compactMap {
+            normalized.croppingToVisionRect($0.boundingBox.padded(by: Self.cropPadding))
+        }
     }
 
     /// Returns all pairwise Euclidean distances between photoFaces and enrolled embeddings, sorted ascending.
@@ -76,8 +86,6 @@ struct FaceDetector: Sendable {
 
     // MARK: - CoreML model
 
-    // Loaded once at first use. Returns nil (and surfaces FaceDetectorError.modelNotFound) if the
-    // mlpackage hasn't been added to the Xcode target yet.
     private static let model: MLModel? = {
         guard let url = Bundle.main.url(forResource: "MobileFaceNet", withExtension: "mlmodelc") else {
             return nil
@@ -100,14 +108,11 @@ struct FaceDetector: Sendable {
         return (0..<array.count).map { Float(truncating: array[$0]) }
     }
 
+    // Image must already have orientation normalized to .up before calling this.
     private func detectFaces(in image: UIImage) throws -> [VNFaceObservation] {
         guard let cgImage = image.cgImage else { return [] }
         let request = VNDetectFaceRectanglesRequest()
-        let handler = VNImageRequestHandler(
-            cgImage: cgImage,
-            orientation: CGImagePropertyOrientation(image.imageOrientation),
-            options: [:]
-        )
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         try handler.perform([request])
         return request.results ?? []
     }
@@ -120,10 +125,20 @@ struct FaceDetector: Sendable {
 // MARK: - UIImage helpers
 
 extension UIImage {
-    /// Crops to a Vision-normalized bounding box (origin at bottom-left).
+    /// Returns a copy with orientation baked into pixel data (.up).
+    /// Vision bounding boxes and CGImage crops both operate on raw pixel coordinates,
+    /// so normalizing first ensures they stay in sync.
+    func orientationNormalized() -> UIImage {
+        guard imageOrientation != .up else { return self }
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
+    /// Crops to a Vision-normalized bounding box (origin at bottom-left, image must be .up orientation).
     func croppingToVisionRect(_ visionRect: CGRect) -> UIImage? {
-        let w = size.width * scale
-        let h = size.height * scale
+        let w = size.width
+        let h = size.height
         let rect = CGRect(
             x: visionRect.minX * w,
             y: (1 - visionRect.maxY) * h,
@@ -131,7 +146,7 @@ extension UIImage {
             height: visionRect.height * h
         )
         guard let cropped = cgImage?.cropping(to: rect) else { return nil }
-        return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
+        return UIImage(cgImage: cropped)
     }
 
     func resized(to size: CGSize) -> UIImage? {
@@ -177,20 +192,16 @@ extension UIImage {
 
 private extension CGRect {
     var area: CGFloat { width * height }
-}
 
-private extension CGImagePropertyOrientation {
-    init(_ ui: UIImage.Orientation) {
-        switch ui {
-        case .up:            self = .up
-        case .down:          self = .down
-        case .left:          self = .left
-        case .right:         self = .right
-        case .upMirrored:    self = .upMirrored
-        case .downMirrored:  self = .downMirrored
-        case .leftMirrored:  self = .leftMirrored
-        case .rightMirrored: self = .rightMirrored
-        @unknown default:    self = .up
-        }
+    /// Expands the Vision bounding box by `fraction` of its size on each side, clamped to [0,1].
+    func padded(by fraction: CGFloat) -> CGRect {
+        let dx = width * fraction
+        let dy = height * fraction
+        return CGRect(
+            x: max(0, minX - dx),
+            y: max(0, minY - dy),
+            width: min(1 - max(0, minX - dx), width + dx * 2),
+            height: min(1 - max(0, minY - dy), height + dy * 2)
+        )
     }
 }
