@@ -59,6 +59,25 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         await recomputeDistances()
     }
 
+    func removeEnrollmentImage(at index: Int) async {
+        guard enrollmentImages.indices.contains(index) else { return }
+        enrollmentPickerItems.remove(at: index)
+        enrollmentImages.remove(at: index)
+        if enrollmentFaceCounts.indices.contains(index) {
+            enrollmentFaceCounts.remove(at: index)
+        }
+        await computeEnrollmentEmbeddings()
+        await recomputeDistances()
+    }
+
+    func removeTestImage() {
+        testPickerItem = []
+        testImage = nil
+        testEmbeddings = []
+        testFaceCount = 0
+        distances = []
+    }
+
     func loadTestImage() async {
         testImage = nil
         testEmbeddings = []

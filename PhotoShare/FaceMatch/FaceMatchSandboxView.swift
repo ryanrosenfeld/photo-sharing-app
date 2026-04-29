@@ -44,7 +44,9 @@ struct FaceMatchSandboxView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(Array(vm.enrollmentImages.enumerated()), id: \.offset) { index, image in
-                            imageThumbnail(image, faceCount: vm.enrollmentFaceCounts[safe: index])
+                            imageThumbnail(image, faceCount: vm.enrollmentFaceCounts[safe: index]) {
+                                Task { await vm.removeEnrollmentImage(at: index) }
+                            }
                         }
                     }
                     .padding(.vertical, 4)
@@ -75,7 +77,9 @@ struct FaceMatchSandboxView: View {
 
             if let testImage = vm.testImage {
                 HStack(spacing: 12) {
-                    imageThumbnail(testImage, faceCount: vm.testFaceCount)
+                    imageThumbnail(testImage, faceCount: vm.testFaceCount) {
+                        vm.removeTestImage()
+                    }
                     VStack(alignment: .leading) {
                         Text("\(vm.testFaceCount) face(s) detected")
                             .font(.subheadline)
@@ -107,8 +111,8 @@ struct FaceMatchSandboxView: View {
                         Text("0.1")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Slider(value: $vm.threshold, in: 0.1...1.0, step: 0.01)
-                        Text("1.0")
+                        Slider(value: $vm.threshold, in: 0.1...2.0, step: 0.01)
+                        Text("2.0")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -172,7 +176,7 @@ struct FaceMatchSandboxView: View {
         }
     }
 
-    private func imageThumbnail(_ image: UIImage, faceCount: Int?) -> some View {
+    private func imageThumbnail(_ image: UIImage, faceCount: Int?, onRemove: @escaping () -> Void) -> some View {
         let count = faceCount ?? 0
         return ZStack(alignment: .topTrailing) {
             Image(uiImage: image)
@@ -182,13 +186,31 @@ struct FaceMatchSandboxView: View {
                 .clipped()
                 .cornerRadius(8)
 
-            Text("\(count)")
-                .font(.caption2.bold())
-                .padding(4)
-                .background(count > 0 ? Color.green : Color.red, in: Circle())
-                .foregroundStyle(.white)
+            VStack {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.white, .black.opacity(0.6))
+                }
                 .offset(x: 6, y: -6)
+
+                Spacer()
+            }
+
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Text("\(count)")
+                        .font(.caption2.bold())
+                        .padding(4)
+                        .background(count > 0 ? Color.green : Color.red, in: Circle())
+                        .foregroundStyle(.white)
+                        .offset(x: 6, y: 6)
+                }
+            }
         }
+        .frame(width: 80, height: 80)
     }
 }
 
