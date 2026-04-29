@@ -144,17 +144,20 @@ extension UIImage {
     }
 
     /// Crops to a Vision-normalized bounding box (origin at bottom-left, image must be .up orientation).
+    /// Uses cgImage pixel dimensions directly since UIGraphicsImageRenderer produces images at display
+    /// scale (3x on iPhone) — image.size is in points but cgImage is in pixels.
     func croppingToVisionRect(_ visionRect: CGRect) -> UIImage? {
-        let w = size.width
-        let h = size.height
+        guard let cgImage else { return nil }
+        let w = CGFloat(cgImage.width)
+        let h = CGFloat(cgImage.height)
         let rect = CGRect(
             x: visionRect.minX * w,
             y: (1 - visionRect.maxY) * h,
             width: visionRect.width * w,
             height: visionRect.height * h
         )
-        guard let cropped = cgImage?.cropping(to: rect) else { return nil }
-        return UIImage(cgImage: cropped)
+        guard let cropped = cgImage.cropping(to: rect) else { return nil }
+        return UIImage(cgImage: cropped, scale: scale, orientation: .up)
     }
 
     func resized(to size: CGSize) -> UIImage? {
