@@ -2,6 +2,8 @@ import CoreML
 import UIKit
 import Vision
 
+extension MLModel: @unchecked Sendable {}
+
 enum FaceDetectorError: Error, LocalizedError {
     case modelNotFound
 
