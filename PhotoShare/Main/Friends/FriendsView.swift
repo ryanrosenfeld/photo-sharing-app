@@ -63,7 +63,11 @@ struct FriendsView: View {
                 Text(vm.error ?? "")
             }
             .sheet(item: $enrollingLink) { link in
-                FaceEnrollmentView(friendId: link.recipientId, friendName: link.recipient.displayName)
+                FaceEnrollmentView(
+                    friendId: link.recipientId,
+                    friendName: link.recipient.displayName,
+                    friendHasFaceProfile: link.recipient.faceProfileEnabled
+                )
             }
         }
     }
