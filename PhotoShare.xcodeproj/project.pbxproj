@@ -17,13 +17,16 @@
 		4A21B9BFF73D2B18D82FC723 /* ReceivedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5202D45E8361FDB0E38A177D /* ReceivedPhoto.swift */; };
 		5F9F07026F69069369465982 /* FriendLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2072A8EA320E49746FA2A86C /* FriendLink.swift */; };
 		60541EF3A672BDADACFD85AC /* FaceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 352B52E24CE88F1A05A50F01 /* FaceDetector.swift */; };
+		64016C5658C68844F8BE38C5 /* FaceMatchSandboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6914BCD3C714010FE0FFECDC /* FaceMatchSandboxView.swift */; };
 		6526F764E6DBB581137F34FC /* PhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40C13AF38AEBB02CE44A0B1 /* PhotosView.swift */; };
 		737447D219C181A4960D8496 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 49AAC4B6484BE9C81C2238CD /* GoogleSignIn */; };
 		869E0ADDCFCAFF5A2FCEF0F2 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE08CBC5DEB28B3ED4E1DC0E /* SupabaseClient.swift */; };
 		8F806C9E6BB6F86BE02421BA /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584D5226329672B2E971F1BA /* WelcomeView.swift */; };
+		9104AF698354AA9955DA3EAF /* FaceProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F645D869937923F3FA8FDB8D /* FaceProfileManager.swift */; };
 		962395693BF5304EDD801932 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3683C05BA4BAFBDF97F3A675 /* AuthView.swift */; };
 		9FCC4A9C71B47B18E4CDEE1D /* FriendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89B26AB9AFB08DE629D4EFA0 /* FriendsView.swift */; };
 		9FEC44E09EFFCE2A6776DD73 /* PhotoLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE30DE6AC685B0465868B37 /* PhotoLibraryManager.swift */; };
+		A613BAB1514A428B2FB27348 /* FaceMatchSandboxViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3F0616493E6E029E33B2B2 /* FaceMatchSandboxViewModel.swift */; };
 		B753DB4A110621F6481054AE /* EmailAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F955F53C0A5D9000C414BC1A /* EmailAuthView.swift */; };
 		BAF49FFB5DD9893390EBE430 /* FaceEnrollmentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007E72AD9EA606FC397944D2 /* FaceEnrollmentViewModel.swift */; };
 		C52018AE9AAB82B0F1A16B68 /* FriendsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0EC327D1F445FFDF392AC3 /* FriendsViewModel.swift */; };
@@ -31,6 +34,7 @@
 		D1A6DB173005A9BD6529EF76 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44B82E118CED9EFC0508F7 /* AuthManager.swift */; };
 		D301ABC01A3934FDFC3882DD /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2595B0E3D3E3F0D5275F8FCE /* MainTabView.swift */; };
 		E1C3CAB0B664EC433BE0DBDC /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5336395020DD0E163F1F2630 /* ContentView.swift */; };
+		E5BEDD9800AD84F1BE5E4ECD /* MobileFaceNet.mlpackage in Sources */ = {isa = PBXBuildFile; fileRef = 79FC852BA3ED5C9E7E8CD016 /* MobileFaceNet.mlpackage */; };
 		E8EC374155FFF1744AB1C281 /* PhotosViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1364C9B61887A9B2894F01B5 /* PhotosViewModel.swift */; };
 		F6094FE3C333E3A53AD8284B /* FaceEnrollmentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D96132110D32DEF02A31223 /* FaceEnrollmentView.swift */; };
 /* End PBXBuildFile section */
@@ -49,16 +53,20 @@
 		5202D45E8361FDB0E38A177D /* ReceivedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivedPhoto.swift; sourceTree = "<group>"; };
 		5336395020DD0E163F1F2630 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		584D5226329672B2E971F1BA /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		6914BCD3C714010FE0FFECDC /* FaceMatchSandboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchSandboxView.swift; sourceTree = "<group>"; };
 		6D043016613E24A9D1AB566C /* PhotoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailView.swift; sourceTree = "<group>"; };
+		79FC852BA3ED5C9E7E8CD016 /* MobileFaceNet.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = MobileFaceNet.mlpackage; sourceTree = "<group>"; };
 		7C13B0B5662D46D62B044BA4 /* PhotoShare.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhotoShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		89B26AB9AFB08DE629D4EFA0 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		9CAA9C134039C2AAA62F5240 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9D96132110D32DEF02A31223 /* FaceEnrollmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentView.swift; sourceTree = "<group>"; };
+		BA3F0616493E6E029E33B2B2 /* FaceMatchSandboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchSandboxViewModel.swift; sourceTree = "<group>"; };
 		C40C13AF38AEBB02CE44A0B1 /* PhotosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosView.swift; sourceTree = "<group>"; };
 		C95806FBAC23A00DC260C4F9 /* FaceEnrollmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentStore.swift; sourceTree = "<group>"; };
 		C9AA4AD1706FBD780F04012B /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CE08CBC5DEB28B3ED4E1DC0E /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
 		DD44B82E118CED9EFC0508F7 /* AuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthManager.swift; sourceTree = "<group>"; };
+		F645D869937923F3FA8FDB8D /* FaceProfileManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceProfileManager.swift; sourceTree = "<group>"; };
 		F955F53C0A5D9000C414BC1A /* EmailAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAuthView.swift; sourceTree = "<group>"; };
 		FA0EC327D1F445FFDF392AC3 /* FriendsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsViewModel.swift; sourceTree = "<group>"; };
 		FFE30DE6AC685B0465868B37 /* PhotoLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoLibraryManager.swift; sourceTree = "<group>"; };
@@ -78,6 +86,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		02782962E2175F34A3C960C0 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				79FC852BA3ED5C9E7E8CD016 /* MobileFaceNet.mlpackage */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		2B46E8544B0366A8BAA4DCFA /* Friends */ = {
 			isa = PBXGroup;
 			children = (
@@ -161,6 +177,9 @@
 				C95806FBAC23A00DC260C4F9 /* FaceEnrollmentStore.swift */,
 				9D96132110D32DEF02A31223 /* FaceEnrollmentView.swift */,
 				007E72AD9EA606FC397944D2 /* FaceEnrollmentViewModel.swift */,
+				6914BCD3C714010FE0FFECDC /* FaceMatchSandboxView.swift */,
+				BA3F0616493E6E029E33B2B2 /* FaceMatchSandboxViewModel.swift */,
+				F645D869937923F3FA8FDB8D /* FaceProfileManager.swift */,
 				FFE30DE6AC685B0465868B37 /* PhotoLibraryManager.swift */,
 			);
 			path = FaceMatch;
@@ -178,6 +197,7 @@
 				F9DCA1905312DA93E70DEF5A /* FaceMatch */,
 				C5A15F34D5BEE6B12D6B9F36 /* Main */,
 				7A320BF8A7FF529C7A3C492C /* Models */,
+				02782962E2175F34A3C960C0 /* Resources */,
 			);
 			path = PhotoShare;
 			sourceTree = "<group>";
@@ -252,10 +272,14 @@
 				022F6B28B41FA39B9ECC6EE7 /* FaceEnrollmentStore.swift in Sources */,
 				F6094FE3C333E3A53AD8284B /* FaceEnrollmentView.swift in Sources */,
 				BAF49FFB5DD9893390EBE430 /* FaceEnrollmentViewModel.swift in Sources */,
+				64016C5658C68844F8BE38C5 /* FaceMatchSandboxView.swift in Sources */,
+				A613BAB1514A428B2FB27348 /* FaceMatchSandboxViewModel.swift in Sources */,
+				9104AF698354AA9955DA3EAF /* FaceProfileManager.swift in Sources */,
 				5F9F07026F69069369465982 /* FriendLink.swift in Sources */,
 				9FCC4A9C71B47B18E4CDEE1D /* FriendsView.swift in Sources */,
 				C52018AE9AAB82B0F1A16B68 /* FriendsViewModel.swift in Sources */,
 				D301ABC01A3934FDFC3882DD /* MainTabView.swift in Sources */,
+				E5BEDD9800AD84F1BE5E4ECD /* MobileFaceNet.mlpackage in Sources */,
 				45BDEC76AF49E08ADD2302B2 /* PhotoDetailView.swift in Sources */,
 				9FEC44E09EFFCE2A6776DD73 /* PhotoLibraryManager.swift in Sources */,
 				39C16DFBB981B2C61B48A25C /* PhotoShareApp.swift in Sources */,

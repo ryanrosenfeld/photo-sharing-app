@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.\\(swift|sql|yml|yaml\\)$|seed\")",
+      "Bash(xcodegen generate *)",
+      "Bash(git -C /Users/ryanrosenfeld/dev/photo-sharing-app status)",
+      "Bash(gh repo *)"
+    ]
+  }
+}

@@ -61,7 +61,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         for item in enrollmentPickerItems {
             if let data = try? await item.loadTransferable(type: Data.self),
                let image = UIImage(data: data) {
-                images.append(image)
+                images.append(image.preparedForFaceDetection())
             }
         }
         enrollmentImages = images
@@ -98,7 +98,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         guard let item = testPickerItem.first,
               let data = try? await item.loadTransferable(type: Data.self),
               let image = UIImage(data: data) else { return }
-        testImage = image
+        testImage = image.preparedForFaceDetection()
         await computeTestEmbeddings()
         recomputeDistances()
     }

@@ -28,36 +28,36 @@ struct FaceDetector: Sendable {
     /// Returns the 128-D MobileFaceNet embedding for the largest detected face in `image`.
     /// Used during enrollment: the friend is assumed to be the primary subject.
     func largestFaceEmbedding(in image: UIImage) throws -> [Float]? {
-        let normalized = image.orientationNormalized()
-        let faces = try detectFaces(in: normalized)
+        let prepared = image.preparedForFaceDetection()
+        let faces = try detectFaces(in: prepared)
         guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else {
             return nil
         }
-        return try embedding(croppingTo: largest.boundingBox.padded(by: Self.cropPadding), in: normalized)
+        return try embedding(croppingTo: largest.boundingBox.padded(by: Self.cropPadding), in: prepared)
     }
 
     /// Returns 128-D embeddings for every detected face in `image`.
     /// Used when scanning camera-roll photos to find matching friends.
     func allFaceEmbeddings(in image: UIImage) throws -> [[Float]] {
-        let normalized = image.orientationNormalized()
-        return try detectFaces(in: normalized).compactMap { face in
-            try embedding(croppingTo: face.boundingBox.padded(by: Self.cropPadding), in: normalized)
+        let prepared = image.preparedForFaceDetection()
+        return try detectFaces(in: prepared).compactMap { face in
+            try embedding(croppingTo: face.boundingBox.padded(by: Self.cropPadding), in: prepared)
         }
     }
 
     /// Returns the cropped face image used for the largest-face embedding (mirrors enrollment logic).
     func largestFaceCrop(in image: UIImage) throws -> UIImage? {
-        let normalized = image.orientationNormalized()
-        let faces = try detectFaces(in: normalized)
+        let prepared = image.preparedForFaceDetection()
+        let faces = try detectFaces(in: prepared)
         guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else { return nil }
-        return normalized.croppingToVisionRect(largest.boundingBox.padded(by: Self.cropPadding))
+        return prepared.croppingToVisionRect(largest.boundingBox.padded(by: Self.cropPadding))
     }
 
     /// Returns cropped face images for every detected face in `image` (mirrors allFaceEmbeddings order).
     func allFaceCrops(in image: UIImage) throws -> [UIImage] {
-        let normalized = image.orientationNormalized()
-        return try detectFaces(in: normalized).compactMap {
-            normalized.croppingToVisionRect($0.boundingBox.padded(by: Self.cropPadding))
+        let prepared = image.preparedForFaceDetection()
+        return try detectFaces(in: prepared).compactMap {
+            prepared.croppingToVisionRect($0.boundingBox.padded(by: Self.cropPadding))
         }
     }
 
@@ -125,13 +125,21 @@ struct FaceDetector: Sendable {
 // MARK: - UIImage helpers
 
 extension UIImage {
-    /// Returns a copy with orientation baked into pixel data (.up).
-    /// Vision bounding boxes and CGImage crops both operate on raw pixel coordinates,
-    /// so normalizing first ensures they stay in sync.
-    func orientationNormalized() -> UIImage {
-        guard imageOrientation != .up else { return self }
-        return UIGraphicsImageRenderer(size: size).image { _ in
-            draw(in: CGRect(origin: .zero, size: size))
+    /// Normalizes orientation to .up and downsamples to at most `maxDimension` on the longest side.
+    /// Called before every Vision + CoreML pipeline to avoid OOM on full-resolution camera photos.
+    func preparedForFaceDetection(maxDimension: CGFloat = 1024) -> UIImage {
+        let longest = max(size.width, size.height)
+        let needsResize = longest > maxDimension
+        let targetSize: CGSize
+        if needsResize {
+            let scale = maxDimension / longest
+            targetSize = CGSize(width: (size.width * scale).rounded(), height: (size.height * scale).rounded())
+        } else {
+            targetSize = size
+        }
+        guard imageOrientation != .up || needsResize else { return self }
+        return UIGraphicsImageRenderer(size: targetSize).image { _ in
+            draw(in: CGRect(origin: .zero, size: targetSize))
         }
     }
 
