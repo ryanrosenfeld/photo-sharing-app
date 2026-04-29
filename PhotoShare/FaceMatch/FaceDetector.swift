@@ -15,9 +15,10 @@ enum FaceDetectorError: Error, LocalizedError {
 // FaceDetector is a stateless struct — safe to capture into Task.detached.
 struct FaceDetector: Sendable {
 
-    // Euclidean distance threshold for MobileFaceNet embeddings.
-    // Same person across varied lighting/pose: ~0.3–0.4. Different people: >0.6.
-    static let defaultMatchThreshold: Float = 0.35
+    // Euclidean distance threshold for MobileFaceNet embeddings (buffalo_sc / w600k_mbf).
+    // The model outputs unnormalized 512-D embeddings, so distances live in a wider range
+    // than typical L2-normalized face models. Tuned empirically on real device data.
+    static let defaultMatchThreshold: Float = 15
 
     // Fraction of the bounding box size added as padding on each side.
     // MobileFaceNet was trained with some context around the face, not a tight crop.

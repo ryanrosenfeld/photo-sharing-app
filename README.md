@@ -2,14 +2,15 @@
 
 An iOS app that automatically shares photos to friends who appear in them. When a new photo in your camera roll contains a linked friend's face, it's instantly delivered to them — no manual sharing required.
 
-Face matching runs entirely on-device (Apple Vision). Embeddings never leave the device.
+Face matching runs entirely on-device. Embeddings never leave the device.
 
 ## Tech Stack
 
 - **iOS 17+** — SwiftUI, Swift 6 strict concurrency
 - **Backend** — Supabase (PostgreSQL, Auth, Storage)
 - **Push Notifications** — APNs direct via Supabase Edge Functions
-- **Face Detection** — Apple Vision framework (on-device only)
+- **Face Detection** — Apple Vision (`VNDetectFaceRectanglesRequest`)
+- **Face Recognition** — MobileFaceNet via CoreML (bundled `.mlpackage`, ArcFace-trained)
 - **Project Generation** — XcodeGen (`project.yml` is source of truth)
 
 ## Getting Started
@@ -56,10 +57,13 @@ photo-sharing-app/
 ├── Secrets.template.swift       # Reference for required API keys
 ├── SPEC.md                      # Full product specification
 ├── ARCHITECTURE.md              # Tech stack, data model, decision log
+├── scripts/
+│   └── convert_mobilefacenet.py # ONNX → CoreML conversion (one-time)
 └── PhotoShare/
     ├── Auth/                    # Sign in with Apple, Google, email/password
     ├── Config/                  # Supabase client, Secrets
-    ├── FaceMatch/               # On-device face detection & enrollment
+    ├── FaceMatch/               # On-device face detection, enrollment, matching
+    ├── Resources/               # Bundled MobileFaceNet.mlpackage
     ├── Main/                    # Photos tab, Friends tab
     └── Models/                  # Shared data types
 ```

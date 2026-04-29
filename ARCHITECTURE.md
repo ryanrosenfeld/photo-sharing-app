@@ -2,7 +2,7 @@
 
 ## Overview
 
-iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push Notification service (APNs) for delivery. Face detection runs entirely on-device using Apple's Vision framework.
+iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push Notification service (APNs) for delivery. Face detection and recognition run entirely on-device — Vision for detection, a bundled MobileFaceNet CoreML model for identity embeddings.
 
 ---
 
@@ -16,7 +16,8 @@ iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push
 | Auth | Supabase Auth | Apple, Google, email/password |
 | File Storage | Supabase Storage | Photo uploads |
 | Push Notifications | APNs (direct) | Via Supabase Edge Functions |
-| Face Detection | Apple Vision (on-device) | Embeddings never leave device |
+| Face Detection | Apple Vision (on-device) | `VNDetectFaceRectanglesRequest` for bounding boxes |
+| Face Recognition | MobileFaceNet via CoreML | Bundled `.mlpackage`; 512-D ArcFace embeddings; on-device only |
 | Project Generation | XcodeGen | `project.yml` is source of truth |
 | Package Manager | Swift Package Manager | |
 
@@ -32,19 +33,27 @@ photo-sharing-app/
 ├── CLAUDE.md                    # Instructions for Claude sessions
 ├── Secrets.template.swift       # Copy → PhotoShare/Config/Secrets.swift and fill in
 ├── .gitignore
+├── scripts/
+│   └── convert_mobilefacenet.py # ONNX → CoreML conversion for the face model (one-time)
 └── PhotoShare/
     ├── PhotoShareApp.swift      # @main entry point; wires Google Sign-In URL handler
     ├── ContentView.swift        # Root router: loading → auth → main app
     ├── Config/
     │   ├── Secrets.swift        # Gitignored; holds API keys
     │   └── SupabaseClient.swift # Global `supabase` singleton
-    ├── Auth/
-    │   ├── AuthManager.swift    # @MainActor ObservableObject; owns session state
-    │   ├── WelcomeView.swift    # Marketing landing screen
-    │   ├── AuthView.swift       # Apple / Google / Email sign-in options
-    │   └── EmailAuthView.swift  # Email + password form (sign-in & sign-up)
+    ├── Auth/                    # Apple / Google / Email auth flow
+    ├── FaceMatch/
+    │   ├── FaceDetector.swift            # Vision face detection + MobileFaceNet embedding
+    │   ├── FaceEnrollmentStore.swift     # JSON persistence for [[Float]] embeddings
+    │   ├── FaceEnrollmentView/VM.swift   # Enrollment UI + flow (auto / manual)
+    │   ├── FaceProfileManager.swift      # Optional server-stored reference photos
+    │   ├── PhotoLibraryManager.swift     # Camera roll cursor + permissions
+    │   ├── AutoShareProcessor.swift      # End-to-end loop: detect → match → upload
+    │   └── FaceMatchSandboxView/VM.swift # Debug-only screen for tuning the matcher
+    ├── Resources/
+    │   └── MobileFaceNet.mlpackage       # Bundled CoreML face recognition model
     └── Main/
-        └── MainTabView.swift    # Tab shell + placeholder screens
+        └── MainTabView.swift    # Tab shell + Profile tab
 ```
 
 ---
@@ -94,18 +103,25 @@ device_tokens    id, user_id, apns_token (unique)
 
 ---
 
-## Push Notification Architecture (planned)
+## Photo Processing & Push Notification Pipeline
 
 ```
 Photo captured on device
-  → Face detection (on-device Vision)
-  → Match against enrolled friend embeddings (local)
-  → Upload photo to Supabase Storage
-  → Insert row into `photos` + `photo_recipients`
-  → Supabase database trigger fires Edge Function
-  → Edge Function looks up recipient APNs tokens
-  → Edge Function sends HTTP/2 request to APNs
-  → Recipient device receives push notification
+  → AutoShareProcessor wakes on app foreground
+  → For each new asset:
+      1. Load full-res image
+      2. Downsample to 1024px (orientation-normalized) for face processing
+      3. Vision face detection → bounding boxes
+      4. Crop each face (with 25% padding) and resize to 112×112
+      5. MobileFaceNet CoreML inference → 512-D embedding per face
+      6. Compare embeddings to each enrolled friend (Euclidean distance)
+  → If any match below threshold:
+      → Upload full-res photo to Supabase Storage
+      → Insert row into `photos` + `photo_recipients`
+      → Supabase database trigger fires Edge Function
+      → Edge Function looks up recipient APNs tokens
+      → Edge Function sends HTTP/2 request to APNs
+      → Recipient device receives push notification
 ```
 
 ---
@@ -178,6 +194,29 @@ See [ARCHITECTURE.md — Decision Log](#decision-log) section below.
 **Reasoning:**
 - The Photos tab is optimized for quickly reviewing and saving received photos — a more focused UX.
 - Link requests are relationship-management actions; Friends is the natural home.
+
+---
+
+### 2026-04-28 — Face recognition: MobileFaceNet (CoreML) over VNGenerateImageFeaturePrintRequest
+
+**Decision:** Bundle a MobileFaceNet CoreML model (insightface buffalo_sc / `w600k_mbf`, ArcFace-trained) for face identity embeddings. Vision is still used for face detection (`VNDetectFaceRectanglesRequest`).
+
+**Alternatives considered:** continuing with `VNGenerateImageFeaturePrintRequest`, FaceNet via CoreML, Create ML custom classifier, ARKit/TrueDepth.
+
+**Reasoning:**
+- `VNGenerateImageFeaturePrintRequest` is a general-purpose image similarity model, not a face recognition model. Same-person and different-person distance distributions overlapped in practice — no clean threshold existed.
+- MobileFaceNet was trained specifically with ArcFace loss to maximize the margin between same-identity and different-identity pairs. ~4 MB model; runs in ~25ms on A-series chips.
+- Apple has no public face *identity* API. Photos uses a private `PersonsUI` framework that is not exposed to third-party apps.
+- Create ML can only train classifiers over a fixed set of people; doesn't fit the open-set, per-friendship enrollment model.
+
+**Implementation notes:**
+- Pipeline: Vision detects face bounding box → crop with 25% padding → resize to 112×112 → CoreML inference → 512-D `[Float]` embedding
+- Images are normalized to `.up` orientation and downsampled to 1024px before processing (full-res photos OOM the device)
+- Enrollments are stored under a `face_enrollment_v2_` UserDefaults key prefix; old `VNFeaturePrintObservation` enrollments are silently ignored
+- The model file lives at `PhotoShare/Resources/MobileFaceNet.mlpackage`. Conversion is reproducible via `scripts/convert_mobilefacenet.py` (ONNX → PyTorch → CoreML)
+- A debug-only Face Match Sandbox screen (Profile → Debug → Face Match Sandbox) lets us inspect raw distances, face crops, and threshold behavior interactively
+
+**Trade-off accepted:** Embeddings are not L2-normalized at the model's output layer, so raw Euclidean distances live in a wider numeric range (~5–25) than for typical normalized models. The threshold is empirically tuned rather than landing in the textbook 0.3–0.4 range.
 
 ---
 
