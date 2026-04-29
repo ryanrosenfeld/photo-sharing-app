@@ -1,7 +1,6 @@
 import Photos
 import Supabase
 import UIKit
-import Vision
 
 // Orchestrates the full auto-share loop:
 //   1. Fetch new camera-roll photos since last run
@@ -48,7 +47,7 @@ final class AutoShareProcessor: ObservableObject {
                 continue
             }
 
-            let faceEmbeddings: [VNFeaturePrintObservation]
+            let faceEmbeddings: [[Float]]
             do {
                 faceEmbeddings = try await Task.detached(priority: .userInitiated) { [detector, image] in
                     try detector.allFaceEmbeddings(in: image)

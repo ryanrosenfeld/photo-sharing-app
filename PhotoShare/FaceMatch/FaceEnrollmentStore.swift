@@ -1,27 +1,22 @@
 import Foundation
-import Vision
 
 // Persists face embeddings locally per friend.
-// Embeddings are VNFeaturePrintObservation values archived via NSKeyedArchiver.
+// Embeddings are 128-D float vectors from MobileFaceNet, stored as JSON.
 // They never leave the device — this is the hard privacy constraint.
+//
+// Key prefix is "face_enrollment_v2_" to avoid collisions with the old
+// VNFeaturePrintObservation data stored under "face_enrollment_".
 struct FaceEnrollmentStore: Sendable {
-    private static let keyPrefix = "face_enrollment_"
+    private static let keyPrefix = "face_enrollment_v2_"
 
-    func save(_ observations: [VNFeaturePrintObservation], for friendId: UUID) throws {
-        let data = try NSKeyedArchiver.archivedData(
-            withRootObject: observations as NSArray,
-            requiringSecureCoding: true
-        )
+    func save(_ embeddings: [[Float]], for friendId: UUID) throws {
+        let data = try JSONEncoder().encode(embeddings)
         UserDefaults.standard.set(data, forKey: key(for: friendId))
     }
 
-    func load(for friendId: UUID) -> [VNFeaturePrintObservation]? {
+    func load(for friendId: UUID) -> [[Float]]? {
         guard let data = UserDefaults.standard.data(forKey: key(for: friendId)) else { return nil }
-        guard let array = try? NSKeyedUnarchiver.unarchivedObject(
-            ofClasses: [NSArray.self, VNFeaturePrintObservation.self],
-            from: data
-        ) as? NSArray else { return nil }
-        return array.compactMap { $0 as? VNFeaturePrintObservation }
+        return try? JSONDecoder().decode([[Float]].self, from: data)
     }
 
     func hasEnrollment(for friendId: UUID) -> Bool {

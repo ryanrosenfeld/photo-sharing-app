@@ -1,7 +1,6 @@
 #if DEBUG
 import PhotosUI
 import SwiftUI
-import Vision
 
 @MainActor
 final class FaceMatchSandboxViewModel: ObservableObject {
@@ -34,8 +33,8 @@ final class FaceMatchSandboxViewModel: ObservableObject {
 
     // MARK: - Private state
 
-    private var enrolledEmbeddings: [VNFeaturePrintObservation] = []
-    private var testEmbeddings: [VNFeaturePrintObservation] = []
+    private var enrolledEmbeddings: [[Float]] = []
+    private var testEmbeddings: [[Float]] = []
     private let detector = FaceDetector()
 
     // MARK: - Actions
@@ -98,7 +97,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
 
-        var embeddings: [VNFeaturePrintObservation] = []
+        var embeddings: [[Float]] = []
         var counts: [Int] = []
         for image in enrollmentImages {
             do {

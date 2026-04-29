@@ -1,49 +1,51 @@
+import CoreML
 import UIKit
 import Vision
 
-// VNFeaturePrintObservation is an immutable Obj-C class that Apple hasn't
-// annotated for Swift 6 concurrency. It's safe to send across actors.
-extension VNFeaturePrintObservation: @unchecked Sendable {}
+enum FaceDetectorError: Error, LocalizedError {
+    case modelNotFound
+
+    var errorDescription: String? {
+        "MobileFaceNet.mlpackage is not in the app bundle. Run scripts/convert_mobilefacenet.py then add the output to the Xcode target."
+    }
+}
 
 // FaceDetector is a stateless struct — safe to capture into Task.detached.
 struct FaceDetector: Sendable {
 
-    // Distance below which two embeddings are considered the same person.
-    // Lower = stricter. Tune once real data is available.
-    static let defaultMatchThreshold: Float = 0.55
+    // Euclidean distance threshold for MobileFaceNet embeddings.
+    // Same person across varied lighting/pose: ~0.3–0.4. Different people: >0.6.
+    static let defaultMatchThreshold: Float = 0.35
 
     // MARK: - Public API
 
-    /// Returns the feature-print embedding for the largest detected face in `image`.
+    /// Returns the 128-D MobileFaceNet embedding for the largest detected face in `image`.
     /// Used during enrollment: the friend is assumed to be the primary subject.
-    func largestFaceEmbedding(in image: UIImage) throws -> VNFeaturePrintObservation? {
+    func largestFaceEmbedding(in image: UIImage) throws -> [Float]? {
         let faces = try detectFaces(in: image)
         guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else {
             return nil
         }
-        return try featurePrint(croppingTo: largest.boundingBox, in: image)
+        return try embedding(croppingTo: largest.boundingBox, in: image)
     }
 
-    /// Returns embeddings for every detected face in `image`.
+    /// Returns 128-D embeddings for every detected face in `image`.
     /// Used when scanning camera-roll photos to find matching friends.
-    func allFaceEmbeddings(in image: UIImage) throws -> [VNFeaturePrintObservation] {
+    func allFaceEmbeddings(in image: UIImage) throws -> [[Float]] {
         try detectFaces(in: image).compactMap { face in
-            try featurePrint(croppingTo: face.boundingBox, in: image)
+            try embedding(croppingTo: face.boundingBox, in: image)
         }
     }
 
-    /// Returns all pairwise distances between photoFaces and enrolled embeddings, sorted ascending.
+    /// Returns all pairwise Euclidean distances between photoFaces and enrolled embeddings, sorted ascending.
     func pairwiseDistances(
-        photoFaces: [VNFeaturePrintObservation],
-        enrolled: [VNFeaturePrintObservation]
+        photoFaces: [[Float]],
+        enrolled: [[Float]]
     ) -> [Float] {
         var distances: [Float] = []
         for face in photoFaces {
             for ref in enrolled {
-                var distance: Float = 0
-                if (try? face.computeDistance(&distance, to: ref)) != nil {
-                    distances.append(distance)
-                }
+                distances.append(euclidean(face, ref))
             }
         }
         return distances.sorted()
@@ -51,21 +53,38 @@ struct FaceDetector: Sendable {
 
     /// True if any face in `photoFaces` is within `threshold` of any embedding in `enrolled`.
     func isMatch(
-        photoFaces: [VNFeaturePrintObservation],
-        enrolled: [VNFeaturePrintObservation],
+        photoFaces: [[Float]],
+        enrolled: [[Float]],
         threshold: Float = defaultMatchThreshold
     ) -> Bool {
-        for face in photoFaces {
-            for ref in enrolled {
-                var distance: Float = 0
-                guard (try? face.computeDistance(&distance, to: ref)) != nil else { continue }
-                if distance < threshold { return true }
-            }
-        }
-        return false
+        pairwiseDistances(photoFaces: photoFaces, enrolled: enrolled).first.map { $0 < threshold } ?? false
     }
 
+    // MARK: - CoreML model
+
+    // Loaded once at first use. Returns nil (and surfaces FaceDetectorError.modelNotFound) if the
+    // mlpackage hasn't been added to the Xcode target yet.
+    private static let model: MLModel? = {
+        guard let url = Bundle.main.url(forResource: "MobileFaceNet", withExtension: "mlmodelc") else {
+            return nil
+        }
+        return try? MLModel(contentsOf: url)
+    }()
+
     // MARK: - Internals
+
+    private func embedding(croppingTo visionRect: CGRect, in image: UIImage) throws -> [Float]? {
+        guard let model = Self.model else { throw FaceDetectorError.modelNotFound }
+        guard let crop = image.croppingToVisionRect(visionRect),
+              let resized = crop.resized(to: CGSize(width: 112, height: 112)),
+              let pixelBuffer = resized.pixelBuffer(width: 112, height: 112) else { return nil }
+
+        let input = try MLDictionaryFeatureProvider(dictionary: ["face": pixelBuffer])
+        let output = try model.prediction(from: input)
+
+        guard let array = output.featureValue(for: "embedding")?.multiArrayValue else { return nil }
+        return (0..<array.count).map { Float(truncating: array[$0]) }
+    }
 
     private func detectFaces(in image: UIImage) throws -> [VNFaceObservation] {
         guard let cgImage = image.cgImage else { return [] }
@@ -79,17 +98,12 @@ struct FaceDetector: Sendable {
         return request.results ?? []
     }
 
-    private func featurePrint(croppingTo visionRect: CGRect, in image: UIImage) throws -> VNFeaturePrintObservation? {
-        guard let crop = image.croppingToVisionRect(visionRect),
-              let cropCG = crop.cgImage else { return nil }
-        let request = VNGenerateImageFeaturePrintRequest()
-        let handler = VNImageRequestHandler(cgImage: cropCG, options: [:])
-        try handler.perform([request])
-        return request.results?.first
+    private func euclidean(_ a: [Float], _ b: [Float]) -> Float {
+        zip(a, b).reduce(0) { $0 + ($1.0 - $1.1) * ($1.0 - $1.1) }.squareRoot()
     }
 }
 
-// MARK: - UIImage Vision crop
+// MARK: - UIImage helpers
 
 private extension UIImage {
     /// Crops to a Vision-normalized bounding box (origin at bottom-left).
@@ -104,6 +118,44 @@ private extension UIImage {
         )
         guard let cropped = cgImage?.cropping(to: rect) else { return nil }
         return UIImage(cgImage: cropped, scale: scale, orientation: imageOrientation)
+    }
+
+    func resized(to size: CGSize) -> UIImage? {
+        UIGraphicsImageRenderer(size: size).image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+        }
+    }
+
+    /// Returns a 32BGRA CVPixelBuffer at the requested dimensions.
+    /// CoreML handles the BGRA→BGR channel reorder and [-1,1] normalization (baked in at model conversion time).
+    func pixelBuffer(width: Int, height: Int) -> CVPixelBuffer? {
+        guard let cgImage else { return nil }
+        var buffer: CVPixelBuffer?
+        let attrs: [CFString: Any] = [
+            kCVPixelBufferCGImageCompatibilityKey: true,
+            kCVPixelBufferCGBitmapContextCompatibilityKey: true,
+        ]
+        guard CVPixelBufferCreate(
+            kCFAllocatorDefault, width, height,
+            kCVPixelFormatType_32BGRA,
+            attrs as CFDictionary,
+            &buffer
+        ) == kCVReturnSuccess, let pixelBuffer = buffer else { return nil }
+
+        CVPixelBufferLockBaseAddress(pixelBuffer, [])
+        defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, []) }
+
+        guard let ctx = CGContext(
+            data: CVPixelBufferGetBaseAddress(pixelBuffer),
+            width: width, height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: CVPixelBufferGetBytesPerRow(pixelBuffer),
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return nil }
+
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return pixelBuffer
     }
 }
 
