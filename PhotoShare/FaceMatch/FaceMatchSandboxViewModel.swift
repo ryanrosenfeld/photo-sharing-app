@@ -20,7 +20,9 @@ final class FaceMatchSandboxViewModel: ObservableObject {
     // MARK: - Processed images
 
     @Published var enrollmentImages: [UIImage] = []
+    @Published var enrollmentFaceCrops: [Int: UIImage] = [:]  // keyed by image index
     @Published var testImage: UIImage?
+    @Published var testFaceCrops: [UIImage] = []
 
     // MARK: - Results
 
@@ -51,6 +53,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         enrollmentImages = []
         enrolledEmbeddings = []
         enrollmentFaceCounts = []
+        enrollmentFaceCrops = [:]
         distanceResults = []
         errorMessage = nil
 
@@ -81,6 +84,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         testPickerItem = []
         testImage = nil
         testEmbeddings = []
+        testFaceCrops = []
         testFaceCount = 0
         distanceResults = []
     }
@@ -107,13 +111,17 @@ final class FaceMatchSandboxViewModel: ObservableObject {
 
         var embeddings: [(imageIndex: Int, embedding: [Float])] = []
         var counts: [Int] = []
+        var crops: [Int: UIImage] = [:]
         for (imageIndex, image) in enrollmentImages.enumerated() {
             do {
-                let embedding = try await Task.detached(priority: .userInitiated) { [detector, image] in
-                    try detector.largestFaceEmbedding(in: image)
+                let result = try await Task.detached(priority: .userInitiated) { [detector, image] in
+                    (try detector.largestFaceEmbedding(in: image),
+                     try detector.largestFaceCrop(in: image))
                 }.value
+                let (embedding, crop) = result
                 counts.append(embedding != nil ? 1 : 0)
                 if let e = embedding { embeddings.append((imageIndex: imageIndex, embedding: e)) }
+                if let c = crop { crops[imageIndex] = c }
             } catch {
                 counts.append(0)
                 errorMessage = "Detection error: \(error.localizedDescription)"
@@ -121,6 +129,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         }
         enrolledEmbeddings = embeddings
         enrollmentFaceCounts = counts
+        enrollmentFaceCrops = crops
     }
 
     private func computeTestEmbeddings() async {
@@ -129,13 +138,17 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         defer { isProcessing = false }
 
         do {
-            let embeddings = try await Task.detached(priority: .userInitiated) { [detector, image] in
-                try detector.allFaceEmbeddings(in: image)
+            let result = try await Task.detached(priority: .userInitiated) { [detector, image] in
+                (try detector.allFaceEmbeddings(in: image),
+                 try detector.allFaceCrops(in: image))
             }.value
+            let (embeddings, crops) = result
             testEmbeddings = embeddings
+            testFaceCrops = crops
             testFaceCount = embeddings.count
         } catch {
             testEmbeddings = []
+            testFaceCrops = []
             testFaceCount = 0
             errorMessage = "Detection error: \(error.localizedDescription)"
         }

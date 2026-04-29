@@ -52,6 +52,28 @@ struct FaceMatchSandboxView: View {
                     .padding(.vertical, 4)
                 }
             }
+
+            if !vm.enrollmentFaceCrops.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Detected face crops")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(vm.enrollmentFaceCrops.keys.sorted()), id: \.self) { idx in
+                                if let crop = vm.enrollmentFaceCrops[idx] {
+                                    Image(uiImage: crop)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 56, height: 56)
+                                        .clipped()
+                                        .cornerRadius(6)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } header: {
             Text("Enrollment Photos")
         } footer: {
@@ -87,6 +109,33 @@ struct FaceMatchSandboxView: View {
                             Text("No faces found — matching won't run.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                if !vm.testFaceCrops.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Detected face crops")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(Array(vm.testFaceCrops.enumerated()), id: \.offset) { idx, crop in
+                                    VStack(spacing: 2) {
+                                        Image(uiImage: crop)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 56, height: 56)
+                                            .clipped()
+                                            .cornerRadius(6)
+                                        if vm.testFaceCount > 1 {
+                                            Text("Face \(idx + 1)")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -130,8 +179,10 @@ struct FaceMatchSandboxView: View {
 
                     ForEach(Array(vm.distanceResults.enumerated()), id: \.element.id) { index, result in
                         HStack(spacing: 10) {
-                            // Enrollment photo thumbnail
-                            if let img = vm.enrollmentImages[safe: result.enrollmentImageIndex] {
+                            // Face crop from enrollment photo (falls back to full photo if crop unavailable)
+                            let cropImg = vm.enrollmentFaceCrops[result.enrollmentImageIndex]
+                                ?? vm.enrollmentImages[safe: result.enrollmentImageIndex]
+                            if let img = cropImg {
                                 Image(uiImage: img)
                                     .resizable()
                                     .scaledToFill()

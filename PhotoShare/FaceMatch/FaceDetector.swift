@@ -39,6 +39,18 @@ struct FaceDetector: Sendable {
         }
     }
 
+    /// Returns the cropped face image used for the largest-face embedding (mirrors enrollment logic).
+    func largestFaceCrop(in image: UIImage) throws -> UIImage? {
+        let faces = try detectFaces(in: image)
+        guard let largest = faces.max(by: { $0.boundingBox.area < $1.boundingBox.area }) else { return nil }
+        return image.croppingToVisionRect(largest.boundingBox)
+    }
+
+    /// Returns cropped face images for every detected face in `image` (mirrors allFaceEmbeddings order).
+    func allFaceCrops(in image: UIImage) throws -> [UIImage] {
+        try detectFaces(in: image).compactMap { image.croppingToVisionRect($0.boundingBox) }
+    }
+
     /// Returns all pairwise Euclidean distances between photoFaces and enrolled embeddings, sorted ascending.
     func pairwiseDistances(
         photoFaces: [[Float]],
@@ -107,7 +119,7 @@ struct FaceDetector: Sendable {
 
 // MARK: - UIImage helpers
 
-private extension UIImage {
+extension UIImage {
     /// Crops to a Vision-normalized bounding box (origin at bottom-left).
     func croppingToVisionRect(_ visionRect: CGRect) -> UIImage? {
         let w = size.width * scale
