@@ -69,7 +69,7 @@ sim() { # name -> udid (create if missing)
 A=$(sim verify-alice); B=$(sim verify-bob)
 # Personas run one simulator at a time (16 GB MacBook Air thrashes with 2 sims + Xcode + Docker);
 # the hard cap is 2, and the personas are independent apart from the shared backend.
-xcrun simctl shutdown all 2>/dev/null
+for n in "$A" "$B"; do xcrun simctl shutdown "$n" 2>/dev/null; done
 for u in $A $B; do xcrun simctl erase "$u"; done
 boot() { xcrun simctl boot "$1" 2>/dev/null; xcrun simctl bootstatus "$1" -b >/dev/null 2>&1; }
 log "simulators: alice=$A bob=$B"

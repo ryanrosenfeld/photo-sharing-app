@@ -1,52 +1,35 @@
 import Photos
 import SwiftUI
 
-/// Photos waiting for the user's OK before anything is uploaded.
+/// Photos waiting for the user's OK before anything is uploaded. Presented as a sheet from the Friends tab.
 struct ReviewQueueView: View {
     @EnvironmentObject var store: ReviewQueueStore
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
     @State private var confirmSendAll = false
     @State private var confirmDiscardAll = false
 
     private var senderId: UUID? { authManager.session?.user.id }
 
     var body: some View {
-        Group {
-            if store.items.isEmpty {
-                ContentUnavailableView(
-                    "All Caught Up",
-                    systemImage: "checkmark.circle",
-                    description: Text("Photos you want to check before sharing will wait here.")
-                )
-                .accessibilityIdentifier("review.empty")
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 20) {
-                        Label("Nothing leaves your phone until you send it.", systemImage: "lock.fill")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                        ForEach(store.items) { item in
-                            ReviewCard(item: item)
+        ZStack {
+            OttoColor.canvas.ignoresSafeArea()
+            VStack(spacing: 0) {
+                header
+                if store.items.isEmpty {
+                    empty
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            Label("Nothing leaves your phone until you send it.", systemImage: "lock.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(OttoColor.barkSoft)
+                            ForEach(store.items) { item in
+                                ReviewCard(item: item)
+                            }
                         }
+                        .padding(16)
                     }
-                    .padding()
-                }
-            }
-        }
-        .navigationTitle("Review")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if store.items.count > 1 {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button("Send All (\(store.items.count))", systemImage: "paperplane") { confirmSendAll = true }
-                            .accessibilityIdentifier("review.sendAll")
-                        Button("Discard All", systemImage: "trash", role: .destructive) { confirmDiscardAll = true }
-                            .accessibilityIdentifier("review.discardAll")
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                    .accessibilityIdentifier("review.bulkMenu")
                 }
             }
         }
@@ -74,6 +57,61 @@ struct ReviewQueueView: View {
             Text(store.error ?? "")
         }
     }
+
+    private var header: some View {
+        HStack(alignment: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                OttoEyebrow(text: "Review")
+                Text("Ready to send?")
+                    .font(OttoFont.serifBold(size: 28))
+                    .foregroundStyle(OttoColor.ink)
+            }
+            Spacer()
+            if store.items.count > 1 {
+                Menu {
+                    Button("Send All (\(store.items.count))", systemImage: "paperplane") { confirmSendAll = true }
+                        .accessibilityIdentifier("review.sendAll")
+                    Button("Discard All", systemImage: "trash", role: .destructive) { confirmDiscardAll = true }
+                        .accessibilityIdentifier("review.discardAll")
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(OttoColor.ink)
+                        .frame(width: 38, height: 38)
+                        .background(OttoColor.chip)
+                        .clipShape(Circle())
+                }
+                .accessibilityIdentifier("review.bulkMenu")
+            }
+            Button("Done") { dismiss() }
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(OttoColor.sage)
+                .padding(.leading, 8)
+                .accessibilityIdentifier("review.done")
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 22)
+        .padding(.bottom, 10)
+    }
+
+    private var empty: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            OttoMascot(pose: .sleeping, width: 200)
+            Text("All caught up.")
+                .font(OttoFont.serifBoldItalic(size: 22))
+                .foregroundStyle(OttoColor.ink)
+            Text("Photos you want to check before sharing will wait here.")
+                .font(.system(size: 14))
+                .foregroundStyle(OttoColor.bark)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("review.empty")
+    }
 }
 
 private struct ReviewCard: View {
@@ -86,69 +124,64 @@ private struct ReviewCard: View {
     private var isSending: Bool { store.sendingIds.contains(item.id) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            LibraryThumbnail(assetId: item.assetId)
-                .frame(height: 260)
-                .frame(maxWidth: .infinity)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-
-            Text(item.takenAt.formatted(date: .abbreviated, time: .shortened))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Send to")
-                    .font(.subheadline.weight(.semibold))
-                FlowChips(recipients: item.recipients, excluded: $excluded)
-            }
-
-            HStack(spacing: 10) {
-                Button {
-                    store.reject(item)
-                } label: {
-                    Text("Discard")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.secondarySystemFill))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-                .disabled(isSending)
-                .accessibilityIdentifier("review.reject")
-
-                Button {
-                    guard let senderId = authManager.session?.user.id else { return }
-                    let ids = included
-                    Task { await store.approve(item, to: ids, senderId: senderId) }
-                } label: {
-                    Group {
-                        if isSending {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Send").font(.subheadline.weight(.semibold))
-                        }
-                    }
+        OttoSectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                LibraryThumbnail(assetId: item.assetId)
+                    .frame(height: 260)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(included.isEmpty ? Color.secondary.opacity(0.3) : Color.accentColor)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                Text(item.takenAt.formatted(date: .abbreviated, time: .shortened))
+                    .font(.system(size: 12))
+                    .foregroundStyle(OttoColor.barkSoft)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    OttoEyebrow(text: "Send to")
+                    RecipientChips(recipients: item.recipients, excluded: $excluded)
                 }
-                .buttonStyle(.plain)
-                .disabled(included.isEmpty || isSending)
-                .accessibilityIdentifier("review.approve")
+
+                HStack(spacing: 10) {
+                    Button {
+                        store.reject(item)
+                    } label: {
+                        Text("Discard")
+                            .font(.system(size: 15, weight: .medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .foregroundStyle(OttoColor.bark)
+                            .overlay(Capsule().stroke(OttoColor.line, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isSending)
+                    .accessibilityIdentifier("review.reject")
+
+                    Button {
+                        guard let senderId = authManager.session?.user.id else { return }
+                        let ids = included
+                        Task { await store.approve(item, to: ids, senderId: senderId) }
+                    } label: {
+                        Group {
+                            if isSending { ProgressView().tint(.white) } else { Text("Send").font(.system(size: 15, weight: .semibold)) }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(included.isEmpty ? OttoColor.sage.opacity(0.35) : OttoColor.sage)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(included.isEmpty || isSending)
+                    .accessibilityIdentifier("review.approve")
+                }
             }
+            .padding(12)
         }
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("review.row")
     }
 }
 
-private struct FlowChips: View {
+private struct RecipientChips: View {
     let recipients: [ReviewItem.Recipient]
     @Binding var excluded: Set<UUID>
 
@@ -160,11 +193,11 @@ private struct FlowChips: View {
                     if on { excluded.insert(r.id) } else { excluded.remove(r.id) }
                 } label: {
                     Label(r.name, systemImage: on ? "checkmark.circle.fill" : "circle")
-                        .font(.subheadline)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(on ? Color.accentColor.opacity(0.15) : Color(.secondarySystemFill))
-                        .foregroundStyle(on ? Color.accentColor : .secondary)
+                        .font(.system(size: 14, weight: .medium))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(on ? OttoColor.sage.opacity(0.18) : OttoColor.chip)
+                        .foregroundStyle(on ? OttoColor.sageDark : OttoColor.barkSoft)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -182,11 +215,11 @@ private struct LibraryThumbnail: View {
 
     var body: some View {
         ZStack {
-            Color(.secondarySystemFill)
+            OttoColor.chip
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                ProgressView()
+                ProgressView().tint(OttoColor.sage)
             }
         }
         .clipped()
@@ -198,12 +231,11 @@ private struct LibraryThumbnail: View {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
         options.isNetworkAccessAllowed = true
-        let size = CGSize(width: 900, height: 900)
         let stream = AsyncStream<UIImage> { cont in
-            PHImageManager.default().requestImage(for: asset, targetSize: size, contentMode: .aspectFill, options: options) { img, info in
+            PHImageManager.default().requestImage(for: asset, targetSize: CGSize(width: 900, height: 900),
+                                                  contentMode: .aspectFill, options: options) { img, info in
                 if let img { cont.yield(img) }
-                let degraded = (info?[PHImageResultIsDegradedKey] as? Bool) ?? false
-                if !degraded { cont.finish() }
+                if !((info?[PHImageResultIsDegradedKey] as? Bool) ?? false) { cont.finish() }
             }
         }
         for await img in stream { image = img }

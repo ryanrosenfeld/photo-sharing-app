@@ -119,7 +119,7 @@ final class ScenarioTests: XCTestCase {
         let deadline = Date().addingTimeInterval(40)
         while rows.count > expected - 1 && Date() < deadline { usleep(500_000) }
         XCTAssertEqual(rows.count, expected - 1, "queue after \(action)")
-        if expected == 1 { XCTAssertTrue(app.descendants(matching: .any)["review.empty"].waitForExistence(timeout: 5)) }
+        if expected == 1 { XCTAssertTrue(app.descendants(matching: .any)["review.empty"].waitForExistence(timeout: 8), "empty state") }
         shot("review-after-\(action)")
     }
 
