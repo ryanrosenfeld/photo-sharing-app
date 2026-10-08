@@ -6,53 +6,51 @@ struct WelcomeView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 32) {
-                Spacer()
+            ZStack {
+                OttoColor.canvas.ignoresSafeArea()
 
-                VStack(spacing: 16) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 64))
-                        .foregroundStyle(.primary)
+                VStack(spacing: 0) {
+                    Spacer()
 
-                    Text("PhotoShare")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                    VStack(spacing: 32) {
+                        OttoMascot(pose: .hero, width: 220)
 
-                    Text("Photos with your friends,\nautomatically delivered.")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
+                        VStack(spacing: 14) {
+                            Text("Shared photos,\nottomatically.")
+                                .font(OttoFont.serifBoldItalic(size: 38))
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(2)
+                                .foregroundStyle(OttoColor.ink)
 
-                Spacer()
-
-                VStack(spacing: 12) {
-                    Button {
-                        showGetStarted = true
-                    } label: {
-                        Text("Get Started")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(.primary)
-                            .foregroundStyle(.background)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            Text("When you're in the photo,\nyou get the photo.")
+                                .font(.system(size: 17))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(OttoColor.bark)
+                                .lineSpacing(2)
+                        }
                     }
 
-                    Button {
-                        showSignIn = true
-                    } label: {
-                        Text("Sign In")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(.secondary.opacity(0.15))
-                            .foregroundStyle(.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    Spacer()
+
+                    VStack(spacing: 12) {
+                        OttoPillButton(title: "Get started") {
+                            showGetStarted = true
+                        }
+
+                        Button {
+                            showSignIn = true
+                        } label: {
+                            Text("Already have an account? ")
+                                .foregroundStyle(OttoColor.barkSoft) +
+                            Text("Sign in")
+                                .foregroundStyle(OttoColor.sage)
+                                .fontWeight(.medium)
+                        }
+                        .font(.system(size: 14))
                     }
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 48)
                 }
-                .padding(.horizontal, 32)
-                .padding(.bottom, 48)
             }
             .navigationDestination(isPresented: $showGetStarted) {
                 AuthView()

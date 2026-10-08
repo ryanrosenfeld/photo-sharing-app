@@ -1,25 +1,27 @@
-# PhotoShare — Architecture
+# PhotoShare — Architecture v2
 
 ## Overview
 
-iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push Notification service (APNs) for delivery. Face detection and recognition run entirely on-device — Vision for detection, a bundled MobileFaceNet CoreML model for identity embeddings.
+iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push Notification service (APNs) for delivery. Face detection and recognition run entirely on-device — Vision for detection, a bundled MobileFaceNet CoreML model for identity embeddings. All shared photos and face reference photos are end-to-end encrypted; the server stores only encrypted blobs it cannot read.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology | Notes |
-|---|---|---|
-| UI | SwiftUI | iOS 17+ deployment target |
-| Language | Swift 6 | Strict concurrency enabled |
-| Backend / DB | Supabase (PostgreSQL) | Hosted; see decision log |
-| Auth | Supabase Auth | Apple, Google, email/password |
-| File Storage | Supabase Storage | Photo uploads |
-| Push Notifications | APNs (direct) | Via Supabase Edge Functions |
-| Face Detection | Apple Vision (on-device) | `VNDetectFaceRectanglesRequest` for bounding boxes |
-| Face Recognition | MobileFaceNet via CoreML | Bundled `.mlpackage`; 512-D ArcFace embeddings; on-device only |
-| Project Generation | XcodeGen | `project.yml` is source of truth |
-| Package Manager | Swift Package Manager | |
+| Layer                   | Technology                                     | Notes                                                                                            |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| UI                      | SwiftUI                                        | iOS 17+ deployment target                                                                        |
+| Language                | Swift 6                                        | Strict concurrency enabled                                                                       |
+| Backend / DB            | Supabase (PostgreSQL)                          | Hosted                                                                                           |
+| Auth                    | Supabase Auth                                  | Apple, Google, email/password                                                                    |
+| File Storage            | Supabase Storage                               | Encrypted photo blobs + encrypted face reference photo blobs                                     |
+| Push Notifications      | APNs (direct)                                  | Via Supabase Edge Functions                                                                      |
+| Face Detection          | Apple Vision (on-device)                       | `VNDetectFaceRectanglesRequest` for bounding boxes                                               |
+| Face Recognition        | MobileFaceNet via CoreML                       | Bundled `.mlpackage`; 512-D ArcFace embeddings; on-device only                                   |
+| Photo Encryption        | Asymmetric per-user keypair                    | Private key in Keychain + iCloud Keychain sync; encrypt to recipient public key at send time     |
+| Face Profile Encryption | Symmetric key + per-friend asymmetric wrapping | Reference photos encrypted with symmetric key; symmetric key wrapped to each friend's public key |
+| Project Generation      | XcodeGen                                       | `project.yml` is source of truth                                                                 |
+| Package Manager         | Swift Package Manager                          |                                                                                                  |
 
 ---
 
@@ -27,33 +29,41 @@ iOS-only SwiftUI app backed by Supabase (database, auth, storage) and Apple Push
 
 ```
 photo-sharing-app/
-├── project.yml                  # XcodeGen config — edit this, not the .xcodeproj
-├── SPEC.md                      # Product spec
-├── ARCHITECTURE.md              # This file
-├── CLAUDE.md                    # Instructions for Claude sessions
-├── Secrets.template.swift       # Copy → PhotoShare/Config/Secrets.swift and fill in
+├── project.yml                    # XcodeGen config — edit this, not the .xcodeproj
+├── SPEC.md                        # Product spec
+├── ARCHITECTURE.md                # This file
+├── CLAUDE.md                      # Instructions for Claude sessions
+├── Secrets.template.swift         # Copy → PhotoShare/Config/Secrets.swift and fill in
 ├── .gitignore
 ├── scripts/
-│   └── convert_mobilefacenet.py # ONNX → CoreML conversion for the face model (one-time)
+│   └── convert_mobilefacenet.py   # ONNX → CoreML conversion for the face model (one-time)
 └── PhotoShare/
-    ├── PhotoShareApp.swift      # @main entry point; wires Google Sign-In URL handler
-    ├── ContentView.swift        # Root router: loading → auth → main app
+    ├── PhotoShareApp.swift         # @main entry point; wires auth URL handlers
+    ├── ContentView.swift           # Root router: loading → auth → onboarding → main app
     ├── Config/
-    │   ├── Secrets.swift        # Gitignored; holds API keys
-    │   └── SupabaseClient.swift # Global `supabase` singleton
-    ├── Auth/                    # Apple / Google / Email auth flow
+    │   ├── Secrets.swift           # Gitignored; holds API keys
+    │   └── SupabaseClient.swift    # Global `supabase` singleton
+    ├── Auth/                       # Apple / Google / Email auth flow
+    ├── Crypto/
+    │   ├── KeyPairManager.swift    # Keypair generation, Keychain storage, iCloud Keychain sync, public key upload
+    │   ├── PhotoEncryption.swift   # Encrypt/decrypt photo blobs to/from recipient public key
+    │   └── FaceProfileCrypto.swift # Symmetric key generation, per-friend key wrapping, encrypt/decrypt reference photos
     ├── FaceMatch/
-    │   ├── FaceDetector.swift            # Vision face detection + MobileFaceNet embedding
-    │   ├── FaceEnrollmentStore.swift     # JSON persistence for [[Float]] embeddings
-    │   ├── FaceEnrollmentView/VM.swift   # Enrollment UI + flow (auto / manual)
-    │   ├── FaceProfileManager.swift      # Optional server-stored reference photos
-    │   ├── PhotoLibraryManager.swift     # Camera roll cursor + permissions
-    │   ├── AutoShareProcessor.swift      # End-to-end loop: detect → match → upload
-    │   └── FaceMatchSandboxView/VM.swift # Debug-only screen for tuning the matcher
+    │   ├── FaceDetector.swift              # Vision face detection + MobileFaceNet embedding
+    │   ├── FaceEnrollmentStore.swift       # JSON persistence for [[Float]] embeddings per friend
+    │   ├── FaceProfileSetupView/VM.swift   # Required onboarding step: select + upload encrypted reference photos
+    │   ├── FaceProfileManager.swift        # Manages encrypted reference photo upload, symmetric key, per-friend key distribution
+    │   ├── FaceEnrollmentSync.swift        # On friendship acceptance: fetch + decrypt friend's reference photos → generate embeddings → discard photos
+    │   ├── PhotoLibraryManager.swift       # Camera roll cursor + permissions
+    │   ├── AutoShareProcessor.swift        # End-to-end loop: detect → match → encrypt → upload
+    │   └── FaceMatchSandboxView/VM.swift   # Debug-only screen for tuning the matcher
     ├── Resources/
-    │   └── MobileFaceNet.mlpackage       # Bundled CoreML face recognition model
+    │   └── MobileFaceNet.mlpackage         # Bundled CoreML face recognition model
     └── Main/
-        └── MainTabView.swift    # Tab shell + Profile tab
+        ├── MainTabView.swift               # Tab shell (Photos / Friends / Profile)
+        ├── Photos/                         # Received photos feed, bulk save, expiry warnings
+        ├── Friends/                        # Friends list, toggles, friend requests, manual review queue
+        └── Profile/                        # Account, reference photos, plan status, settings
 ```
 
 ---
@@ -63,43 +73,135 @@ photo-sharing-app/
 ```
 App launch
   └─ ContentView checks AuthManager.session
-       ├─ loading   → ProgressView
-       ├─ nil       → WelcomeView → AuthView
-       │                 ├─ Sign in with Apple  (native ASAuthorization → Supabase idToken)
-       │                 ├─ Sign in with Google (GIDSignIn → Supabase idToken)
-       │                 └─ Email / Password    → EmailAuthView → Supabase signIn/signUp
-       └─ present   → MainTabView
+       ├─ loading    → ProgressView
+       ├─ nil        → WelcomeView → AuthView
+       │                  ├─ Sign in with Apple  (native ASAuthorization → Supabase idToken)
+       │                  ├─ Sign in with Google (GIDSignIn → Supabase idToken)
+       │                  └─ Email / Password    → EmailAuthView → Supabase signIn/signUp
+       └─ present    → check onboarding completion flag
+                           ├─ incomplete → OnboardingFlow
+                           │                  1. Profile setup
+                           │                  2. Face profile setup (required — hard gate)
+                           │                  3. Photo Library permission
+                           │                  4. First friend prompt
+                           │                  5. Notifications permission
+                           └─ complete   → MainTabView
 ```
 
 - Apple Sign In uses a SHA-256 nonce for replay protection (required by Supabase)
 - Google Sign In uses the native GIDSignIn SDK; token passed directly to Supabase
 - Supabase `authStateChanges` async stream keeps `AuthManager.session` live
+- Keypair is generated silently during auth (step 2 of onboarding), stored in Keychain with iCloud Keychain sync enabled; public key uploaded to `profiles` table
 
 ---
 
 ## Data Model
 
-See `supabase/migrations/20260425000000_initial_schema.sql` for the full schema with RLS policies.
+See `supabase/migrations/` for the full schema with RLS policies.
 
 ```
-profiles         id (→ auth.users), display_name, avatar_url, plan (free|pro),
-                 face_profile_enabled (bool, default false)
-links            id, sender_id, recipient_id, status (pending|active|paused|declined)
-                 unique(sender_id, recipient_id) — directional, one row per direction
-photos           id, sender_id, storage_path, taken_at, location_lat/lng, expires_at
-photo_recipients (photo_id, recipient_id) PK, delivered_at, viewed_at
-device_tokens    id, user_id, apns_token (unique)
+profiles           id (→ auth.users), display_name, avatar_url, plan (free|pro),
+                   public_key (base64 DER — user's asymmetric public key)
+
+friendships        id, requester_id, recipient_id, status (pending|active|declined)
+                   unique(requester_id, recipient_id) — one row per pair, requester is lower UUID by convention
+
+friendship_keys    friendship_id, user_id, encrypted_symmetric_key (base64)
+                   — stores each user's copy of the other's face profile symmetric key, wrapped to their public key
+                   — two rows per active friendship (one per direction)
+
+send_toggles       friendship_id, user_id, enabled (bool, default true)
+                   — whether this user is sending photos to the other person in this friendship
+
+receive_toggles    friendship_id, user_id, enabled (bool, default true)
+                   — whether this user is accepting photos from the other person in this friendship
+
+manual_review      friendship_id, user_id, enabled (bool, default false)
+                   — per-friend manual review override; global setting lives in profiles or UserDefaults
+
+photos             id, sender_id, storage_path, taken_at, location_lat/lng, expires_at
+                   — storage_path points to encrypted blob in `photos` bucket
+
+photo_recipients   (photo_id, recipient_id) PK, delivered_at, viewed_at
+
+device_tokens      id, user_id, apns_token (unique)
+
+face_profile_keys  user_id PK, encrypted_symmetric_key (base64)
+                   — user's own copy of their face profile symmetric key, wrapped to their own public key
+                   — separate from friendship_keys; allows user to re-derive key on new device
 ```
 
 **Supabase Storage buckets:**
-- `photos` — shared photos (existing)
-- `face-profiles` — optional user reference photos at path `{user_id}/{uuid}.jpg`; readable by authenticated users, writable only by the owner
+
+- `photos` — encrypted shared photo blobs at path `{sender_id}/{photo_id}`; service-role write only; recipient read via signed URL
+- `face-profiles` — encrypted face reference photo blobs at path `{user_id}/{uuid}`; owner write only; friend read gated by RLS (friendship must be active)
 
 **Key RLS rules:**
-- `links` INSERT enforces the free tier 3-link limit via a count subquery in the policy
-- `photo_recipients` INSERT is service-role only (Edge Function); no client insert policy
-- `device_tokens` is fully owner-scoped
-- `profiles` is publicly readable (needed for friend search)
+
+- `friendships` INSERT: free tier limit of 3 active friendships with send_toggle ON enforced via count subquery in policy
+- `photo_recipients` INSERT: service-role only (Edge Function); no client insert policy
+- `face-profiles` bucket read: authenticated users can read only if an active friendship row exists between them and the file owner
+- `friendship_keys` read/write: owner-scoped; each user can only read their own wrapped key copies
+- `device_tokens`: fully owner-scoped
+- `profiles`: publicly readable (display name, avatar, public key needed for friend request flow)
+
+---
+
+## Keypair & Encryption Architecture
+
+### Per-user asymmetric keypair (photos)
+
+```
+Onboarding
+  → KeyPairManager generates P-256 keypair
+  → Private key stored in Keychain (kSecAttrAccessibleAfterFirstUnlock, iCloud Keychain sync ON)
+  → Public key (DER base64) uploaded to profiles.public_key
+
+At send time (AutoShareProcessor)
+  → Fetch recipient's public key from profiles
+  → Encrypt photo bytes to recipient public key (ECIES / CryptoKit)
+  → Upload encrypted blob to `photos` bucket
+  → Insert photos + photo_recipients rows (via Edge Function)
+
+At receive time
+  → Download encrypted blob via signed URL
+  → Decrypt with own private key (CryptoKit)
+  → Display / save to camera roll
+```
+
+### Symmetric key scheme (face reference photos)
+
+```
+Face profile setup (onboarding)
+  → FaceProfileCrypto generates random 256-bit symmetric key (AES-GCM)
+  → Reference photos encrypted with symmetric key on-device
+  → Encrypted blobs uploaded to `face-profiles` bucket
+  → Symmetric key wrapped to user's own public key → stored in face_profile_keys
+
+On friendship acceptance (both sides)
+  → User A's device: fetch B's encrypted reference photos + B's face_profile_keys entry
+  → A's device wraps B's symmetric key to A's public key → upsert into friendship_keys
+      (requires A's device to decrypt B's own-wrapped key — this works because A fetches
+       B's face_profile_keys row which is wrapped to B's key; B's device must perform this
+       wrapping step and push A's copy to friendship_keys as part of accepting/sending the request)
+  → A downloads B's encrypted reference photos
+  → A decrypts with B's symmetric key (now accessible via friendship_keys)
+  → A runs MobileFaceNet pipeline → generates 512-D embeddings
+  → A discards reference photos; stores only embeddings locally (FaceEnrollmentStore)
+
+On face profile update
+  → User generates new symmetric key, re-encrypts new reference photos, uploads
+  → User's device re-wraps new symmetric key to each active friend's public key
+  → Updates friendship_keys rows for all friends
+  → Friends' devices detect stale embeddings on next sync → re-fetch, re-decrypt, re-embed
+
+On unfriend
+  → friendship_keys rows for both directions deleted
+  → Friend loses read access to face-profiles bucket (RLS — no active friendship)
+  → Both devices delete local embeddings for each other (FaceEnrollmentStore)
+```
+
+**Note on key wrapping flow:** When A sends a friend request, A cannot yet wrap B's symmetric key (the friendship isn't active). The wrapping step happens on acceptance: B's device wraps B's symmetric key to A's public key and pushes to `friendship_keys`. A's device wraps A's symmetric key to B's public key simultaneously. Both operations happen client-side at acceptance time; both devices must be online for this step.
 
 ---
 
@@ -108,143 +210,72 @@ device_tokens    id, user_id, apns_token (unique)
 ```
 Photo captured on device
   → AutoShareProcessor wakes on app foreground
-  → For each new asset:
+  → For each new asset (deduped by PHAsset.localIdentifier + perceptual hash):
       1. Load full-res image
       2. Downsample to 1024px (orientation-normalized) for face processing
       3. Vision face detection → bounding boxes
-      4. Crop each face (with 25% padding) and resize to 112×112
+      4. Crop each face (25% padding) → resize to 112×112
       5. MobileFaceNet CoreML inference → 512-D embedding per face
-      6. Compare embeddings to each enrolled friend (Euclidean distance)
-  → If any match below threshold:
-      → Upload full-res photo to Supabase Storage
-      → Insert row into `photos` + `photo_recipients`
-      → Supabase database trigger fires Edge Function
-      → Edge Function looks up recipient APNs tokens
-      → Edge Function sends HTTP/2 request to APNs
-      → Recipient device receives push notification
+      6. Compare embeddings to enrolled friends with Send toggle ON
+         (Euclidean distance < threshold = match)
+  → For each matching friend:
+      ├─ If manual review ON for this friend:
+      │    → Queue photo locally; no upload; badge review queue
+      └─ If manual review OFF (default):
+           → Fetch recipient's public key from profiles
+           → Encrypt full-res photo on-device (ECIES via CryptoKit)
+           → Upload encrypted blob to `photos` Supabase Storage
+           → Call Edge Function: insert photos row + photo_recipients row
+           → Edge Function looks up recipient APNs tokens
+           → Edge Function sends HTTP/2 request to APNs
+           → Recipient device receives push: "[Name] shared a photo with you"
+
+Manual review approval
+  → User approves photo for friend F in review queue
+  → Same encrypt → upload → Edge Function → APNs flow as above
+  → Rejected photos: discarded locally, never leave device
+```
+
+---
+
+## Friend Request & Enrollment Pipeline
+
+```
+A generates invite link
+  → Deep link URL with A's user_id + signed token
+  → friendships row inserted with status=pending
+
+B taps link → app opens → friendship acceptance screen
+  → B accepts:
+      → friendships.status = active
+      → B's device: wraps B's symmetric key to A's public key → upsert friendship_keys (A's copy)
+      → A's device: wraps A's symmetric key to B's public key → upsert friendship_keys (B's copy)
+        (triggered by realtime subscription on friendships table)
+      → send_toggles + receive_toggles rows inserted (both default true)
+      → Both devices begin FaceEnrollmentSync:
+          → Fetch other's encrypted reference photos from face-profiles bucket
+          → Decrypt using friendship_keys symmetric key
+          → MobileFaceNet pipeline → embeddings stored in FaceEnrollmentStore
+          → Reference photos discarded
+      → A notified: "[Name] accepted your friend request"
+  → B declines:
+      → friendships.status = declined
+      → No keys exchanged, no enrollment
 ```
 
 ---
 
 ## Key Constraints
 
-- **Face embeddings are never uploaded.** All face matching is on-device only. The server only receives matched friend IDs + the photo. Users may opt in to uploading **reference photos** (not embeddings) to Supabase Storage so friends' devices can generate embeddings locally — no server-side face processing occurs.
-- **Free tier limit is 3 active outgoing links.** Enforced server-side via Postgres RLS / Edge Function validation, not just client-side.
-- **Links are directional.** A → B and B → A are independent rows in the `links` table.
+- **Face embeddings are never uploaded.** All face matching is on-device. The server receives only encrypted photo blobs — it cannot determine whether a face appears in them.
+- **Reference photos are end-to-end encrypted.** Server stores encrypted blobs and wrapped key copies; it cannot decrypt either. No server-side face processing occurs.
+- **Free tier limit: 3 friends with Send toggle ON.** Enforced server-side via Postgres RLS on `send_toggles` INSERT/UPDATE, not client-side only.
+- **Keypair generated at onboarding — non-skippable.** No keypair = cannot send or receive encrypted content = cannot participate in the app.
+- **Face profile setup is required — hard gate.** Cannot send or accept a friend request without having uploaded encrypted reference photos. Enforced client-side (onboarding gate) and server-side (Edge Function validates face_profile_keys exists before activating friendship).
+- **Debug tools are TestFlight/debug builds only.** Face Match Sandbox screen must not ship in production builds. Gate with `#if DEBUG` or a build flag.
 
 ---
 
 ## Decision Log
 
-See [ARCHITECTURE.md — Decision Log](#decision-log) section below.
-
----
-
-## Decision Log
-
-### 2026-04-25 — Backend: Supabase over Firebase
-
-**Decision:** Use Supabase (PostgreSQL) as the backend.
-
-**Alternatives considered:** Firebase (Firestore), AWS Amplify.
-
-**Reasoning:**
-- The friend-link graph is inherently relational (directional edges with state). PostgreSQL handles this naturally with foreign keys, joins, and row-level security. Firestore's document model would require awkward denormalization.
-- Supabase is open-source and self-hostable, reducing vendor lock-in risk.
-- Predictable compute-based pricing vs. Firestore's per-read/write model, which can spike unexpectedly in a photo-sharing workload.
-
-**Trade-off accepted:** Firebase's FCM is more mature for push notifications. Mitigated by going direct to APNs via Supabase Edge Functions, which keeps the stack unified and costs zero.
-
----
-
-### 2026-04-25 — Push Notifications: APNs direct over FCM / OneSignal
-
-**Decision:** Send push notifications directly to APNs from Supabase Edge Functions.
-
-**Alternatives considered:** FCM (Firebase Cloud Messaging), OneSignal, Novu.
-
-**Reasoning:**
-- Keeps the entire backend in one place (no extra vendor).
-- APNs HTTP/2 API is well-documented and not complex for a single notification type.
-- Zero per-notification cost.
-- FCM would re-introduce a Google dependency after choosing Supabase specifically to avoid Firebase lock-in.
-
-**Trade-off accepted:** We own the token registration and retry logic. FCM handles these automatically. Acceptable complexity for the control gained.
-
----
-
-### 2026-04-25 — Removed in-app camera; switched to photo library monitoring
-
-**Decision:** Remove the in-app camera. The app monitors the user's native camera roll for new photos instead.
-
-**Reasoning:**
-- Reduces friction — users shouldn't need to switch to a separate camera app.
-- Simplifies the app surface area; camera UX is a solved problem in iOS.
-- Requires Photo Library read permission (previously only add-only was needed).
-- Photos are processed on next app foreground (background processing is out of scope for v1).
-
-**Trade-off accepted:** We lose instant processing at capture time. There's a delay between taking a photo and it being shared, bounded by when the user next opens the app.
-
----
-
-### 2026-04-25 — Merged Inbox into Photos tab; moved link requests to Friends tab
-
-**Decision:** Replace the Inbox + Camera tabs with a single Photos tab. Pending link requests surface in the Friends tab (badged) rather than the Inbox.
-
-**Reasoning:**
-- The Photos tab is optimized for quickly reviewing and saving received photos — a more focused UX.
-- Link requests are relationship-management actions; Friends is the natural home.
-
----
-
-### 2026-04-28 — Face recognition: MobileFaceNet (CoreML) over VNGenerateImageFeaturePrintRequest
-
-**Decision:** Bundle a MobileFaceNet CoreML model (insightface buffalo_sc / `w600k_mbf`, ArcFace-trained) for face identity embeddings. Vision is still used for face detection (`VNDetectFaceRectanglesRequest`).
-
-**Alternatives considered:** continuing with `VNGenerateImageFeaturePrintRequest`, FaceNet via CoreML, Create ML custom classifier, ARKit/TrueDepth.
-
-**Reasoning:**
-- `VNGenerateImageFeaturePrintRequest` is a general-purpose image similarity model, not a face recognition model. Same-person and different-person distance distributions overlapped in practice — no clean threshold existed.
-- MobileFaceNet was trained specifically with ArcFace loss to maximize the margin between same-identity and different-identity pairs. ~4 MB model; runs in ~25ms on A-series chips.
-- Apple has no public face *identity* API. Photos uses a private `PersonsUI` framework that is not exposed to third-party apps.
-- Create ML can only train classifiers over a fixed set of people; doesn't fit the open-set, per-friendship enrollment model.
-
-**Implementation notes:**
-- Pipeline: Vision detects face bounding box → crop with 25% padding → resize to 112×112 → CoreML inference → 512-D `[Float]` embedding
-- Images are normalized to `.up` orientation and downsampled to 1024px before processing (full-res photos OOM the device)
-- Enrollments are stored under a `face_enrollment_v2_` UserDefaults key prefix; old `VNFeaturePrintObservation` enrollments are silently ignored
-- The model file lives at `PhotoShare/Resources/MobileFaceNet.mlpackage`. Conversion is reproducible via `scripts/convert_mobilefacenet.py` (ONNX → PyTorch → CoreML)
-- A debug-only Face Match Sandbox screen (Profile → Debug → Face Match Sandbox) lets us inspect raw distances, face crops, and threshold behavior interactively
-
-**Trade-off accepted:** Embeddings are not L2-normalized at the model's output layer, so raw Euclidean distances live in a wider numeric range (~5–25) than for typical normalized models. The threshold is empirically tuned rather than landing in the textbook 0.3–0.4 range.
-
----
-
-### 2026-04-28 — Face enrollment: dual-mode (auto from face profile vs. manual)
-
-**Decision:** Support two face enrollment paths: auto-enrollment via the friend's uploaded face profile, and manual enrollment where the capturing user selects photos themselves.
-
-**Reasoning:**
-- Manual enrollment (original design) puts the burden on every user to find and upload photos of each friend they link with. This doesn't scale as the friend graph grows.
-- A face profile (opt-in server-side reference photos) lets each user enroll themselves once; any friend who links with them gets automatic enrollment without any action.
-- Opt-in is essential: storing photos of yourself server-side is a meaningfully different privacy decision than purely on-device processing. The choice must be explicit and reversible.
-
-**Privacy model:**
-- Reference photos are stored in Supabase Storage (`face-profiles/{user_id}/`), readable by authenticated users.
-- Embeddings are always generated on the downloading friend's device — the server never processes or analyzes the photos.
-- Disabling the face profile deletes all reference photos from Storage immediately.
-
-**Trade-off accepted:** Users who opt out of the face profile still require friends to manually enroll them. The two-path model adds UI complexity (mode picker in FaceEnrollmentView, face profile management in ProfileView) but avoids social pressure to opt in by presenting both modes as equally valid.
-
----
-
-### 2026-04-25 — Auth: Apple + Google + Email/Password
-
-**Decision:** Support Sign in with Apple, Sign in with Google, and email/password.
-
-**Reasoning:**
-- App Store guideline requires Sign in with Apple if any third-party OAuth is offered (Google qualifies), so Apple is mandatory.
-- Google is the most common OAuth provider and expected by users.
-- Email/password for users who prefer it or don't have/want Google.
-
-**Note:** Phone number auth (originally in spec) was dropped in favor of email for lower friction and no SMS cost in early stages.
+See [`DECISIONS.md`](DECISIONS.md) for the full log. New decisions should be appended there (not here).

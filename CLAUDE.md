@@ -17,9 +17,12 @@
 ### Update `ARCHITECTURE.md` when:
 - A new library or service is added or removed
 - The folder/file structure changes meaningfully
-- A significant architectural decision is made (add an entry to the Decision Log with date and reasoning)
 - The data model or push notification flow changes
 - A new major component or pattern is introduced
+
+### Update `DECISIONS.md` when:
+- A significant architectural or product decision is made — add an entry with date, alternatives considered, reasoning, and trade-offs accepted
+- `DECISIONS.md` is intentionally kept out of the default session context (it's verbose). Read it only when investigating why something was built a certain way.
 
 ---
 
@@ -38,7 +41,8 @@
 | File | Purpose |
 |---|---|
 | `SPEC.md` | Product spec — read first |
-| `ARCHITECTURE.md` | Architecture + decision log — read second |
+| `ARCHITECTURE.md` | Architecture, tech stack, data model — read second |
+| `DECISIONS.md` | Decision log — read only when investigating why something was built a certain way |
 | `project.yml` | XcodeGen config — source of truth for project structure |
 | `Secrets.template.swift` | Template for API keys (actual `Secrets.swift` is gitignored) |
 | `PhotoShare/Config/SupabaseClient.swift` | Global `supabase` singleton |
