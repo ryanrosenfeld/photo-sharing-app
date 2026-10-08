@@ -1,7 +1,9 @@
+import GoogleSignIn
 import SwiftUI
 
 struct ContentView: View {
     @StateObject private var authManager = AuthManager()
+    @StateObject private var inviteRouter = InviteRouter()
 
     var body: some View {
         ZStack {
@@ -15,6 +17,12 @@ struct ContentView: View {
             }
         }
         .environmentObject(authManager)
+        .environmentObject(inviteRouter)
+        .onOpenURL { url in
+            if inviteRouter.handle(url) { return }
+            GIDSignIn.sharedInstance.handle(url)
+            Task { try? await supabase.auth.session(from: url) }
+        }
     }
 }
 
