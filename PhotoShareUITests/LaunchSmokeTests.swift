@@ -1,7 +1,7 @@
 import XCTest
 
 final class LaunchSmokeTests: XCTestCase {
-    func testSignedOutLaunchShowsWelcomeThenEmailForm() {
+    func testSignedOutLaunchShowsWelcomeThenSignUpForm() {
         let app = XCUIApplication()
         app.launch()
 
@@ -9,7 +9,9 @@ final class LaunchSmokeTests: XCTestCase {
         XCTAssertTrue(getStarted.waitForExistence(timeout: 15))
         getStarted.tap()
 
-        XCTAssertTrue(app.textFields["emailAuth.email"].waitForExistence(timeout: 5))
+        // "Get started" opens the sign-up form: name, email, password.
+        XCTAssertTrue(app.textFields["emailAuth.name"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textFields["emailAuth.email"].exists)
         XCTAssertTrue(app.secureTextFields["emailAuth.password"].exists)
         XCTAssertTrue(app.buttons["emailAuth.submit"].exists)
     }
