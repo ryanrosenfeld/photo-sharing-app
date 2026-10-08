@@ -8,7 +8,7 @@ DEST     := platform=iOS Simulator,name=$(SIM_NAME)
 OUT      := verification-output
 XCB      := xcodebuild -project PhotoShare.xcodeproj -scheme PhotoShare -destination '$(DEST)' -derivedDataPath $(OUT)/DerivedData
 
-.PHONY: verify generate test-unit test-ui scenario
+.PHONY: verify generate test-unit test-ui scenario onboarding
 
 generate:
 	xcodegen generate
@@ -22,6 +22,9 @@ test-unit: generate
 test-ui: generate
 	@mkdir -p $(OUT) && rm -rf $(OUT)/ui.xcresult
 	$(XCB) -only-testing:PhotoShareUITests/LaunchSmokeTests -resultBundlePath $(OUT)/ui.xcresult test 2>&1 | tee $(OUT)/ui.log | tail -25
+
+onboarding:
+	scripts/verify/run_onboarding.sh
 
 scenario:
 	scripts/verify/run_scenario.sh
