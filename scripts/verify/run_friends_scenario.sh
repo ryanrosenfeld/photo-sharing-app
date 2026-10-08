@@ -43,7 +43,10 @@ fi
 eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY)=')"
 log "resetting database (migrations + persona seed)"
 supabase db reset >"$OUT/logs/db-reset.log" 2>&1 && pass "db reset: migrations (incl. mutual_friendships) + personas applied" || { fail "db reset"; exit 1; }
-sleep 5
+# wait until auth + rest answer after the reset (they restart; a fixed sleep is not enough on a loaded Mac)
+for _ in $(seq 1 60); do
+  [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H 'Content-Type: application/json' -d '{"email":"dan@test.local","password":"Test1234!"}')" = 200 ] && break; sleep 3
+done
 
 token() { curl -s -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" \
   -H 'Content-Type: application/json' -d "{\"email\":\"$1@test.local\",\"password\":\"$PASSWORD\"}" | jq -r .access_token; }
