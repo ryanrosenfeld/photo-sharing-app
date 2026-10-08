@@ -24,6 +24,7 @@ struct EmailAuthView: View {
                     Text("Create Account").tag(true)
                 }
                 .pickerStyle(.segmented)
+                .accessibilityIdentifier("emailAuth.mode")
                 .padding(.top, 8)
 
                 VStack(spacing: 14) {
@@ -32,6 +33,7 @@ struct EmailAuthView: View {
                             .textContentType(.name)
                             .autocorrectionDisabled()
                             .styledField()
+                            .accessibilityIdentifier("emailAuth.name")
                     }
 
                     TextField("Email", text: $email)
@@ -40,10 +42,12 @@ struct EmailAuthView: View {
                         .autocorrectionDisabled()
                         .autocapitalization(.none)
                         .styledField()
+                        .accessibilityIdentifier("emailAuth.email")
 
                     SecureField("Password \(isSignUp ? "(8+ characters)" : "")", text: $password)
                         .textContentType(isSignUp ? .newPassword : .password)
                         .styledField()
+                        .accessibilityIdentifier("emailAuth.password")
                 }
 
                 Button {
@@ -76,6 +80,7 @@ struct EmailAuthView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(!isFormValid || isLoading)
+                .accessibilityIdentifier("emailAuth.submit")
             }
             .padding(.horizontal, 32)
             .padding(.bottom, 32)

@@ -18,6 +18,7 @@ struct FriendsView: View {
                         systemImage: "person.2",
                         description: Text("When someone sends you a link request, it will appear here.")
                     )
+                    .accessibilityIdentifier("friends.empty")
                 } else {
                     List {
                         if !vm.pendingRequests.isEmpty {
@@ -101,6 +102,7 @@ private struct LinkRequestRow: View {
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .accessibilityIdentifier("friends.request.accept")
                 Button(action: onDecline) {
                     Text("Decline")
                         .font(.subheadline.weight(.semibold))
@@ -110,9 +112,12 @@ private struct LinkRequestRow: View {
                         .foregroundStyle(.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
+                .accessibilityIdentifier("friends.request.decline")
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("friends.request.row")
     }
 }
 
@@ -149,8 +154,11 @@ private struct OutgoingLinkRow: View {
                 .clipShape(Capsule())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("friends.link.enroll")
         }
         .padding(.vertical, 2)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("friends.link.row")
     }
 }
 

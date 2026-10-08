@@ -38,6 +38,7 @@ struct WelcomeView: View {
                             .foregroundStyle(.background)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .accessibilityIdentifier("welcome.getStarted")
 
                     Button {
                         showSignIn = true
@@ -50,6 +51,7 @@ struct WelcomeView: View {
                             .foregroundStyle(.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .accessibilityIdentifier("welcome.signIn")
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 48)
