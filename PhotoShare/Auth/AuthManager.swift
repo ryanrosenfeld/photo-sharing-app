@@ -8,6 +8,9 @@ final class AuthManager: ObservableObject {
     @Published var currentProfile: UserProfile?
     @Published var isLoading = true
     @Published var error: AuthError?
+    @Published var profileLoadFailed = false
+    /// Set when sign-up succeeded but the project requires email confirmation before a session exists.
+    @Published var awaitingEmailConfirmation: String?
 
     init() {
         Task {
@@ -30,14 +33,21 @@ final class AuthManager: ObservableObject {
         for await (_, newSession) in supabase.auth.authStateChanges {
             session = newSession
             if let newSession {
-                await fetchProfile(userId: newSession.user.id)
+                if currentProfile?.id != newSession.user.id { await fetchProfile(userId: newSession.user.id) }
             } else {
                 currentProfile = nil
+                profileLoadFailed = false
             }
         }
     }
 
     // MARK: - Profile
+
+    func reloadProfile() async {
+        guard let userId = session?.user.id else { return }
+        profileLoadFailed = false
+        await fetchProfile(userId: userId)
+    }
 
     func fetchProfile(userId: UUID) async {
         do {
@@ -48,8 +58,11 @@ final class AuthManager: ObservableObject {
                 .single()
                 .execute()
                 .value
+            profileLoadFailed = false
         } catch {
-            self.error = .message("Could not load profile: \(error.localizedDescription)")
+            // First load failing leaves the app without a profile: surface a retry screen, not an alert.
+            if currentProfile == nil { profileLoadFailed = true }
+            else { self.error = .message("Could not load profile: \(error.localizedDescription)") }
         }
     }
 
@@ -107,20 +120,36 @@ final class AuthManager: ObservableObject {
         do {
             try await supabase.auth.signIn(email: email, password: password)
         } catch {
-            self.error = .message(error.localizedDescription)
+            self.error = .message(Self.friendly(error))
         }
     }
 
     func signUp(email: String, password: String, displayName: String) async {
         do {
-            try await supabase.auth.signUp(
+            let response = try await supabase.auth.signUp(
                 email: email,
                 password: password,
                 data: ["display_name": .string(displayName)]
             )
+            if response.session == nil { awaitingEmailConfirmation = email }
         } catch {
-            self.error = .message(error.localizedDescription)
+            self.error = .message(Self.friendly(error))
         }
+    }
+
+    /// Plain-language versions of the errors people actually hit.
+    private static func friendly(_ error: Error) -> String {
+        let text = error.localizedDescription
+        let lower = text.lowercased()
+        if lower.contains("invalid login credentials") { return "That email and password don't match. Check them and try again." }
+        if lower.contains("already registered") || lower.contains("already been registered") {
+            return "There's already an account with that email. Try signing in instead."
+        }
+        if lower.contains("password") && lower.contains("least") { return "Choose a password with at least 8 characters." }
+        if lower.contains("offline") || lower.contains("network") || lower.contains("internet") {
+            return "No connection. Check your internet and try again."
+        }
+        return text
     }
 
     // MARK: - Sign Out

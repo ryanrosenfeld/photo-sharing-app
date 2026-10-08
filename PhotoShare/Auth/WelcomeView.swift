@@ -57,10 +57,10 @@ struct WelcomeView: View {
                 .padding(.bottom, 48)
             }
             .navigationDestination(isPresented: $showGetStarted) {
-                AuthView()
+                AuthView(startInSignUp: true)
             }
             .navigationDestination(isPresented: $showSignIn) {
-                AuthView()
+                AuthView(startInSignUp: false)
             }
         }
     }

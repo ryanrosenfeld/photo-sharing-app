@@ -28,7 +28,9 @@ on conflict do nothing;
 
 -- handle_new_user trigger already created profiles; set the persona specifics.
 update public.profiles set plan = 'pro' where id = 'c3333333-3333-3333-3333-333333333333';
-update public.profiles set face_profile_enabled = true where id = 'b2222222-2222-2222-2222-222222222222';
+-- Onboarding requires a face profile, so every persona counts as onboarded for that step
+-- (bob's reference photos are uploaded by scripts/verify/run_scenario.sh; the others never serve as the enrollment source).
+update public.profiles set face_profile_enabled = true;
 
 insert into public.links (sender_id, recipient_id, status) values
   ('a1111111-1111-1111-1111-111111111111','b2222222-2222-2222-2222-222222222222','active'),

@@ -1,3 +1,4 @@
+import Photos
 import PhotosUI
 import SwiftUI
 
@@ -85,11 +86,9 @@ struct ProfileView: View {
                 Section("My Face Profile") {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(profile?.faceProfileEnabled == true ? "Shared with friends" : "Not sharing")
+                            Text(profile?.faceProfileEnabled == true ? "Set up" : "Not set up")
                                 .font(.subheadline)
-                            Text(profile?.faceProfileEnabled == true
-                                 ? "Friends can auto-enroll you without choosing photos"
-                                 : "Friends must choose photos of you manually")
+                            Text("Friends' phones use your photos to recognize you")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -101,6 +100,8 @@ struct ProfileView: View {
                         .accessibilityIdentifier("profile.faceProfile")
                     }
                 }
+
+                PermissionsSection()
 
                 Section {
                     Button("Sign Out", role: .destructive) {
@@ -142,6 +143,40 @@ struct ProfileView: View {
             } message: {
                 Text(authManager.error?.localizedDescription ?? "")
             }
+        }
+    }
+}
+
+// MARK: - Permissions (recovery path if the user declined during onboarding)
+
+struct PermissionsSection: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+
+    private var photosOK: Bool { photoStatus == .authorized || photoStatus == .limited }
+
+    var body: some View {
+        Section("Permissions") {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Photo library")
+                    Text(photosOK
+                         ? (photoStatus == .limited ? "Limited: only selected photos are checked" : "On")
+                         : "Off: new photos aren't being shared")
+                        .font(.caption)
+                        .foregroundStyle(photosOK && photoStatus != .limited ? Color.secondary : Color.orange)
+                }
+                Spacer()
+                if !photosOK || photoStatus == .limited {
+                    Button("Settings", action: openSettings)
+                        .font(.subheadline)
+                        .accessibilityIdentifier("profile.photoSettings")
+                }
+            }
+            .accessibilityIdentifier("profile.photoStatus")
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite) }
         }
     }
 }
@@ -198,10 +233,10 @@ struct FaceProfileSetupSheet: View {
 
     private var explanation: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(isEnabled ? "Your face profile is on" : "Make enrollment easier for friends")
+            Text(isEnabled ? "Your face profile" : "Make enrollment easier for friends")
                 .font(.headline)
             Text(isEnabled
-                 ? "Friends who link with you can auto-enroll your face without selecting photos themselves. You can update your reference photos or turn this off at any time."
+                 ? "Friends' phones use these photos to recognize you. You can replace them with fresh ones any time."
                  : "Upload 3–5 photos of yourself so friends can auto-enroll your face when they link with you — no manual photo selection on their end. Your photos are stored securely and only used to generate face embeddings on your friends' devices.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -285,11 +320,6 @@ struct FaceProfileSetupSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(selectedItems.count < 3 || isWorking)
-
-            Button("Turn Off Face Profile", role: .destructive) {
-                Task { await disableProfile() }
-            }
-            .disabled(isWorking)
         }
     }
 
@@ -309,18 +339,6 @@ struct FaceProfileSetupSheet: View {
         defer { isWorking = false }
         do {
             try await manager.enable(photos: previewImages, for: userId)
-            onComplete()
-            dismiss()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func disableProfile() async {
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await manager.disable(for: userId)
             onComplete()
             dismiss()
         } catch {

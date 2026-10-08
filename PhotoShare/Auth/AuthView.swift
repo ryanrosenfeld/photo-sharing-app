@@ -4,6 +4,7 @@ import SwiftUI
 struct AuthView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showEmailAuth = false
+    var startInSignUp = false
 
     var body: some View {
         NavigationStack {
@@ -60,7 +61,7 @@ struct AuthView: View {
                     Button {
                         showEmailAuth = true
                     } label: {
-                        Text("Continue with Email")
+                        Text(startInSignUp ? "Sign up with Email" : "Continue with Email")
                             .font(.system(size: 17, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -74,7 +75,7 @@ struct AuthView: View {
                 .padding(.bottom, 48)
             }
             .navigationDestination(isPresented: $showEmailAuth) {
-                EmailAuthView()
+                EmailAuthView(startInSignUp: startInSignUp)
             }
             .alert("Sign In Error", isPresented: Binding(
                 get: { authManager.error != nil },
