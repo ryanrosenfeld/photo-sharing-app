@@ -47,9 +47,10 @@ sleep 5
 
 token() { curl -s -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" \
   -H 'Content-Type: application/json' -d "{\"email\":\"$1@test.local\",\"password\":\"$PASSWORD\"}" | jq -r .access_token; }
+EMPTY_JSON='{}'
 rpc() { # persona fn json-body  -> prints body, sets RPC_CODE
   local resp; resp=$(curl -s -w '\n%{http_code}' -X POST "$API_URL/rest/v1/rpc/$2" -H "apikey: $ANON_KEY" \
-    -H "Authorization: Bearer $(token "$1")" -H 'Content-Type: application/json' -d "${3:-{\}}")
+    -H "Authorization: Bearer $(token "$1")" -H 'Content-Type: application/json' -d "${3:-$EMPTY_JSON}")
   RPC_CODE=$(echo "$resp" | tail -1); echo "$resp" | sed '$d'; }
 id_of() { psql_q "select id from auth.users where email='$1@test.local'"; }
 DAN=$(id_of dan); CAROL=$(id_of carol); ALICE=$(id_of alice)
@@ -58,8 +59,8 @@ fr() { psql_q "select send_enabled::int || receive_enabled::int from friendships
 # ---- simulators ---------------------------------------------------------------------------------
 sim() { local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
   [ -n "$u" ] || u=$(xcrun simctl create "$1" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro); echo "$u"; }
-A=$(sim verify-alice); B=$(sim verify-bob)    # generic device pair; A hosts dan, B hosts carol
-xcrun simctl shutdown all 2>/dev/null
+A=$(sim verify-friends-a); B=$(sim verify-friends-b)   # A hosts dan, B hosts carol
+for u in $A $B; do xcrun simctl shutdown "$u" 2>/dev/null; done
 for u in $A $B; do xcrun simctl erase "$u"; done
 boot() { xcrun simctl boot "$1" 2>/dev/null; xcrun simctl bootstatus "$1" -b >/dev/null 2>&1; }
 xcodegen generate >/dev/null
