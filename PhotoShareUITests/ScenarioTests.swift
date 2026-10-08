@@ -178,7 +178,7 @@ final class ScenarioTests: XCTestCase {
         XCTAssertTrue(toggle.waitForExistence(timeout: 5), "toggle")
         let want = (env["VERIFY_VALUE"] ?? "off") == "on" ? "1" : "0"
         shot("friend-detail-before")
-        if (toggle.value as? String) != want { toggle.tap() }
+        if (toggle.value as? String) != want { toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }  // the switch sits at the row's trailing edge
         let settled = Date().addingTimeInterval(10)
         while (toggle.value as? String) != want && Date() < settled { usleep(300_000) }
         sleep(2)  // let the RPC + reload land
@@ -204,7 +204,7 @@ final class ScenarioTests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 15), "friend row")
         row.tap()
         app.buttons["friend.unfriend"].tap()
-        let confirm = app.buttons["friend.unfriend.confirm"].exists ? app.buttons["friend.unfriend.confirm"] : app.sheets.buttons["Unfriend"].firstMatch
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Unfriend' AND identifier != 'friend.unfriend'")).firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), "confirmation")
         shot("unfriend-confirm")
         confirm.tap()
