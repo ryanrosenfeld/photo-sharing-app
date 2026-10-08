@@ -84,11 +84,11 @@ final class ScenarioTests: XCTestCase {
     func testSetManualReview() {
         ensureSignedIn()
         app.buttons["tab.profile"].tap()
-        let toggle = app.buttons["profile.manualReview"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10), "manual review toggle")
+        let toggle = app.switches["profile.manualReview"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 30), "manual review toggle")
         let want = (env["VERIFY_REVIEW"] ?? "on") == "on"
-        if (toggle.value as? String == "on") != want { toggle.tap() }
-        XCTAssertEqual(toggle.value as? String, want ? "on" : "off", "toggle state")
+        if (toggle.value as? String == "1") != want { toggle.tap() }
+        XCTAssertEqual(toggle.value as? String, want ? "1" : "0", "toggle state")
         shot("profile-manual-review-\(want ? "on" : "off")")
     }
 

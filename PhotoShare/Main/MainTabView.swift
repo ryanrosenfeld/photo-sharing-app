@@ -431,9 +431,8 @@ struct OttoProfileView: View {
                 settingsRowLabel(label: label, sub: sub, dot: dot, hasChev: hasChev)
                 if hasToggle {
                     Toggle("", isOn: isOn)
-                        .toggleStyle(OttoToggleStyle())
+                        .toggleStyle(OttoToggleStyle(id: toggleId))
                         .labelsHidden()
-                        .accessibilityIdentifier(toggleId ?? "")
                 }
                 if hasChev {
                     Image(systemName: "chevron.right")
@@ -478,6 +477,8 @@ struct OttoProfileView: View {
 // MARK: - Otto toggle style
 
 struct OttoToggleStyle: ToggleStyle {
+    var id: String? = nil
+
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
@@ -494,7 +495,7 @@ struct OttoToggleStyle: ToggleStyle {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityValue(configuration.isOn ? "on" : "off")
+        .accessibilityIdentifier(id ?? "")
         .animation(.spring(response: 0.2), value: configuration.isOn)
     }
 }
