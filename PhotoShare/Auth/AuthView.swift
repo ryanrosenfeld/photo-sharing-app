@@ -127,19 +127,17 @@ struct AuthView: View {
                     }
                     .padding(.horizontal, 28)
 
+                    termsLabel
+                        .padding(.top, 28)
                 }
                 .font(.system(size: 13))
                 .padding(.top, 0)
-                .padding(.bottom, 80)
+                .padding(.bottom, 40)
                 .padding(.horizontal, 0)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
-        .overlay(alignment: .bottom) {
-            termsLabel
-                .padding(.bottom, 28)
-        }
         .alert("Check your email", isPresented: Binding(
             get: { authManager.awaitingEmailConfirmation != nil },
             set: { if !$0 { authManager.awaitingEmailConfirmation = nil } }
@@ -267,6 +265,7 @@ struct AuthView: View {
                         .font(.system(size: 15))
                         .foregroundStyle(OttoColor.barkSoft)
                 }
+                .accessibilityIdentifier("emailAuth.showPassword")
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

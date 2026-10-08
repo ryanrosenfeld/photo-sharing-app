@@ -39,7 +39,9 @@ final class OnboardingTests: XCTestCase {
         name.tap(); name.typeText("Erin Onboard")
         let email = app.textFields["emailAuth.email"]
         email.tap(); email.typeText(env["VERIFY_NEW_EMAIL"] ?? "")
-        let pw = app.secureTextFields["emailAuth.password"]
+        // Reveal first: the iOS "Strong Password" sheet on a secure new-password field swallows simulated typing.
+        app.buttons["emailAuth.showPassword"].tap()
+        let pw = app.textFields["emailAuth.password"]
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         shot("03-signup-filled")
         app.buttons["emailAuth.submit"].tap()
