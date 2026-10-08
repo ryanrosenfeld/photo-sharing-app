@@ -113,6 +113,10 @@ struct FaceDetector: Sendable {
     private func detectFaces(in image: UIImage) throws -> [VNFaceObservation] {
         guard let cgImage = image.cgImage else { return [] }
         let request = VNDetectFaceRectanglesRequest()
+        #if targetEnvironment(simulator)
+        // The Simulator has no GPU/ANE for Vision: without this it throws "Could not create inference context".
+        request.usesCPUOnly = true
+        #endif
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         try handler.perform([request])
         return request.results ?? []

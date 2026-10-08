@@ -15,9 +15,9 @@ generate:
 verify: generate test-unit test-ui
 
 test-unit: generate
-	@mkdir -p $(OUT)
-	$(XCB) -only-testing:PhotoShareTests -resultBundlePath $(OUT)/unit.xcresult test 2>&1 | tee $(OUT)/unit.log | tail -25
+	@mkdir -p $(OUT) && rm -rf $(OUT)/unit.xcresult
+	TEST_RUNNER_VERIFY_OUTPUT_DIR=$(CURDIR)/$(OUT) $(XCB) -only-testing:PhotoShareTests -resultBundlePath $(OUT)/unit.xcresult test 2>&1 | tee $(OUT)/unit.log | tail -25
 
 test-ui: generate
-	@mkdir -p $(OUT)
+	@mkdir -p $(OUT) && rm -rf $(OUT)/ui.xcresult
 	$(XCB) -only-testing:PhotoShareUITests -resultBundlePath $(OUT)/ui.xcresult test 2>&1 | tee $(OUT)/ui.log | tail -25

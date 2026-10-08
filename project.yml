@@ -63,6 +63,10 @@ targets:
     platform: iOS
     sources:
       - path: PhotoShareTests
+        excludes:
+          - Fixtures/**
+      - path: PhotoShareTests/Fixtures
+        type: folder
     dependencies:
       - target: PhotoShare
     settings:

@@ -1,0 +1,66 @@
+[
+  {
+    "identity": "alice",
+    "file": "alice_1.jpg"
+  },
+  {
+    "identity": "alice",
+    "file": "alice_2.jpg"
+  },
+  {
+    "identity": "alice",
+    "file": "alice_3.jpg"
+  },
+  {
+    "identity": "alice",
+    "file": "alice_4.jpg"
+  },
+  {
+    "identity": "bob",
+    "file": "bob_1.jpg"
+  },
+  {
+    "identity": "bob",
+    "file": "bob_2.jpg"
+  },
+  {
+    "identity": "bob",
+    "file": "bob_3.jpg"
+  },
+  {
+    "identity": "bob",
+    "file": "bob_4.jpg"
+  },
+  {
+    "identity": "carol",
+    "file": "carol_1.jpg"
+  },
+  {
+    "identity": "carol",
+    "file": "carol_2.jpg"
+  },
+  {
+    "identity": "carol",
+    "file": "carol_3.jpg"
+  },
+  {
+    "identity": "carol",
+    "file": "carol_4.jpg"
+  },
+  {
+    "identity": "dan",
+    "file": "dan_1.jpg"
+  },
+  {
+    "identity": "dan",
+    "file": "dan_2.jpg"
+  },
+  {
+    "identity": "dan",
+    "file": "dan_3.jpg"
+  },
+  {
+    "identity": "dan",
+    "file": "dan_4.jpg"
+  }
+]
