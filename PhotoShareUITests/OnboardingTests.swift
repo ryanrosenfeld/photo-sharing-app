@@ -59,7 +59,16 @@ final class OnboardingTests: XCTestCase {
         let images = app.images.matching(identifier: "PXGGridLayout-Info")
         XCTAssertTrue(images.firstMatch.waitForExistence(timeout: 15), "photo picker")
         XCTAssertGreaterThanOrEqual(images.count, 4, "4 fixture photos visible in picker")
-        for i in 0..<4 { images.element(boundBy: i).tap() }
+        // The cells report not-hittable (picker remote view), so tap their centres; skip duplicate frames.
+        var seen = Set<String>(); var tapped = 0
+        for i in 0..<images.count where tapped < 4 {
+            let cell = images.element(boundBy: i)
+            let key = "\(cell.frame)"
+            if seen.contains(key) || cell.frame.height < 50 { continue }
+            seen.insert(key); tapped += 1
+            cell.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        XCTAssertEqual(tapped, 4, "tapped 4 distinct photos")
         shot("05-picker-selected")
         let done = app.buttons["Done"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5) && done.isEnabled, "picker Done enabled")
