@@ -2,6 +2,8 @@ import SwiftUI
 
 struct FriendsView: View {
     @EnvironmentObject var vm: FriendsViewModel
+    @EnvironmentObject var reviewStore: ReviewQueueStore
+    @State private var showReview = false
     @State private var showAddFriend = false
     @State private var enrollingLink: OutgoingLink?
     private let enrollmentStore = FaceEnrollmentStore()
@@ -39,11 +41,18 @@ struct FriendsView: View {
                     Spacer()
                     ProgressView().tint(OttoColor.sage)
                     Spacer()
-                } else if vm.outgoingLinks.isEmpty && vm.pendingRequests.isEmpty {
+                } else if vm.outgoingLinks.isEmpty && vm.pendingRequests.isEmpty && reviewStore.items.isEmpty {
                     emptyState
                 } else {
                     ScrollView {
                         VStack(spacing: 0) {
+                            // photos waiting for approval (manual review)
+                            if !reviewStore.items.isEmpty {
+                                reviewCard
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 16)
+                            }
+
                             // pending request card
                             if !vm.pendingRequests.isEmpty {
                                 friendRequestCard
@@ -70,6 +79,9 @@ struct FriendsView: View {
             Button("OK") { vm.error = nil }
         } message: {
             Text(vm.error ?? "")
+        }
+        .sheet(isPresented: $showReview) {
+            ReviewQueueView()
         }
         .sheet(isPresented: $showAddFriend) {
             AddFriendSheet()
@@ -114,6 +126,41 @@ struct FriendsView: View {
             }
             Spacer()
         }
+    }
+
+    // MARK: - Review card
+
+    private var reviewCard: some View {
+        Button {
+            showReview = true
+        } label: {
+            OttoSectionCard {
+                HStack(spacing: 14) {
+                    Image(systemName: "tray.full.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(OttoColor.sage)
+                        .frame(width: 42, height: 42)
+                        .background(OttoColor.sage.opacity(0.15))
+                        .clipShape(Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(reviewStore.count) photo\(reviewStore.count == 1 ? "" : "s") to review")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(OttoColor.ink)
+                            .accessibilityIdentifier("friends.reviewQueue.count")
+                        Text("Held on your phone until you send them")
+                            .font(.system(size: 13))
+                            .foregroundStyle(OttoColor.barkSoft)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(OttoColor.barkSoft.opacity(0.5))
+                }
+                .padding(16)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("friends.reviewQueue")
     }
 
     // MARK: - Friend request card
