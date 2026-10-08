@@ -310,6 +310,21 @@ All permissions requested contextually, each preceded by an in-app explanation b
 
 ## Onboarding
 
+Implemented as of the onboarding workstream (email/password sign-up; Apple/Google buttons remain on the sign-in form):
+
+1. **Welcome screen** — "Get started" opens the sign-up form, "Sign in" opens the sign-in form (same screen, toggle at the bottom).
+2. **Account** — name, email, password (8+ chars, show/hide toggle, keyboard moves field to field, plain-language errors). If the project requires email confirmation, the user is told to check their email.
+3. **Face profile (required)** — choose 3–5 photos of yourself. Each photo is checked **on the device the moment it is picked** (exactly one prominent face, face large enough); each tile shows a check or the reason it was rejected; only accepted photos are uploaded; Continue unlocks at 3 accepted photos. Privacy line shown. No "turn off" anywhere; Profile → Manage replaces the set through the same checked picker.
+4. **Photo Library** — in-app explanation, then the system prompt. If the user declines, they are not trapped: "Open Settings" or "Continue without it", and Profile → Permissions shows the live state with a one-tap route to Settings.
+5. **Notifications** — explanation, then the system prompt; "Not now" is equally visible and is remembered (never re-asked on relaunch).
+6. **Home.**
+
+Onboarding state is **derived, not stored**: face profile present on the server, and the system permission status. A force-quit or reinstall resumes at the first unfinished step and never re-asks a question already answered. The account exists as soon as step 2 completes (deviation from "account is not created until face profile is done": a half-finished sign-up is resumed, not lost).
+
+Not yet in the flow: keypair generation and the first-friend invite step (owned by the friends/crypto workstreams; add as further `OnboardingStep` cases).
+
+Original v3 plan, kept for reference:
+
 1. **Welcome screen** — value prop: "Photos with your friends, automatically delivered"
 2. **Phone number entry** → SMS verification
 3. **Keypair generation** — silent, runs immediately after verification; stored in Keychain with iCloud Keychain sync; non-skippable

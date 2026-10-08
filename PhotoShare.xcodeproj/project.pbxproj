@@ -11,6 +11,7 @@
 		022F6B28B41FA39B9ECC6EE7 /* FaceEnrollmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C95806FBAC23A00DC260C4F9 /* FaceEnrollmentStore.swift */; };
 		0A5C5808DB1867C5DA9F3757 /* LaunchSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4774F76467506EC5393B7455 /* LaunchSmokeTests.swift */; };
 		0B6D4555E9BFF42E39CC4ED2 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9EBEE59E170A3AE0B93874D5 /* Supabase */; };
+		21BD531D0903EE074AB19A41 /* FaceProfileValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C5EDE49E1EE9852ACAC7244 /* FaceProfileValidatorTests.swift */; };
 		2B6799478E8326FCAA69B7CD /* OnboardingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6873D55BFBC57DCA04FBEB1 /* OnboardingTests.swift */; };
 		32BD19CBF7ABE5B1294FEF9A /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CDD4532DA400B92DDEF0251A /* GoogleSignInSwift */; };
 		38DDA2E1FAEEE891E0A1A0C4 /* FaceMatchPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */; };
@@ -81,6 +82,7 @@
 		352B52E24CE88F1A05A50F01 /* FaceDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDetector.swift; sourceTree = "<group>"; };
 		3683C05BA4BAFBDF97F3A675 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		4774F76467506EC5393B7455 /* LaunchSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSmokeTests.swift; sourceTree = "<group>"; };
+		4C5EDE49E1EE9852ACAC7244 /* FaceProfileValidatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceProfileValidatorTests.swift; sourceTree = "<group>"; };
 		4CFEF091CD9374625BF7B6CF /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		5129AE1EF35D5B8A337A157C /* OttoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OttoTheme.swift; sourceTree = "<group>"; };
 		5202D45E8361FDB0E38A177D /* ReceivedPhoto.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivedPhoto.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 			isa = PBXGroup;
 			children = (
 				AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */,
+				4C5EDE49E1EE9852ACAC7244 /* FaceProfileValidatorTests.swift */,
 				EAD745F4A993CBCF1BC99F8F /* SmokeTests.swift */,
 			);
 			path = PhotoShareTests;
@@ -420,6 +423,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				38DDA2E1FAEEE891E0A1A0C4 /* FaceMatchPipelineTests.swift in Sources */,
+				21BD531D0903EE074AB19A41 /* FaceProfileValidatorTests.swift in Sources */,
 				6C13DDBB25091EBC104FA28D /* SmokeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
