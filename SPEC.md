@@ -122,15 +122,15 @@ Every user is required to upload reference photos of themselves as part of accou
 ### Pipeline
 
 - When new photos are added to the user's camera roll, the app processes them on next app foreground
-- Pipeline: Vision (`VNDetectFaceRectanglesRequest`) detects face bounding box → crop with 25% padding → resize to 112×112 → MobileFaceNet CoreML inference → 512-D float embedding
-- Images normalized to `.up` orientation and downsampled to 1024px before processing
+- Pipeline: Vision detects faces (image pyramid of 1024px tiles so small faces in wide shots are found) → landmarks aligned to the ArcFace 112×112 template (padded box crop only as a penalised fallback) → MobileFaceNet CoreML inference → 512-D float embedding
+- Images normalized to `.up` orientation and capped at 4096px before processing
 - Detected face embeddings compared against locally stored enrolled embeddings for all friends with Send toggle ON
 - A match above the confidence threshold triggers a share to that friend
 
 ### Matching
 
 - MobileFaceNet (ArcFace-trained, `w600k_mbf`) bundled as CoreML model (~4MB, ~25ms on A-series)
-- Confidence threshold tunable server-side (pushed to devices without app update); raw Euclidean distances in ~5–25 range
+- Confidence threshold tunable server-side (pushed to devices without app update); cosine distance (0 = identical, ~1 = unrelated), default 0.55
 - Conservative threshold: prefer missed shares over false positives
 - Users can report a missed share to improve future matching
 - If a friend updates their reference photos and embeddings are regenerated, matching accuracy improves automatically
@@ -371,8 +371,8 @@ Note: face enrollment of friends is now fully automatic on friendship acceptance
 
 - Detection: `VNDetectFaceRectanglesRequest` (Apple Vision)
 - Embedding: MobileFaceNet CoreML model (`w600k_mbf`, ArcFace-trained, ~4MB, ~25ms on A-series)
-- Pipeline: detect → crop (25% padding) → resize 112×112 → CoreML → 512-D float embedding
-- Threshold: empirically tuned (raw Euclidean distances ~5–25 range); tunable server-side
+- Pipeline: detect (pyramid) → align to ArcFace template → 112×112 → CoreML → 512-D float embedding
+- Threshold: cosine distance 0.55, chosen from real-photo (LFW) same/different-person distributions; tunable server-side
 - Debug: Face Match Sandbox screen available in debug/TestFlight builds only (Profile → Debug); must not ship in production
 
 ### Photo Encryption

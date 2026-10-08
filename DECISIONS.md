@@ -4,6 +4,18 @@ A record of significant architectural and product decisions. Add an entry whenev
 
 ---
 
+### 2026-10-08 — Face matching: landmark alignment, cosine distance, pyramid detection
+
+**Decision:** Align faces with Vision landmarks onto the ArcFace template, compare with cosine distance (threshold 0.55), detect over a tile pyramid, and penalise unaligned (box-crop) faces by 0.2.
+
+**Alternatives considered:** keep box crop and just retune the Euclidean threshold (LFW: recall 75% only with 1.8% false matches, no usable threshold); flip test-time augmentation (+0.4% recall, 2x CoreML cost, dropped); wider/narrower box padding (0.25 was already best).
+
+**Reasoning:** On 70 real LFW identities the old pipeline had AUC 0.979 and no threshold with both high recall and no wrong-person matches; aligned + cosine has AUC 1.000, 95% recall and 0 false matches in 18,009 wrong-person pairs. Alignment alone with the old Euclidean threshold collapsed recall to 3% because embedding length varies with image quality. Vision misses faces under ~5% of the frame, so tiles recover 80px heads in 12 MP photos. Full numbers and caveats: `docs/face-matching/README.md`.
+
+**Trade-offs accepted:** Vision landmarks don't work in the Simulator, so Simulator tests cover only the fallback path and alignment is verified on the Mac, not yet on a physical iPhone. Pyramid detection costs up to ~27 Vision calls per 12 MP photo. Existing enrollments are invalidated (`face_enrollment_v3_`). Threshold chosen on LFW (easy) so real phone photos may need re-tuning.
+
+---
+
 ### 2026-04-25 — Backend: Supabase over Firebase
 
 **Decision:** Use Supabase (PostgreSQL) as the backend.
