@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(PhotoShare)
+@testable import PhotoShare
+#endif
 // FaceEmbedding comes from PhotoShare/FaceMatch/FaceDetector.swift (compiled into both the app and the mac tool)
 
 /// Scores the face-match pipeline over the fixture manifest. Foundation-only so both the XCTest
