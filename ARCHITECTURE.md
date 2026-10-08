@@ -99,6 +99,9 @@ App launch
 
 See `supabase/migrations/` for the full schema with RLS policies.
 
+> **Implemented in v3 (friends):** the `friendships` / toggle tables above are realised as `invites` + `friendships(user_id, friend_id, send_enabled, receive_enabled)` (two rows per friendship) behind RPCs; see `supabase/migrations/20260610093000_mutual_friendships.sql` and DECISIONS.md (2026-10-08). `friendship_keys`, `manual_review` and E2E encryption are still planned. Invite links are `photoshare://invite/<code>`, handled by `InviteRouter` (ContentView `onOpenURL`) and `InviteAcceptSheet`.
+
+
 ```
 profiles           id (→ auth.users), display_name, avatar_url, plan (free|pro),
                    public_key (base64 DER — user's asymmetric public key)
