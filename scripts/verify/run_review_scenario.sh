@@ -110,9 +110,9 @@ uistep alice "$A" testSetManualReview TEST_RUNNER_VERIFY_REVIEW=on \
 
 # ---- 3. new photos land in Alice's library -------------------------------------------------------
 sleep 2
-mkdir -p "$OUT/addmedia"; cp "$FIX/bob_3.jpg" "$FIX/bob_4.jpg" "$FIX/dan_3.jpg" "$OUT/addmedia/"
-xcrun simctl addmedia "$A" "$OUT/addmedia/bob_3.jpg" "$OUT/addmedia/bob_4.jpg" "$OUT/addmedia/dan_3.jpg" \
-  && pass "alice: simctl addmedia (2 photos of Bob, 1 of Dan)"
+mkdir -p "$OUT/addmedia"; cp "$FIX/bob_3.jpg" "$FIX/bob_2.jpg" "$FIX/dan_3.jpg" "$OUT/addmedia/"
+xcrun simctl addmedia "$A" "$OUT/addmedia/bob_3.jpg" "$OUT/addmedia/bob_2.jpg" "$OUT/addmedia/dan_3.jpg" \
+  && pass "alice: simctl addmedia (2 photos of Bob, 1 of Dan; bob_2 is also a reference photo, so it matches for sure)"
 
 launch_alice() {
   xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
