@@ -166,6 +166,7 @@ struct FaceEnrollmentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .disabled(!isReady || vm.isEnrolling)
+        .accessibilityIdentifier("enroll.submit")
     }
 
     private var successView: some View {
@@ -180,9 +181,12 @@ struct FaceEnrollmentView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("Done") { dismiss() }
+                .accessibilityIdentifier("enroll.done")
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 4)
         }
         .padding(.vertical, 32)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("enroll.success")
     }
 }

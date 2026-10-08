@@ -29,6 +29,7 @@
 - **`Secrets.swift` is gitignored.** Never commit it. Use `Secrets.template.swift` at the project root as the reference for what values are needed.
 - **Swift 6 strict concurrency is enabled.** All new code must be concurrency-safe. Prefer `@MainActor` on ViewModels. Avoid `nonisolated(unsafe)` unless truly necessary.
 - **Deployment target is iOS 17.** Don't use APIs introduced after iOS 17 without an availability check.
+- **Verify changes with `make verify`** (and `make scenario` for end-to-end flows); see `scripts/verify/README.md`.
 - **Face embeddings never leave the device.** This is a hard privacy constraint. Do not write code that uploads embeddings or raw face data to any server.
 
 ---
@@ -44,3 +45,4 @@
 | `PhotoShare/Config/SupabaseClient.swift` | Global `supabase` singleton |
 | `PhotoShare/Auth/AuthManager.swift` | Auth state + sign-in methods |
 | `PhotoShare/ContentView.swift` | Root router |
+

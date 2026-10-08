@@ -248,3 +248,16 @@ See [ARCHITECTURE.md — Decision Log](#decision-log) section below.
 - Email/password for users who prefer it or don't have/want Google.
 
 **Note:** Phone number auth (originally in spec) was dropped in favor of email for lower friction and no SMS cost in early stages.
+
+
+---
+
+## Verification Harness
+
+Lets Claude (or CI later) change the app and check it works without a human in the loop. See `scripts/verify/README.md`.
+
+- `make verify` — `xcodegen`, then `PhotoShareTests` (hosted XCTest incl. the face-match pipeline over `PhotoShareTests/Fixtures/faces`) and a `PhotoShareUITests` launch smoke test on the iPhone 17 Pro simulator.
+- `make scenario` — `scripts/verify/run_scenario.sh`: local Supabase in Docker (repo migrations + `supabase/seed_personas.sql`: Alice, Bob, Carol, Dan) and an end-to-end scenario across two simulators (one booted at a time; cap is 2), with evidence under `verification-output/` (gitignored).
+- Debug builds read `PHOTOSHARE_SUPABASE_URL` / `PHOTOSHARE_SUPABASE_ANON_KEY` from the environment (see `SupabaseClient.swift`), so simulators can point at local Supabase without touching `Secrets.swift`.
+- Face fixtures are AI-generated (non-real) portraits plus augmented variants: they guard pipeline regressions, not real-world recognition accuracy (threshold 15 was tuned on real device photos).
+- On the Simulator, `FaceDetector` forces Vision to CPU and CoreML to `.cpuOnly`; the default compute units yield "Could not create inference context" (Vision) and an all-zero embedding (CoreML).

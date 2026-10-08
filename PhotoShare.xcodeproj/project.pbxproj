@@ -33,6 +33,7 @@
 		B753DB4A110621F6481054AE /* EmailAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F955F53C0A5D9000C414BC1A /* EmailAuthView.swift */; };
 		BAF49FFB5DD9893390EBE430 /* FaceEnrollmentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 007E72AD9EA606FC397944D2 /* FaceEnrollmentViewModel.swift */; };
 		C52018AE9AAB82B0F1A16B68 /* FriendsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0EC327D1F445FFDF392AC3 /* FriendsViewModel.swift */; };
+		C5F5CC4C984C9D06E4770E8E /* ScenarioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C4B7159BF6F4F8B8AEF7D4 /* ScenarioTests.swift */; };
 		CA2345DCE054748BD3164197 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CFEF091CD9374625BF7B6CF /* UserProfile.swift */; };
 		D000A938093010DF3E96D681 /* Fixtures in Resources */ = {isa = PBXBuildFile; fileRef = 7E0B7D8E3546ED65435C1BEB /* Fixtures */; };
 		D1A6DB173005A9BD6529EF76 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44B82E118CED9EFC0508F7 /* AuthManager.swift */; };
@@ -81,6 +82,7 @@
 		7C13B0B5662D46D62B044BA4 /* PhotoShare.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PhotoShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E0B7D8E3546ED65435C1BEB /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fixtures; path = PhotoShareTests/Fixtures; sourceTree = SOURCE_ROOT; };
 		89B26AB9AFB08DE629D4EFA0 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
+		96C4B7159BF6F4F8B8AEF7D4 /* ScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioTests.swift; sourceTree = "<group>"; };
 		9CAA9C134039C2AAA62F5240 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9D96132110D32DEF02A31223 /* FaceEnrollmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentView.swift; sourceTree = "<group>"; };
 		AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchPipelineTests.swift; sourceTree = "<group>"; };
@@ -192,6 +194,7 @@
 			isa = PBXGroup;
 			children = (
 				4774F76467506EC5393B7455 /* LaunchSmokeTests.swift */,
+				96C4B7159BF6F4F8B8AEF7D4 /* ScenarioTests.swift */,
 			);
 			path = PhotoShareUITests;
 			sourceTree = "<group>";
@@ -414,6 +417,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A5C5808DB1867C5DA9F3757 /* LaunchSmokeTests.swift in Sources */,
+				C5F5CC4C984C9D06E4770E8E /* ScenarioTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

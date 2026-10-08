@@ -2,12 +2,13 @@
 #   make verify        build + unit tests + UI smoke on the simulator
 #   make test-unit     unit tests only (incl. face-match pipeline)
 #   make test-ui       UI tests only
+#   make scenario      2-persona e2e on simulators vs local Supabase (slow, ~10 min; needs Docker/colima)
 SIM_NAME ?= iPhone 17 Pro
 DEST     := platform=iOS Simulator,name=$(SIM_NAME)
 OUT      := verification-output
 XCB      := xcodebuild -project PhotoShare.xcodeproj -scheme PhotoShare -destination '$(DEST)' -derivedDataPath $(OUT)/DerivedData
 
-.PHONY: verify generate test-unit test-ui
+.PHONY: verify generate test-unit test-ui scenario
 
 generate:
 	xcodegen generate
@@ -21,3 +22,6 @@ test-unit: generate
 test-ui: generate
 	@mkdir -p $(OUT) && rm -rf $(OUT)/ui.xcresult
 	$(XCB) -only-testing:PhotoShareUITests -resultBundlePath $(OUT)/ui.xcresult test 2>&1 | tee $(OUT)/ui.log | tail -25
+
+scenario:
+	scripts/verify/run_scenario.sh
