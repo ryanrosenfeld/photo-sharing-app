@@ -55,14 +55,15 @@ final class OnboardingTests: XCTestCase {
 
         // --- Pick all 4 library photos: 3 portraits pass, the landscape is rejected ---
         choose.tap()
-        let picker = app.otherElements["PHPickerViewController"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 10), "photo picker")
-        let images = picker.images
-        XCTAssertTrue(images.firstMatch.waitForExistence(timeout: 10))
+        // The system picker is part of the app's accessibility tree; grid cells carry this identifier.
+        let images = app.images.matching(identifier: "PXGGridLayout-Info")
+        XCTAssertTrue(images.firstMatch.waitForExistence(timeout: 15), "photo picker")
         XCTAssertGreaterThanOrEqual(images.count, 4, "4 fixture photos visible in picker")
         for i in 0..<4 { images.element(boundBy: i).tap() }
         shot("05-picker-selected")
-        picker.buttons["Add"].tap()
+        let done = app.buttons["Done"].firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 5) && done.isEnabled, "picker Done enabled")
+        done.tap()
 
         let ok = app.descendants(matching: .any).matching(identifier: "faceProfile.tile.ok")
         let bad = app.descendants(matching: .any).matching(identifier: "faceProfile.tile.bad")
