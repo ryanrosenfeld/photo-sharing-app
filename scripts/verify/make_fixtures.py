@@ -39,10 +39,14 @@ def variant(img, i, rng):
     return im
 
 def scene(w, h, bg_src, rng):
-    """Blurred, darkened/tinted background built from a (different) portrait: plausible bokeh, no hard edges."""
-    c = rng.randint(0, 150)
-    bg = bg_src.crop((c, c, c + 360, c + 360)).resize((w, w), Image.BICUBIC).crop((0, 0, w, h))
-    bg = bg.filter(ImageFilter.GaussianBlur(18))
+    """Smooth, face-free background: a bilinear gradient between the corner colours of a (different) portrait plus a
+    little low-frequency texture. (An enlarged+blurred portrait as background gets detected as a giant face.)"""
+    sw, sh = bg_src.size
+    corners = [bg_src.getpixel(p) for p in [(8, 8), (sw - 9, 8), (8, sh - 9), (sw - 9, sh - 9)]]
+    tiny = Image.new("RGB", (2, 2)); tiny.putdata(corners)
+    bg = tiny.resize((w, h), Image.BILINEAR)
+    noise = Image.effect_noise((w // 16, h // 16), 40).resize((w, h), Image.BICUBIC).filter(ImageFilter.GaussianBlur(6))
+    bg = Image.blend(bg, Image.merge("RGB", (noise,) * 3), 0.12)
     return ImageEnhance.Brightness(bg).enhance(rng.uniform(0.6, 0.95))
 
 def paste_face(bg, face, size, xy):

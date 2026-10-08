@@ -162,7 +162,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         var results: [FaceDistanceResult] = []
         for (testIdx, testFace) in testEmbeddings.enumerated() {
             for enrolled in enrolledEmbeddings {
-                let dist = euclidean(testFace, enrolled.embedding)
+                let dist = detector.pairwiseDistances(photoFaces: [testFace], enrolled: [enrolled.embedding])[0]
                 results.append(FaceDistanceResult(
                     enrollmentImageIndex: enrolled.imageIndex,
                     testFaceIndex: testIdx,
@@ -171,10 +171,6 @@ final class FaceMatchSandboxViewModel: ObservableObject {
             }
         }
         distanceResults = results.sorted { $0.distance < $1.distance }
-    }
-
-    private func euclidean(_ a: [Float], _ b: [Float]) -> Float {
-        zip(a, b).reduce(0) { $0 + ($1.0 - $1.1) * ($1.0 - $1.1) }.squareRoot()
     }
 }
 #endif
