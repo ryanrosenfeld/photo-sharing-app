@@ -355,8 +355,7 @@ struct AddFriendSheet: View {
                             Text(InviteLink.url(code: code).absoluteString)
                                 .font(.system(size: 12, design: .monospaced))
                                 .foregroundStyle(OttoColor.bark)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .textSelection(.enabled)
                                 .accessibilityIdentifier("invite.link")
                         }
