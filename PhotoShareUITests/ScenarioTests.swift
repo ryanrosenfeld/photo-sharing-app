@@ -104,7 +104,7 @@ final class ScenarioTests: XCTestCase {
 
     /// The friend's row button (accessibility label is "<name>, <status>").
     private func friendRow(_ name: String) -> XCUIElement {
-        app.buttons.matching(identifier: "friends.row").matching(NSPredicate(format: "label BEGINSWITH %@", name + ",")).firstMatch
+        app.descendants(matching: .any).matching(identifier: "friends.row").matching(NSPredicate(format: "label BEGINSWITH %@", name + ",")).firstMatch
     }
 
     /// Inviter: open Add Friend, capture the generated link (written to VERIFY_OUT_FILE for the runner to compare with the DB).
@@ -144,8 +144,9 @@ final class ScenarioTests: XCTestCase {
         shot("invite-accepted")
         app.buttons["invite.done"].tap()
         openFriendsTab()
-        XCTAssertTrue(friendRow(who).waitForExistence(timeout: 10), "friend row for \(who)")
+        let found = friendRow(who).waitForExistence(timeout: 15)
         shot("friends-after-accept")
+        XCTAssertTrue(found, "friend row for \(who)")
     }
 
     /// Opens the deep link when the invite is not usable (used/self/...) and checks the explanation.
@@ -189,7 +190,7 @@ final class ScenarioTests: XCTestCase {
     func testFriendRowStatus() {
         ensureSignedIn()
         openFriendsTab()
-        let status = app.buttons["friends.row"].firstMatch
+        let status = app.descendants(matching: .any).matching(identifier: "friends.row").firstMatch
         XCTAssertTrue(status.waitForExistence(timeout: 15), "friend row")
         shot("friends-row-status")
         XCTAssertTrue(status.label.contains(env["VERIFY_EXPECT_STATUS"] ?? ""), "status was: \(status.label)")

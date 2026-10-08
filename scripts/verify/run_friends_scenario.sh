@@ -57,7 +57,7 @@ rpc() { # persona fn json-body  -> prints body, sets RPC_CODE
   RPC_CODE=$(echo "$resp" | tail -1); echo "$resp" | sed '$d'; }
 id_of() { psql_q "select id from auth.users where email='$1@test.local'"; }
 DAN=$(id_of dan); CAROL=$(id_of carol); ALICE=$(id_of alice)
-fr() { psql_q "select send_enabled::int || receive_enabled::int from friendships where user_id='$1' and friend_id='$2'"; }
+fr() { psql_q "select send_enabled::int::text || receive_enabled::int::text from friendships where user_id='$1' and friend_id='$2'"; }
 
 # The local DB is shared with other worktrees; if another session resets it with its own migrations, ours vanish.
 db_intact() { [ "$(psql_q "select count(*) from pg_proc where proname='list_friends'")" = 1 ] || {
