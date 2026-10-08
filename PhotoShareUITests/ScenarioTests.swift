@@ -40,18 +40,17 @@ final class ScenarioTests: XCTestCase {
 
     private func ensureSignedIn() {
         defer { allowPhotosAccessIfAsked() }
-        if app.tabBars.buttons["Photos"].waitForExistence(timeout: 8) { return }
+        if app.buttons["tab.photos"].waitForExistence(timeout: 8) { return }
         let getStarted = app.buttons["welcome.signIn"]
         XCTAssertTrue(getStarted.waitForExistence(timeout: 15), "welcome screen")
         getStarted.tap()
-        app.buttons["auth.email"].tap()
         let email = app.textFields["emailAuth.email"]
         XCTAssertTrue(email.waitForExistence(timeout: 5))
         email.tap(); email.typeText(env["VERIFY_EMAIL"] ?? "")
         let pw = app.secureTextFields["emailAuth.password"]
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         app.buttons["emailAuth.submit"].tap()
-        XCTAssertTrue(app.tabBars.buttons["Photos"].waitForExistence(timeout: 20), "signed in -> main tabs")
+        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "signed in -> main tabs")
     }
 
     /// Sign in; grant Photos access if the system alert appears (also pre-granted via simctl privacy).
@@ -63,7 +62,7 @@ final class ScenarioTests: XCTestCase {
     /// Alice: open Friends, enroll the friend from their face profile (no photo picker needed).
     func testEnrollFriendFromFaceProfile() {
         ensureSignedIn()
-        app.tabBars.buttons["Friends"].tap()
+        app.buttons["tab.friends"].tap()
         app.tap()  // lets the interruption monitor handle the Photos permission alert
         let enroll = app.buttons["friends.link.enroll"].firstMatch
         XCTAssertTrue(enroll.waitForExistence(timeout: 15), "outgoing friend row with enroll button")
@@ -79,17 +78,14 @@ final class ScenarioTests: XCTestCase {
         app.buttons["enroll.done"].tap()
     }
 
-    /// Bob: Photos tab shows `VERIFY_EXPECT_PHOTOS` received photo rows.
+    /// Bob: Photos tab shows a polaroid stack from Alice (the stack groups photos by sender).
     func testPhotosTabShowsReceivedPhotos() {
         ensureSignedIn()
-        app.tabBars.buttons["Photos"].tap()
-        let expected = Int(env["VERIFY_EXPECT_PHOTOS"] ?? "1") ?? 1
-        let row = app.descendants(matching: .any).matching(identifier: "photos.row")
-        let deadline = Date().addingTimeInterval(20)
-        while row.count < expected && Date() < deadline { usleep(500_000) }
+        app.buttons["tab.photos"].tap()
+        let stack = app.descendants(matching: .any)["photos.stack.Alice"]
+        let found = stack.waitForExistence(timeout: 30)
         shot("photos-tab")
-        XCTAssertEqual(row.count, expected, "received photo rows")
-        XCTAssertTrue(app.staticTexts["Alice"].exists, "sender name on row")
+        XCTAssertTrue(found, "photo stack from Alice on the Photos tab")
     }
 
     /// Signed-in app sits in the foreground long enough for the auto-share pass to finish.

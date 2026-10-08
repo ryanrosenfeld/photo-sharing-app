@@ -4,9 +4,10 @@ struct ContentView: View {
     @StateObject private var authManager = AuthManager()
 
     var body: some View {
-        Group {
+        ZStack {
+            OttoColor.canvas.ignoresSafeArea()
             if authManager.isLoading {
-                ProgressView()
+                ProgressView().tint(OttoColor.sage)
             } else if authManager.session != nil {
                 MainTabView()
             } else {
