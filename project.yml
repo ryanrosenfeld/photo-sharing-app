@@ -57,3 +57,44 @@ targets:
           - CFBundleURLName: "PhotoShare Auth"
             CFBundleURLSchemes:
               - "photoshare"
+
+  PhotoShareTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PhotoShareTests
+        excludes:
+          - Fixtures/**
+      - path: PhotoShareTests/Fixtures
+        type: folder
+    dependencies:
+      - target: PhotoShare
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.ryanrosenfeld.photoshare.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/PhotoShare.app/PhotoShare"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  PhotoShareUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PhotoShareUITests
+    dependencies:
+      - target: PhotoShare
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.ryanrosenfeld.photoshare.uitests
+        TEST_TARGET_NAME: PhotoShare
+
+schemes:
+  PhotoShare:
+    build:
+      targets:
+        PhotoShare: all
+    test:
+      targets:
+        - PhotoShareTests
+        - PhotoShareUITests

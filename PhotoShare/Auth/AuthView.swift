@@ -46,6 +46,7 @@ struct AuthView: View {
                                 .stroke(Color(.separator), lineWidth: 1)
                         )
                     }
+                    .accessibilityIdentifier("auth.google")
 
                     // Divider
                     HStack {
@@ -67,6 +68,7 @@ struct AuthView: View {
                             .foregroundStyle(.primary)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
+                    .accessibilityIdentifier("auth.email")
                 }
                 .padding(.horizontal, 32)
                 .padding(.bottom, 48)

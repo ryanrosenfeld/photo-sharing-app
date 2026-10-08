@@ -16,6 +16,7 @@ struct PhotosView: View {
                         systemImage: "photo.stack",
                         description: Text("Photos shared with you will appear here.")
                     )
+                    .accessibilityIdentifier("photos.empty")
                 } else {
                     List(vm.photos) { photo in
                         NavigationLink {
@@ -24,12 +25,14 @@ struct PhotosView: View {
                         } label: {
                             PhotoRow(photo: photo)
                         }
+                        .accessibilityIdentifier("photos.row")
                         .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
                         .task {
                             await vm.markViewed(photo)
                         }
                     }
                     .listStyle(.plain)
+                    .accessibilityIdentifier("photos.list")
                 }
             }
             .navigationTitle("Photos")

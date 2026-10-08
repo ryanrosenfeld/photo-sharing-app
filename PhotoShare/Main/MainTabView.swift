@@ -66,6 +66,7 @@ struct ProfileView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(profile?.displayName ?? "Loading…")
                                 .font(.headline)
+                                .accessibilityIdentifier("profile.displayName")
                             Text(profile?.plan.displayName ?? "")
                                 .font(.subheadline)
                                 .foregroundStyle(profile?.plan.isPro == true ? .orange : .secondary)
@@ -97,6 +98,7 @@ struct ProfileView: View {
                             showFaceProfileSetup = true
                         }
                         .font(.subheadline)
+                        .accessibilityIdentifier("profile.faceProfile")
                     }
                 }
 
@@ -104,6 +106,7 @@ struct ProfileView: View {
                     Button("Sign Out", role: .destructive) {
                         Task { await authManager.signOut() }
                     }
+                    .accessibilityIdentifier("profile.signOut")
                 }
 
                 #if DEBUG
@@ -111,6 +114,7 @@ struct ProfileView: View {
                     NavigationLink("Face Match Sandbox") {
                         FaceMatchSandboxView()
                     }
+                    .accessibilityIdentifier("profile.sandbox")
                 }
                 #endif
             }

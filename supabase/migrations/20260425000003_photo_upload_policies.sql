@@ -24,8 +24,9 @@ create policy "Public read of photos bucket"
   on storage.objects for select
   using (bucket_id = 'photos');
 
--- Senders can delete their own uploads (owner is set automatically on insert).
+-- Senders can delete their own uploads. owner_id (text) is used instead of owner: newer Supabase
+-- storage makes owner a uuid, which breaks the text comparison on a fresh/local database.
 create policy "Owners can delete their photos"
   on storage.objects for delete
   to authenticated
-  using (bucket_id = 'photos' and owner = auth.uid()::text);
+  using (bucket_id = 'photos' and owner_id = auth.uid()::text);
