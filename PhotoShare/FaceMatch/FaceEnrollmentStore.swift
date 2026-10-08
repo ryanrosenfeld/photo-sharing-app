@@ -10,14 +10,14 @@ import Foundation
 struct FaceEnrollmentStore: Sendable {
     private static let keyPrefix = "face_enrollment_v3_"
 
-    func save(_ embeddings: [[Float]], for friendId: UUID) throws {
+    func save(_ embeddings: [FaceEmbedding], for friendId: UUID) throws {
         let data = try JSONEncoder().encode(embeddings)
         UserDefaults.standard.set(data, forKey: key(for: friendId))
     }
 
-    func load(for friendId: UUID) -> [[Float]]? {
+    func load(for friendId: UUID) -> [FaceEmbedding]? {
         guard let data = UserDefaults.standard.data(forKey: key(for: friendId)) else { return nil }
-        return try? JSONDecoder().decode([[Float]].self, from: data)
+        return try? JSONDecoder().decode([FaceEmbedding].self, from: data)
     }
 
     func hasEnrollment(for friendId: UUID) -> Bool {

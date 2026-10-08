@@ -43,8 +43,8 @@ final class FaceMatchSandboxViewModel: ObservableObject {
     // MARK: - Private state
 
     // Tuples preserve which enrollment image each embedding came from.
-    private var enrolledEmbeddings: [(imageIndex: Int, embedding: [Float])] = []
-    private var testEmbeddings: [[Float]] = []
+    private var enrolledEmbeddings: [(imageIndex: Int, embedding: FaceEmbedding)] = []
+    private var testEmbeddings: [FaceEmbedding] = []
     private let detector = FaceDetector()
 
     // MARK: - Actions
@@ -109,7 +109,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
         isProcessing = true
         defer { isProcessing = false }
 
-        var embeddings: [(imageIndex: Int, embedding: [Float])] = []
+        var embeddings: [(imageIndex: Int, embedding: FaceEmbedding)] = []
         var counts: [Int] = []
         var crops: [Int: UIImage] = [:]
         for (imageIndex, image) in enrollmentImages.enumerated() {

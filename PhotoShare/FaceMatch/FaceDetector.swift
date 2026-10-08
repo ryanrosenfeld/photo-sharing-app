@@ -16,6 +16,25 @@ enum FaceDetectorError: Error, LocalizedError {
     }
 }
 
+/// A face embedding plus how it was made. Faces whose landmarks could not be aligned fall back to a padded box
+/// crop, which is far less reliable (see docs/face-matching), so comparisons involving them are penalised.
+struct FaceEmbedding: Codable, Sendable, Equatable {
+    var vector: [Float]
+    var aligned: Bool
+}
+
+/// A detected face in the coordinate space of the image it was found in (pixels, origin top-left).
+struct DetectedFace: Sendable {
+    let box: CGRect
+    /// Raw Vision landmarks (may be implausible, e.g. on the Simulator); see `alignedLandmarks`.
+    let landmarks: FaceAligner.Landmarks?
+
+    /// Landmarks good enough to align on, else nil (-> box-crop fallback).
+    var alignedLandmarks: FaceAligner.Landmarks? {
+        landmarks.flatMap { FaceAligner.plausible($0, faceWidth: box.width) ? $0 : nil }
+    }
+}
+
 /// Detect -> align -> embed. The core works on CGImage so the same code runs in the app, in the XCTest
 /// harness (Simulator) and in the macOS evaluation tool (scripts/verify/facematch-mac.sh), where Vision
 /// landmarks are real (the Simulator's landmark detector returns garbage; see `FaceAligner.plausible`).
@@ -32,28 +51,38 @@ struct FaceDetector: Sendable {
     static let defaultMatchThreshold: Float = 0.55
     #endif
 
-    /// Longest image side handed to Vision. Bigger frames are downsampled (OOM on 12 MP camera photos).
-    static let maxDimension: CGFloat = 1024
+    /// Added to the distance when either embedding came from the box-crop fallback, i.e. unaligned faces must be
+    /// 0.2 closer to match. On LFW, box-crop impostors reach 0.34 while aligned ones stay above 0.65.
+    static let unalignedPenalty: Float = 0.2
+
+    /// Longest image side kept for detection. Vision's detector misses faces below ~5% of the frame, so large
+    /// photos are scanned as an image pyramid of 1024px tiles (see `detectFaces`) instead of being squeezed to 1024.
+    static let maxDimension: CGFloat = 4096
+
+    private static let tileSize: CGFloat = 1024
+    private static let tileStride: CGFloat = 768          // 25% overlap so a face is whole in at least one tile
+    private static let minFacePixels: CGFloat = 32        // smaller heads carry too little detail to embed
+    private static let landmarkRegionScale: CGFloat = 1.8 // landmarks are re-detected on a crop this many times the box
 
     // Fallback crop (only when landmarks are missing/implausible): fraction of the box added on each side.
     fileprivate static let cropPadding: CGFloat = 0.25
 
-    // MARK: - CGImage API (image must already be orientation-normalized and downsampled: see `prepared`)
+    // MARK: - CGImage API (image must already be orientation-normalized: see `prepared` / `preparedCGImage`)
 
     /// Embedding of the largest detected face. Used during enrollment: the friend is the primary subject.
-    func largestFaceEmbedding(in image: CGImage) throws -> [Float]? {
-        guard let largest = try detectFaces(in: image).max(by: { $0.boundingBox.area < $1.boundingBox.area }) else { return nil }
+    func largestFaceEmbedding(in image: CGImage) throws -> FaceEmbedding? {
+        guard let largest = try detectFaces(in: image).max(by: { $0.box.area < $1.box.area }) else { return nil }
         return try embedding(for: largest, in: image)
     }
 
     /// Embeddings for every detected face. Used when scanning camera-roll photos to find matching friends.
-    func allFaceEmbeddings(in image: CGImage) throws -> [[Float]] {
+    func allFaceEmbeddings(in image: CGImage) throws -> [FaceEmbedding] {
         try detectFaces(in: image).compactMap { try embedding(for: $0, in: image) }
     }
 
     /// The 112x112 model input for the largest face (what the sandbox shows). Debug/test aid.
     func largestFaceCrop(in image: CGImage) throws -> CGImage? {
-        guard let largest = try detectFaces(in: image).max(by: { $0.boundingBox.area < $1.boundingBox.area }) else { return nil }
+        guard let largest = try detectFaces(in: image).max(by: { $0.box.area < $1.box.area }) else { return nil }
         return FaceAligner.crop112(for: largest, in: image)
     }
 
@@ -62,23 +91,20 @@ struct FaceDetector: Sendable {
         try detectFaces(in: image).compactMap { FaceAligner.crop112(for: $0, in: image) }
     }
 
-    /// Detections for debugging: Vision box (normalized, bottom-left origin) and whether alignment was used.
-    func faceDiagnostics(in image: CGImage) throws -> [(box: CGRect, aligned: Bool, landmarks: FaceAligner.Landmarks?)] {
-        let w = CGFloat(image.width), h = CGFloat(image.height)
-        return try detectFaces(in: image).map { face in
-            let l = FaceAligner.landmarks(of: face, imageWidth: w, imageHeight: h)
-            return (face.boundingBox, l.map { FaceAligner.plausible($0, face: face, imageWidth: w) } ?? false, l)
-        }
+    /// Detected faces (boxes + landmarks in image pixels). Debug/test aid.
+    func faceDiagnostics(in image: CGImage) throws -> [DetectedFace] {
+        try detectFaces(in: image)
     }
 
     // MARK: - Distances
 
     /// All pairwise cosine distances between photoFaces and enrolled embeddings, sorted ascending.
-    func pairwiseDistances(photoFaces: [[Float]], enrolled: [[Float]]) -> [Float] {
+    func pairwiseDistances(photoFaces: [FaceEmbedding], enrolled: [FaceEmbedding]) -> [Float] {
         var distances: [Float] = []
         for face in photoFaces {
             for ref in enrolled {
-                distances.append(cosineDistance(face, ref))
+                let penalty = face.aligned && ref.aligned ? 0 : Self.unalignedPenalty
+                distances.append(cosineDistance(face.vector, ref.vector) + penalty)
             }
         }
         return distances.sorted()
@@ -86,8 +112,8 @@ struct FaceDetector: Sendable {
 
     /// True if any face in `photoFaces` is within `threshold` of any embedding in `enrolled`.
     func isMatch(
-        photoFaces: [[Float]],
-        enrolled: [[Float]],
+        photoFaces: [FaceEmbedding],
+        enrolled: [FaceEmbedding],
         threshold: Float = defaultMatchThreshold
     ) -> Bool {
         pairwiseDistances(photoFaces: photoFaces, enrolled: enrolled).first.map { $0 < threshold } ?? false
@@ -121,29 +147,24 @@ struct FaceDetector: Sendable {
         return try? MLModel(contentsOf: url, configuration: config)
     }()
 
-    // MARK: - Internals
+    // MARK: - Embedding
 
-    private func embedding(for face: VNFaceObservation, in image: CGImage) throws -> [Float]? {
+    private func embedding(for face: DetectedFace, in image: CGImage) throws -> FaceEmbedding? {
         guard let model = Self.model else { throw FaceDetectorError.modelNotFound }
-        guard let crop = FaceAligner.crop112(for: face, in: image),
-              let pixelBuffer = crop.pixelBuffer() else { return nil }
-
-        let input = try MLDictionaryFeatureProvider(dictionary: ["input_1": pixelBuffer])
-        let output = try model.prediction(from: input)
-
-        guard let array = output.featureValue(for: "embedding")?.multiArrayValue else { return nil }
-        return (0..<array.count).map { Float(truncating: array[$0]) }
+        guard let crop = FaceAligner.crop112(for: face, in: image), let v = try embed(crop, with: model) else { return nil }
+        #if FACEMATCH_ABLATE_BOX
+        return FaceEmbedding(vector: v, aligned: true)   // evaluation-only: no penalty, matches the pre-change pipeline
+        #else
+        return FaceEmbedding(vector: v, aligned: face.alignedLandmarks != nil)
+        #endif
     }
 
-    private func detectFaces(in image: CGImage) throws -> [VNFaceObservation] {
-        let request = VNDetectFaceLandmarksRequest()
-        #if targetEnvironment(simulator)
-        // The Simulator has no GPU/ANE for Vision: without this it throws "Could not create inference context".
-        request.usesCPUOnly = true
-        #endif
-        let handler = VNImageRequestHandler(cgImage: image, options: [:])
-        try handler.perform([request])
-        return request.results ?? []
+    private func embed(_ crop: CGImage, with model: MLModel) throws -> [Float]? {
+        guard let pixelBuffer = crop.pixelBuffer() else { return nil }
+        let input = try MLDictionaryFeatureProvider(dictionary: ["input_1": pixelBuffer])
+        let output = try model.prediction(from: input)
+        guard let array = output.featureValue(for: "embedding")?.multiArrayValue else { return nil }
+        return (0..<array.count).map { Float(truncating: array[$0]) }
     }
 
     /// 1 - cos(a, b); 0 = same direction, ~1 = unrelated, 2 = opposite.
@@ -156,6 +177,116 @@ struct FaceDetector: Sendable {
         let denom = (na * nb).squareRoot()
         return denom > 0 ? 1 - dot / denom : 2
         #endif
+    }
+
+    // MARK: - Detection
+
+    /// Finds faces at every size: scans the whole image plus, for big images, an image pyramid of 1024px tiles
+    /// (Vision's detector returns nothing for faces under ~5% of the frame, which is what small faces in
+    /// wide shots are), merges duplicates, then re-detects landmarks on a crop of each face.
+    private func detectFaces(in image: CGImage) throws -> [DetectedFace] {
+        let w = CGFloat(image.width), h = CGFloat(image.height), longest = max(w, h)
+        var candidates: [(rect: CGRect, confidence: Float)] = []
+
+        // pyramid levels (longest side in px): 1024 sees big faces, 2048 and native see small ones
+        var targets: Set<CGFloat> = [min(longest, Self.tileSize)]
+        if longest > 1536 { targets.insert(min(longest, 2048)) }
+        if longest > 2560 { targets.insert(min(longest, 4096)) }
+        for target in targets.sorted() {
+            let scale = target / longest
+            guard let level = target < longest ? image.resized(to: CGSize(width: (w * scale).rounded(), height: (h * scale).rounded())) : image else { continue }
+            let lw = CGFloat(level.width), lh = CGFloat(level.height)
+            for tile in Self.tiles(width: lw, height: lh) {
+                guard let crop = level.cropping(to: tile) else { continue }
+                for obs in try Self.detectRectangles(in: crop) {
+                    var r = obs.boundingBox.pixelRect(width: tile.width, height: tile.height)
+                    // drop faces cut off by an interior tile border (a neighbouring tile has them whole)
+                    let margin = tile.width * 0.015
+                    if (r.minX < margin && tile.minX > 0) || (r.maxX > tile.width - margin && tile.maxX < lw)
+                        || (r.minY < margin && tile.minY > 0) || (r.maxY > tile.height - margin && tile.maxY < lh) { continue }
+                    r = r.offsetBy(dx: tile.minX, dy: tile.minY)
+                    let back = 1 / scale
+                    r = CGRect(x: r.minX * back, y: r.minY * back, width: r.width * back, height: r.height * back)
+                    if r.width >= Self.minFacePixels { candidates.append((r, obs.confidence)) }
+                }
+            }
+        }
+        return try Self.suppressDuplicates(candidates).compactMap { try refine(box: $0, in: image) }
+    }
+
+    /// Overlapping tiles of `tileSize` covering the image (one tile if the image fits).
+    private static func tiles(width: CGFloat, height: CGFloat) -> [CGRect] {
+        func starts(_ length: CGFloat) -> [CGFloat] {
+            guard length > tileSize else { return [0] }
+            var s: [CGFloat] = []
+            var x: CGFloat = 0
+            while x + tileSize < length { s.append(x); x += tileStride }
+            s.append(length - tileSize)
+            return s
+        }
+        let tw = min(width, tileSize), th = min(height, tileSize)
+        return starts(height).flatMap { y in starts(width).map { x in CGRect(x: x, y: y, width: tw, height: th) } }
+    }
+
+    private static func detectRectangles(in image: CGImage) throws -> [VNFaceObservation] {
+        let request = VNDetectFaceRectanglesRequest()
+        #if targetEnvironment(simulator)
+        // The Simulator has no GPU/ANE for Vision: without this it throws "Could not create inference context".
+        request.usesCPUOnly = true
+        #endif
+        try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
+        return request.results ?? []
+    }
+
+    /// Non-maximum suppression: keep the most confident (then largest) box of each overlapping group.
+    private static func suppressDuplicates(_ boxes: [(rect: CGRect, confidence: Float)]) -> [CGRect] {
+        var kept: [CGRect] = []
+        for b in boxes.sorted(by: { ($0.confidence, $0.rect.area) > ($1.confidence, $1.rect.area) }) {
+            let dup = kept.contains { k in
+                let inter = k.intersection(b.rect)
+                guard !inter.isNull else { return false }
+                let i = inter.area
+                return i / (k.area + b.rect.area - i) > 0.35 || i / min(k.area, b.rect.area) > 0.7
+            }
+            if !dup { kept.append(b.rect) }
+        }
+        return kept
+    }
+
+    /// Landmarks are detected again on a crop around the face, upscaled to a comfortable size: far more accurate for
+    /// small faces than the landmarks of a whole-frame pass, and bounded in cost for large ones.
+    private func refine(box: CGRect, in image: CGImage) throws -> DetectedFace? {
+        let side = max(box.width, box.height) * Self.landmarkRegionScale
+        let center = CGPoint(x: box.midX, y: box.midY)
+        let bounds = CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))
+        let region = CGRect(x: center.x - side / 2, y: center.y - side / 2, width: side, height: side).intersection(bounds).integral
+        guard !region.isNull, let regionImage = image.cropping(to: region) else { return DetectedFace(box: box, landmarks: nil) }
+        // work on a 320...640px crop: upscale small faces, downscale large ones
+        let k: CGFloat = region.width < 320 ? 320 / region.width : (region.width > 640 ? 640 / region.width : 1)
+        let scaled = k == 1 ? regionImage : (regionImage.resized(to: CGSize(width: (region.width * k).rounded(), height: (region.height * k).rounded())) ?? regionImage)
+        let sw = CGFloat(scaled.width), sh = CGFloat(scaled.height)
+
+        let request = VNDetectFaceLandmarksRequest()
+        #if targetEnvironment(simulator)
+        request.usesCPUOnly = true
+        #endif
+        try VNImageRequestHandler(cgImage: scaled, options: [:]).perform([request])
+
+        // the observation that best overlaps where we expect the face (box in scaled-crop pixels)
+        let expected = CGRect(x: (box.minX - region.minX) * k, y: (box.minY - region.minY) * k, width: box.width * k, height: box.height * k)
+        let best = (request.results ?? []).max { a, b in
+            a.boundingBox.pixelRect(width: sw, height: sh).iou(expected) < b.boundingBox.pixelRect(width: sw, height: sh).iou(expected)
+        }
+        guard let obs = best, obs.boundingBox.pixelRect(width: sw, height: sh).iou(expected) > 0.3,
+              let l = FaceAligner.landmarks(of: obs, imageWidth: sw, imageHeight: sh) else {
+            return DetectedFace(box: box, landmarks: nil)
+        }
+        func toImage(_ p: CGPoint) -> CGPoint { CGPoint(x: region.minX + p.x / k, y: region.minY + p.y / k) }
+        let mapped = FaceAligner.Landmarks(
+            leftEye: toImage(l.leftEye), rightEye: toImage(l.rightEye), nose: toImage(l.nose),
+            mouthLeft: toImage(l.mouthLeft), mouthRight: toImage(l.mouthRight))
+        // box from the landmark pass is tighter/more consistent than the detector's; keep the detector box for ordering
+        return DetectedFace(box: box, landmarks: mapped)
     }
 }
 
@@ -172,11 +303,12 @@ enum FaceAligner {
     ]
 
     /// Landmarks in image pixels (origin top-left): eyes ordered image-left first.
-    struct Landmarks {
+    struct Landmarks: Sendable {
         var leftEye: CGPoint, rightEye: CGPoint, nose: CGPoint, mouthLeft: CGPoint, mouthRight: CGPoint
         var points: [CGPoint] { [leftEye, rightEye, nose, mouthLeft, mouthRight] }
     }
 
+    /// Landmarks of a Vision observation in pixels of the image it was detected in.
     static func landmarks(of face: VNFaceObservation, imageWidth w: CGFloat, imageHeight h: CGFloat) -> Landmarks? {
         guard let lm = face.landmarks,
               let le = lm.leftEye?.normalizedPoints, let re = lm.rightEye?.normalizedPoints,
@@ -197,10 +329,9 @@ enum FaceAligner {
         return Landmarks(leftEye: eyes[0], rightEye: eyes[1], nose: mean(nose), mouthLeft: ml, mouthRight: mr)
     }
 
-    /// Sanity check: eyes a plausible distance apart relative to the box, mouth well below the eyes, limited roll.
+    /// Sanity check: eyes a plausible distance apart relative to the face, mouth well below the eyes, limited roll.
     /// Rejects the Simulator's collapsed landmarks so we fall back to the box crop instead of aligning garbage.
-    static func plausible(_ l: Landmarks, face: VNFaceObservation, imageWidth w: CGFloat) -> Bool {
-        let boxW = face.boundingBox.width * w
+    static func plausible(_ l: Landmarks, faceWidth boxW: CGFloat) -> Bool {
         guard boxW > 8 else { return false }
         let eyeDx = l.rightEye.x - l.leftEye.x, eyeDy = l.rightEye.y - l.leftEye.y
         let eyeDist = (eyeDx * eyeDx + eyeDy * eyeDy).squareRoot()
@@ -214,36 +345,54 @@ enum FaceAligner {
     }
 
     /// The 112x112 crop fed to the model. Aligned when landmarks are usable, else the padded box crop.
-    static func crop112(for face: VNFaceObservation, in image: CGImage) -> CGImage? {
-        let w = CGFloat(image.width), h = CGFloat(image.height)
+    static func crop112(for face: DetectedFace, in image: CGImage) -> CGImage? {
         #if FACEMATCH_ABLATE_BOX
         // Evaluation-only build flag: reproduce the pre-alignment pipeline (padded box crop) for before/after numbers.
         return boxCrop112(for: face, in: image)
-        #endif
-        if let l = landmarks(of: face, imageWidth: w, imageHeight: h), plausible(l, face: face, imageWidth: w),
-           let t = similarity(from: l.points, to: template),
+        #else
+        if let l = face.alignedLandmarks, let t = similarity(from: l.points, to: template),
            let out = warp(image, by: t) { return out }
         return boxCrop112(for: face, in: image)
+        #endif
     }
 
-    static func boxCrop112(for face: VNFaceObservation, in image: CGImage) -> CGImage? {
-        let w = CGFloat(image.width), h = CGFloat(image.height)
-        let r = face.boundingBox.padded(by: FaceDetector.cropPadding)
-        let rect = CGRect(x: r.minX * w, y: (1 - r.maxY) * h, width: r.width * w, height: r.height * h)
-        guard let cropped = image.cropping(to: rect) else { return nil }
+    static func boxCrop112(for face: DetectedFace, in image: CGImage) -> CGImage? {
+        let b = face.box
+        let pad = FaceDetector.cropPadding
+        let rect = CGRect(x: b.minX - b.width * pad, y: b.minY - b.height * pad, width: b.width * (1 + 2 * pad), height: b.height * (1 + 2 * pad))
+            .intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))).integral
+        guard !rect.isNull, let cropped = image.cropping(to: rect) else { return nil }
         return render(size: 112) { ctx in
             ctx.draw(cropped, in: CGRect(x: 0, y: 0, width: 112, height: 112))
         }
     }
 
     /// Draws `image` through `t` (image px, top-left origin -> 112x112 template space, top-left origin).
+    /// Only the source region the 112x112 window covers is touched, and big sources are halved first so
+    /// a 1000px face is area-averaged down instead of aliased.
     static func warp(_ image: CGImage, by t: CGAffineTransform) -> CGImage? {
-        let h = CGFloat(image.height)
+        guard abs(t.a * t.d - t.b * t.c) > 1e-9 else { return nil }
+        let inv = t.inverted()
+        let corners = [CGPoint(x: 0, y: 0), CGPoint(x: 112, y: 0), CGPoint(x: 0, y: 112), CGPoint(x: 112, y: 112)].map { $0.applying(inv) }
+        let xs = corners.map(\.x), ys = corners.map(\.y)
+        let region = CGRect(x: xs.min()! - 2, y: ys.min()! - 2, width: xs.max()! - xs.min()! + 4, height: ys.max()! - ys.min()! + 4)
+            .intersection(CGRect(x: 0, y: 0, width: CGFloat(image.width), height: CGFloat(image.height))).integral
+        guard !region.isNull, region.width >= 1, region.height >= 1, var src = image.cropping(to: region) else { return render(size: 112) { _ in } }
+        // image px -> region px -> (optional halvings) -> template
+        var tt = CGAffineTransform(translationX: region.minX, y: region.minY).concatenating(t)
+        var scale = (tt.a * tt.a + tt.b * tt.b).squareRoot()
+        while scale < 0.5, src.width >= 8, src.height >= 8,
+              let half = src.resized(to: CGSize(width: (src.width + 1) / 2, height: (src.height + 1) / 2)) {
+            src = half
+            tt = CGAffineTransform(scaleX: 2, y: 2).concatenating(tt)   // region-px of the half-size image are 2x as large
+            scale *= 2
+        }
+        let h = CGFloat(src.height)
         return render(size: 112) { ctx in
             ctx.translateBy(x: 0, y: 112); ctx.scaleBy(x: 1, y: -1)    // top-left origin for the destination
-            ctx.concatenate(t)                                          // image px -> template space
+            ctx.concatenate(tt)                                         // source px -> template space
             ctx.translateBy(x: 0, y: h); ctx.scaleBy(x: 1, y: -1)       // CG draws images bottom-left
-            ctx.draw(image, in: CGRect(x: 0, y: 0, width: CGFloat(image.width), height: h))
+            ctx.draw(src, in: CGRect(x: 0, y: 0, width: CGFloat(src.width), height: h))
         }
     }
 
@@ -283,6 +432,18 @@ enum FaceAligner {
 // MARK: - CGImage / CGRect helpers
 
 extension CGImage {
+    /// High-quality resample to `size` (top-left origin, opaque).
+    func resized(to size: CGSize) -> CGImage? {
+        guard size.width >= 1, size.height >= 1, let ctx = CGContext(
+            data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        ) else { return nil }
+        ctx.interpolationQuality = .high
+        ctx.draw(self, in: CGRect(origin: .zero, size: size))
+        return ctx.makeImage()
+    }
+
     /// 32BGRA CVPixelBuffer at the image's own size (112x112 crops).
     /// CoreML handles the BGRA->BGR channel reorder and [-1,1] normalization (baked in at model conversion time).
     func pixelBuffer() -> CVPixelBuffer? {
@@ -318,16 +479,15 @@ extension CGImage {
 private extension CGRect {
     var area: CGFloat { width * height }
 
-    /// Expands the Vision bounding box by `fraction` of its size on each side, clamped to [0,1].
-    func padded(by fraction: CGFloat) -> CGRect {
-        let dx = width * fraction
-        let dy = height * fraction
-        return CGRect(
-            x: max(0, minX - dx),
-            y: max(0, minY - dy),
-            width: min(1 - max(0, minX - dx), width + dx * 2),
-            height: min(1 - max(0, minY - dy), height + dy * 2)
-        )
+    /// Vision normalized rect (origin bottom-left) -> pixel rect (origin top-left).
+    func pixelRect(width w: CGFloat, height h: CGFloat) -> CGRect {
+        CGRect(x: minX * w, y: (1 - maxY) * h, width: width * w, height: height * h)
+    }
+
+    func iou(_ other: CGRect) -> CGFloat {
+        let inter = intersection(other)
+        guard !inter.isNull else { return 0 }
+        return inter.area / (area + other.area - inter.area)
     }
 }
 
@@ -336,13 +496,13 @@ private extension CGRect {
 #if canImport(UIKit)
 extension FaceDetector {
     /// Embedding of the largest face in `image` (enrollment).
-    func largestFaceEmbedding(in image: UIImage) throws -> [Float]? {
+    func largestFaceEmbedding(in image: UIImage) throws -> FaceEmbedding? {
         guard let cg = image.preparedCGImage() else { return nil }
         return try largestFaceEmbedding(in: cg)
     }
 
     /// Embeddings for every face in `image` (camera-roll scan).
-    func allFaceEmbeddings(in image: UIImage) throws -> [[Float]] {
+    func allFaceEmbeddings(in image: UIImage) throws -> [FaceEmbedding] {
         guard let cg = image.preparedCGImage() else { return [] }
         return try allFaceEmbeddings(in: cg)
     }

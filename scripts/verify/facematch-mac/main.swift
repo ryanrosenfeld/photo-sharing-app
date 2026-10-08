@@ -25,7 +25,7 @@ for f in fixtures {
 // --dump-embeddings: all-face embeddings per file as JSON, for offline metric experiments (python/numpy).
 if args.contains("--dump-embeddings") {
     var dump: [String: [[Float]]] = [:]
-    for f in fixtures { dump[f.file] = try detector.allFaceEmbeddings(in: images[f.file]!) }
+    for f in fixtures { dump[f.file] = try detector.allFaceEmbeddings(in: images[f.file]!).map(\.vector) }
     try JSONEncoder().encode(dump).write(to: out.appendingPathComponent("embeddings.json"))
 }
 
@@ -47,15 +47,15 @@ for f in fixtures {
     let img = images[f.file]!
     let diags = try detector.faceDiagnostics(in: img)
     if diags.isEmpty { undetected.append(f.file) }
-    for d in diags { faceCount += 1; if d.aligned { alignedCount += 1 } }
+    for d in diags { faceCount += 1; if d.alignedLandmarks != nil { alignedCount += 1 } }
     let w = img.width, h = img.height
     guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(),
                               bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue) else { continue }
     ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
     ctx.setLineWidth(max(2, CGFloat(w) / 250))
     for d in diags {
-        ctx.setStrokeColor(d.aligned ? CGColor(red: 1, green: 0.2, blue: 0.2, alpha: 1) : CGColor(red: 1, green: 0.6, blue: 0, alpha: 1))
-        ctx.stroke(CGRect(x: d.box.minX * CGFloat(w), y: d.box.minY * CGFloat(h), width: d.box.width * CGFloat(w), height: d.box.height * CGFloat(h)))
+        ctx.setStrokeColor(d.alignedLandmarks != nil ? CGColor(red: 1, green: 0.2, blue: 0.2, alpha: 1) : CGColor(red: 1, green: 0.6, blue: 0, alpha: 1))
+        ctx.stroke(CGRect(x: d.box.minX, y: CGFloat(h) - d.box.maxY, width: d.box.width, height: d.box.height))
         if let l = d.landmarks {
             ctx.setFillColor(CGColor(red: 0.2, green: 1, blue: 0.2, alpha: 1))
             for p in l.points { let r = max(3, CGFloat(w) / 200); ctx.fillEllipse(in: CGRect(x: p.x - r, y: CGFloat(h) - p.y - r, width: 2 * r, height: 2 * r)) }

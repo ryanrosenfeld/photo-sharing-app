@@ -47,7 +47,7 @@ final class AutoShareProcessor: ObservableObject {
                 continue
             }
 
-            let faceEmbeddings: [[Float]]
+            let faceEmbeddings: [FaceEmbedding]
             do {
                 faceEmbeddings = try await Task.detached(priority: .userInitiated) { [detector, image] in
                     try detector.allFaceEmbeddings(in: image)

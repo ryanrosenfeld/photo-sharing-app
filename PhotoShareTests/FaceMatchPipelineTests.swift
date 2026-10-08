@@ -32,8 +32,8 @@ final class FaceMatchPipelineTests: XCTestCase {
     func testEveryFixtureYieldsA512DimEmbedding() throws {
         for f in try loadFixtures() {
             let e = try XCTUnwrap(try detector.largestFaceEmbedding(in: f.image), "no face detected in \(f.file)")
-            XCTAssertEqual(e.count, 512, f.file)
-            XCTAssertTrue(e.allSatisfy { $0.isFinite }, f.file)
+            XCTAssertEqual(e.vector.count, 512, f.file)
+            XCTAssertTrue(e.vector.allSatisfy { $0.isFinite }, f.file)
         }
     }
 

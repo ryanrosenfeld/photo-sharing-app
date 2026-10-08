@@ -1,4 +1,5 @@
 import Foundation
+// FaceEmbedding comes from PhotoShare/FaceMatch/FaceDetector.swift (compiled into both the app and the mac tool)
 
 /// Scores the face-match pipeline over the fixture manifest. Foundation-only so both the XCTest
 /// (Simulator) and the macOS evaluation tool (scripts/verify/facematch-mac.sh) compile this same file.
@@ -29,13 +30,13 @@ struct FaceMatchEvaluation {
     /// `distances` returns sorted pairwise distances (FaceDetector.pairwiseDistances).
     static func run(
         fixtures: [FaceFixture], threshold: Float,
-        embedLargest: (FaceFixture) throws -> [Float]?,
-        embedAll: (FaceFixture) throws -> [[Float]],
-        distances: ([[Float]], [[Float]]) -> [Float]
+        embedLargest: (FaceFixture) throws -> FaceEmbedding?,
+        embedAll: (FaceFixture) throws -> [FaceEmbedding],
+        distances: ([FaceEmbedding], [FaceEmbedding]) -> [Float]
     ) throws -> FaceMatchEvaluation {
         let identities = Array(Set(fixtures.map(\.identity))).sorted()
-        var enrolled: [String: [[Float]]] = [:]
-        var probes: [(FaceFixture, [[Float]])] = []
+        var enrolled: [String: [FaceEmbedding]] = [:]
+        var probes: [(FaceFixture, [FaceEmbedding])] = []
         for f in fixtures {
             try autoreleasepool {
                 if f.role == "enroll" {
