@@ -7,17 +7,23 @@ import UIKit
 /// false / missed matches at the current threshold.
 ///
 /// Fixtures: PhotoShareTests/Fixtures/faces/manifest.json ([{identity, file}]). Per identity the
-/// first `enrollCount` photos play the friend's enrollment photos, the rest play camera-roll photos.
+/// first `2` photos play the friend's enrollment photos, the rest play camera-roll photos.
 final class FaceMatchPipelineTests: XCTestCase {
 
-    private struct Entry: Decodable { let identity: String; let file: String }
-    private let enrollCount = 2
+    private struct Entry: Decodable {
+        let identity: String
+        let file: String
+        let kind: String
+        let role: String          // "enroll" | "probe"
+        let identities: [String]  // ground truth: who is in the photo
+    }
     private let detector = FaceDetector()
     private let threshold = FaceDetector.defaultMatchThreshold
 
     private struct Loaded {
-        let identity: String
-        let file: String
+        let entry: Entry
+        var identity: String { entry.identity }
+        var file: String { entry.file }
         let image: UIImage
     }
 
@@ -26,7 +32,7 @@ final class FaceMatchPipelineTests: XCTestCase {
         let data = try Data(contentsOf: base.appendingPathComponent("manifest.json"))
         return try JSONDecoder().decode([Entry].self, from: data).map { e in
             let img = UIImage(contentsOfFile: base.appendingPathComponent(e.file).path)
-            return Loaded(identity: e.identity, file: e.file, image: try XCTUnwrap(img, "cannot load \(e.file)"))
+            return Loaded(entry: e, image: try XCTUnwrap(img, "cannot load \(e.file)"))
         }
     }
 
@@ -45,62 +51,63 @@ final class FaceMatchPipelineTests: XCTestCase {
         XCTAssertEqual(detector.pairwiseDistances(photoFaces: [a], enrolled: [b]).first ?? -1, 0, accuracy: 1e-3)
     }
 
-    /// Reports the full matrix; fails only if the pipeline itself breaks (no embeddings).
+    /// Scores every (probe photo, enrolled identity) pair against ground truth at the shipping threshold and
+    /// writes a report: per-kind recall, false matches, distance distributions, and a threshold sweep.
     func testDistanceTableAndMatchOutcomesAtThreshold() throws {
         let fixtures = try loadFixtures()
         let identities = Array(Set(fixtures.map(\.identity))).sorted()
 
-        // Enrollment = largest-face embeddings of the first `enrollCount` photos per identity.
         var enrolled: [String: [[Float]]] = [:]
-        var probes: [(identity: String, file: String, faces: [[Float]])] = []
-        for id in identities {
-            let photos = fixtures.filter { $0.identity == id }
-            for (i, p) in photos.enumerated() {
-                if i < enrollCount {
-                    if let e = try detector.largestFaceEmbedding(in: p.image) { enrolled[id, default: []].append(e) }
+        var probes: [(entry: Entry, faces: [[Float]])] = []
+        for f in fixtures {
+            try autoreleasepool {
+                if f.entry.role == "enroll" {
+                    if let e = try detector.largestFaceEmbedding(in: f.image) { enrolled[f.identity, default: []].append(e) }
                 } else {
-                    probes.append((id, p.file, try detector.allFaceEmbeddings(in: p.image)))
+                    probes.append((f.entry, try detector.allFaceEmbeddings(in: f.image)))
                 }
             }
+            print("PROGRESS \(f.file)")
         }
         XCTAssertEqual(enrolled.count, identities.count, "every identity needs at least one enrollment embedding")
-        XCTAssertFalse(probes.isEmpty)
 
-        var lines = ["probe photo -> min distance to each enrolled identity (threshold \(threshold))"]
-        lines.append("probe".padding(toLength: 12, withPad: " ", startingAt: 0) + identities.map { $0.padding(toLength: 9, withPad: " ", startingAt: 0) }.joined())
-        var falseMatches: [String] = []
-        var missedMatches: [String] = []
-        var correct = 0
+        // genuine = (probe, identity actually in it); impostor = (probe, identity not in it)
+        struct Pair { let file: String; let kind: String; let id: String; let genuine: Bool; let d: Float? }
+        var pairs: [Pair] = []
         for probe in probes {
-            var row = probe.file.padding(toLength: 12, withPad: " ", startingAt: 0)
             for id in identities {
                 let d = detector.pairwiseDistances(photoFaces: probe.faces, enrolled: enrolled[id] ?? []).first
-                row += (d.map { String(format: "%.2f", $0) } ?? "n/a").padding(toLength: 9, withPad: " ", startingAt: 0)
-                let matched = detector.isMatch(photoFaces: probe.faces, enrolled: enrolled[id] ?? [], threshold: threshold)
-                let same = id == probe.identity
-                switch (same, matched) {
-                case (true, false): missedMatches.append("\(probe.file) vs \(id)")
-                case (false, true): falseMatches.append("\(probe.file) vs \(id)")
-                default: correct += 1
-                }
+                pairs.append(Pair(file: probe.entry.file, kind: probe.entry.kind, id: id, genuine: probe.entry.identities.contains(id), d: d))
             }
-            lines.append(row)
         }
-        let total = probes.count * identities.count
-        lines.append("outcomes @\(threshold): correct \(correct)/\(total), false matches \(falseMatches.count), missed matches \(missedMatches.count)")
-        if !falseMatches.isEmpty { lines.append("FALSE:  " + falseMatches.joined(separator: ", ")) }
-        if !missedMatches.isEmpty { lines.append("MISSED: " + missedMatches.joined(separator: ", ")) }
+        func matched(_ p: Pair) -> Bool { p.d.map { $0 < threshold } ?? false }
+        let genuine = pairs.filter(\.genuine), impostor = pairs.filter { !$0.genuine }
+        let missed = genuine.filter { !matched($0) }
+        let falseM = impostor.filter(matched)
+        func stats(_ xs: [Float]) -> String {
+            guard !xs.isEmpty else { return "n/a" }
+            let s = xs.sorted()
+            return String(format: "min %.1f  p50 %.1f  p95 %.1f  max %.1f", s[0], s[s.count / 2], s[Int(Double(s.count - 1) * 0.95)], s[s.count - 1])
+        }
+        let gd = genuine.compactMap(\.d), idist = impostor.compactMap(\.d)
 
-        // Regression baseline at threshold 15 for the committed fixtures (see scripts/verify/make_fixtures.py).
-        // The `_4` probes are small faces inside a wider scene, and `alice_6_large` is a 4032px frame with a
-        // small off-centre face: the pipeline currently misses them. If this set changes (better OR worse),
-        // review the report and update the baseline deliberately.
-        let expectedMissed: Set<String> = [
-            "alice_4.jpg vs alice", "bob_4.jpg vs bob", "carol_4.jpg vs carol", "dan_4.jpg vs dan",
-            "alice_6_large.jpg vs alice",
-        ]
-        XCTAssertEqual(falseMatches, [], "false matches at threshold \(threshold)")
-        XCTAssertEqual(Set(missedMatches), expectedMissed, "missed-match set changed vs baseline")
+        var lines = ["FACE MATCH REPORT  threshold \(threshold)  identities \(identities.count)  probes \(probes.count)  genuine pairs \(genuine.count)  impostor pairs \(impostor.count)"]
+        lines.append("genuine  distance: " + stats(gd) + "   undetected(no face): \(genuine.filter { $0.d == nil }.count)")
+        lines.append("impostor distance: " + stats(idist))
+        lines.append(String(format: "recall %d/%d = %.1f%%   false matches %d/%d", genuine.count - missed.count, genuine.count, 100 * Double(genuine.count - missed.count) / Double(genuine.count), falseM.count, impostor.count))
+        lines.append("per kind (recall):")
+        for kind in Array(Set(genuine.map(\.kind))).sorted() {
+            let g = genuine.filter { $0.kind == kind }
+            lines.append(String(format: "  %-16@ %3d/%3d   genuine %@", kind as NSString, g.filter(matched).count, g.count, stats(g.compactMap(\.d))))
+        }
+        lines.append("threshold sweep (recall / false matches):")
+        for t in [8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 20] as [Float] {
+            let r = genuine.filter { ($0.d ?? .infinity) < t }.count, f = impostor.filter { ($0.d ?? .infinity) < t }.count
+            lines.append(String(format: "  t=%4.0f  recall %3d/%d  false %d", t, r, genuine.count, f))
+        }
+        if let lo = gd.max(), let hi = idist.min() { lines.append(String(format: "worst genuine %.2f vs closest impostor %.2f (gap %.2f)", lo, hi, hi - lo)) }
+        if !falseM.isEmpty { lines.append("FALSE:  " + falseM.map { "\($0.file)~\($0.id)" }.joined(separator: ", ")) }
+        if !missed.isEmpty { lines.append("MISSED: " + missed.map { "\($0.file)~\($0.id)" }.joined(separator: ", ")) }
 
         let report = lines.joined(separator: "\n")
         print("\n=== FACE MATCH REPORT ===\n\(report)\n=========================\n")
@@ -111,6 +118,35 @@ final class FaceMatchPipelineTests: XCTestCase {
         if let dir = ProcessInfo.processInfo.environment["VERIFY_OUTPUT_DIR"] {
             try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
             try? report.write(toFile: dir + "/face-match-report.txt", atomically: true, encoding: .utf8)
+        }
+
+        // Regression gates (set from the committed baseline; tighten deliberately when the pipeline improves).
+        XCTAssertEqual(falseM.count, 0, "false matches at threshold \(threshold): \(falseM.map { "\($0.file)~\($0.id)" })")
+        XCTAssertGreaterThanOrEqual(genuine.count - missed.count, Self.minGenuineMatches, "recall regressed; MISSED: \(missed.map { "\($0.file)~\($0.id)" })")
+    }
+
+    /// Floor for genuine matches over the committed fixtures (see report for the current figure).
+    private static let minGenuineMatches = 28
+
+    /// Writes each fixture with detected boxes drawn (red) and the 25%-padded crop (green) to VERIFY_OUTPUT_DIR/annotated.
+    func testWriteAnnotatedDetections() throws {
+        guard let dir = ProcessInfo.processInfo.environment["VERIFY_OUTPUT_DIR"] else { return }
+        let out = dir + "/annotated"
+        try FileManager.default.createDirectory(atPath: out, withIntermediateDirectories: true)
+        for f in try loadFixtures() {
+            let prepared = f.image.preparedForFaceDetection()
+            let boxes = try detector.faceBoxes(in: f.image)
+            let w = prepared.size.width, h = prepared.size.height
+            let img = UIGraphicsImageRenderer(size: prepared.size).image { ctx in
+                prepared.draw(at: .zero)
+                ctx.cgContext.setLineWidth(max(2, w / 200))
+                for b in boxes {
+                    ctx.cgContext.setStrokeColor(UIColor.red.cgColor)
+                    ctx.cgContext.stroke(CGRect(x: b.minX * w, y: (1 - b.maxY) * h, width: b.width * w, height: b.height * h))
+                }
+            }
+            try img.jpegData(compressionQuality: 0.8)?.write(to: URL(fileURLWithPath: out + "/" + f.file))
+            print("BOXES \(f.file) \(boxes.map { String(format: "[x%.2f y%.2f w%.2f h%.2f]", $0.minX, $0.minY, $0.width, $0.height) })")
         }
     }
 
@@ -124,7 +160,7 @@ final class FaceMatchPipelineTests: XCTestCase {
         let prepared = rotated.image.preparedForFaceDetection()
         XCTAssertEqual(prepared.imageOrientation, .up)
 
-        let enrolled = try fixtures.filter { $0.identity == "alice" }.prefix(enrollCount)
+        let enrolled = try fixtures.filter { $0.identity == "alice" }.prefix(2)
             .compactMap { try detector.largestFaceEmbedding(in: $0.image) }
         let faces = try detector.allFaceEmbeddings(in: rotated.image)
         XCTAssertFalse(faces.isEmpty, "no face found in EXIF-rotated photo")

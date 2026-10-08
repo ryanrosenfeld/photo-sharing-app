@@ -62,6 +62,11 @@ struct FaceDetector: Sendable {
         }
     }
 
+    /// Vision bounding boxes (normalized, bottom-left origin) for every face, in the prepared image. Debug/test aid.
+    func faceBoxes(in image: UIImage) throws -> [CGRect] {
+        try detectFaces(in: image.preparedForFaceDetection()).map(\.boundingBox)
+    }
+
     /// Returns all pairwise Euclidean distances between photoFaces and enrolled embeddings, sorted ascending.
     func pairwiseDistances(
         photoFaces: [[Float]],
