@@ -33,7 +33,6 @@ final class OnboardingTests: XCTestCase {
         XCTAssertTrue(getStarted.waitForExistence(timeout: 15))
         shot("01-welcome")
         getStarted.tap()
-        app.buttons["auth.email"].tap()
         shot("02-signup-empty")
         let name = app.textFields["emailAuth.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5), "Get Started opens in sign-up mode")
@@ -88,17 +87,17 @@ final class OnboardingTests: XCTestCase {
         tapSystemAlert(["Allow"])
 
         // --- Home ---
-        XCTAssertTrue(app.tabBars.buttons["Photos"].waitForExistence(timeout: 20), "lands on main tabs")
+        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "lands on main tabs")
         shot("09-home")
     }
 
     /// Relaunch after completing onboarding must go straight to the app (state is derived, nothing re-asked).
     func testRelaunchSkipsOnboarding() {
-        XCTAssertTrue(app.tabBars.buttons["Photos"].waitForExistence(timeout: 20), "straight to main tabs")
+        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "straight to main tabs")
         shot("10-relaunch-home")
-        app.tabBars.buttons["Profile"].tap()
-        XCTAssertTrue(app.staticTexts["Photo library"].waitForExistence(timeout: 5), "permissions section on Profile")
-        XCTAssertFalse(app.buttons["Turn Off Face Profile"].exists)
+        app.buttons["tab.profile"].tap()
+        XCTAssertTrue(app.buttons["profile.photoStatus"].waitForExistence(timeout: 5), "live permissions rows on Profile")
+        XCTAssertFalse(app.buttons["Turn off reference photos"].exists, "face profile cannot be turned off")
         shot("11-profile-permissions")
     }
 }

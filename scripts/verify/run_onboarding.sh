@@ -2,7 +2,7 @@
 # New-account onboarding on a fresh simulator vs LOCAL Supabase: sign up -> face profile (3 good + 1 rejected photo)
 # -> photo access -> notifications -> home; then a relaunch that must skip onboarding.
 # Evidence: verification-output/onboarding-<ts>/{summary.md,onboarding.mp4,screens/,logs/}
-# Takes the shared simulator lock (~/dev/.photoshare-sim.lock) and shuts simulators down afterwards.
+# Takes the shared simulator lock (/tmp/photoshare-sim.lock) and shuts down only its own simulator afterwards.
 set -uo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -22,13 +22,14 @@ pass() { log "PASS: $*"; echo "- PASS: $*" >> "$SUMMARY"; }
 fail() { log "FAIL: $*"; echo "- FAIL: $*" >> "$SUMMARY"; FAILS=$((FAILS+1)); }
 
 # ---- shared simulator lock (other workstreams share this Mac) ----
-LOCK=$HOME/dev/.photoshare-sim.lock
+LOCK=/tmp/photoshare-sim.lock
 until mkdir "$LOCK" 2>/dev/null; do log "waiting for simulator lock"; sleep 15; done
+echo $$ > "$LOCK/pid"
 VIDPID=""
 cleanup() {
   [ -n "$VIDPID" ] && kill -INT "$VIDPID" 2>/dev/null
   xcrun simctl shutdown "${S:-}" 2>/dev/null
-  rmdir "$LOCK" 2>/dev/null
+  rm -rf "$LOCK"
 }
 trap cleanup EXIT
 

@@ -5,8 +5,10 @@ import SwiftUI
 /// so the user knows immediately which ones count; only photos that pass are uploaded.
 struct FaceProfileStep: View {
     let userId: UUID
-    let step: Int
+    let step: Int?          // nil when reused from the Profile tab (no progress bar)
     let total: Int
+    var title = "Show your face"
+    var showsUploadedNote = false
     let onUploaded: () -> Void
 
     private struct Candidate: Identifiable {
@@ -34,24 +36,30 @@ struct FaceProfileStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingProgress(step: step, total: total)
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
+            if let step {
+                OnboardingProgress(step: step, total: total)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+            }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("Show your face")
-                        .font(.title.bold())
+                    Text(title)
+                        .font(OttoFont.serifBold(size: 28))
+                        .foregroundStyle(OttoColor.ink)
                         .padding(.top, 24)
-                    Text("Choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos.")
-                        .foregroundStyle(.secondary)
+                    Text(showsUploadedNote
+                         ? "Pick 3 to 5 new photos to replace your current set. Your current photos stay until you finish."
+                         : "Choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos.")
+                        .font(.system(size: 16))
+                        .foregroundStyle(OttoColor.bark)
 
                     VStack(alignment: .leading, spacing: 8) {
                         tip("Just you, facing the camera")
                         tip("Good light, nothing covering your face")
                         tip("Mix it up: different days, angles, or glasses on and off")
                     }
-                    .font(.subheadline)
+                    .font(.system(size: 14))
 
                     PhotosPicker(
                         selection: $selection,
@@ -64,9 +72,10 @@ struct FaceProfileStep: View {
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Color.accentColor.opacity(0.12))
-                            .foregroundStyle(Color.accentColor)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .background(OttoColor.surface)
+                            .foregroundStyle(OttoColor.ink)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(OttoColor.line, lineWidth: 1))
                     }
                     .disabled(isUploading)
                     .accessibilityIdentifier("faceProfile.choose")
@@ -79,7 +88,7 @@ struct FaceProfileStep: View {
                     Label("These stay private: they're stored encrypted and only your friends' phones use them, only to recognize you.",
                           systemImage: "lock.fill")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OttoColor.barkSoft)
                 }
                 .padding(.horizontal, 28)
             }
@@ -88,7 +97,7 @@ struct FaceProfileStep: View {
                 if let uploadError {
                     Text(uploadError)
                         .font(.footnote)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(OttoColor.wax)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("faceProfile.error")
                 }
@@ -121,7 +130,7 @@ struct FaceProfileStep: View {
 
     private func tip(_ text: String) -> some View {
         Label(text, systemImage: "face.smiling")
-            .foregroundStyle(.secondary)
+            .foregroundStyle(OttoColor.barkSoft)
     }
 
     private var grid: some View {
@@ -131,7 +140,7 @@ struct FaceProfileStep: View {
             }
             Text("\(validImages.count) of \(Self.minPhotos)–\(Self.maxPhotos) usable")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(validImages.count >= Self.minPhotos ? Color.green : .secondary)
+                .foregroundStyle(validImages.count >= Self.minPhotos ? OttoColor.sageDark : OttoColor.barkSoft)
                 .accessibilityIdentifier("faceProfile.count")
         }
     }
@@ -143,7 +152,7 @@ struct FaceProfileStep: View {
                     if let image = c.image {
                         Image(uiImage: image).resizable().scaledToFill()
                     } else {
-                        Color.secondary.opacity(0.15)
+                        OttoColor.chip
                     }
                 }
                 .frame(width: 96, height: 96)
@@ -156,7 +165,7 @@ struct FaceProfileStep: View {
             if let v = c.verdict, !v.isOK {
                 Text(v.message)
                     .font(.caption2)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(OttoColor.wax)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(width: 96)
@@ -172,9 +181,9 @@ struct FaceProfileStep: View {
         case nil:
             ProgressView().padding(4).background(.regularMaterial, in: Circle())
         case .some(.ok):
-            Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, .green).font(.title3)
+            Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, OttoColor.sage).font(.title3)
         case .some:
-            Image(systemName: "xmark.circle.fill").foregroundStyle(.white, .red).font(.title3)
+            Image(systemName: "xmark.circle.fill").foregroundStyle(.white, OttoColor.wax).font(.title3)
         }
     }
 

@@ -9,7 +9,7 @@ struct OnboardingProgress: View {
         HStack(spacing: 6) {
             ForEach(1...total, id: \.self) { i in
                 Capsule()
-                    .fill(i <= step ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .fill(i <= step ? OttoColor.sage : OttoColor.line)
                     .frame(height: 4)
             }
         }
@@ -24,12 +24,12 @@ struct PrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.system(size: 16, weight: .semibold))
             .frame(maxWidth: .infinity)
             .frame(height: 52)
-            .background(isEnabled ? Color.accentColor : Color.secondary.opacity(0.25))
-            .foregroundStyle(isEnabled ? Color.white : Color.secondary)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .background(isEnabled ? OttoColor.sage : OttoColor.chip)
+            .foregroundStyle(isEnabled ? Color.white : OttoColor.barkSoft)
+            .clipShape(Capsule())
             .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }
@@ -38,7 +38,8 @@ struct PrimaryButtonStyle: ButtonStyle {
 struct OnboardingPage<Actions: View>: View {
     let step: Int
     let total: Int
-    let icon: String
+    var mascot: OttoMascot.Pose? = nil
+    var icon: String = "photo"
     let title: String
     let message: String
     var bullets: [String] = []
@@ -52,22 +53,29 @@ struct OnboardingPage<Actions: View>: View {
 
             ScrollView {
                 VStack(spacing: 18) {
-                    Image(systemName: icon)
-                        .font(.system(size: 56))
-                        .foregroundStyle(Color.accentColor)
-                        .padding(.top, 40)
+                    if let mascot {
+                        OttoMascot(pose: mascot, width: 190).padding(.top, 28)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 52))
+                            .foregroundStyle(OttoColor.sage)
+                            .padding(.top, 40)
+                    }
                     Text(title)
-                        .font(.title.bold())
+                        .font(OttoFont.serifBold(size: 28))
+                        .foregroundStyle(OttoColor.ink)
                         .multilineTextAlignment(.center)
                     Text(message)
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 16))
+                        .lineSpacing(2)
+                        .foregroundStyle(OttoColor.bark)
                         .multilineTextAlignment(.center)
                     if !bullets.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             ForEach(bullets, id: \.self) { b in
                                 Label(b, systemImage: "checkmark.circle.fill")
-                                    .font(.subheadline)
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(OttoColor.bark)
                                     .labelStyle(BulletLabelStyle())
                             }
                         }
@@ -89,7 +97,7 @@ struct OnboardingPage<Actions: View>: View {
 private struct BulletLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
-            configuration.icon.foregroundStyle(Color.accentColor)
+            configuration.icon.foregroundStyle(OttoColor.sage)
             configuration.title
         }
     }

@@ -59,13 +59,13 @@ struct OnboardingFlow: View {
         VStack(spacing: 0) {
             HStack {
                 Text(authManager.currentProfile.map { "Hi, \($0.displayName)" } ?? "")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 14))
+                    .foregroundStyle(OttoColor.barkSoft)
                 Spacer()
                 Menu {
                     Button("Sign out", role: .destructive) { Task { await authManager.signOut() } }
                 } label: {
-                    Image(systemName: "ellipsis.circle").font(.title3)
+                    Image(systemName: "ellipsis.circle").font(.title3).foregroundStyle(OttoColor.barkSoft)
                 }
                 .accessibilityIdentifier("onboarding.menu")
             }

@@ -13,7 +13,7 @@ struct PhotoAccessStep: View {
     var body: some View {
         if denied {
             OnboardingPage(
-                step: step, total: total, icon: "photo.badge.exclamationmark",
+                step: step, total: total, mascot: .sleeping, icon: "photo",
                 title: "Photo access is off",
                 message: "Without it, otto can't spot your friends in new photos, so nothing gets shared automatically. You can turn it on in Settings any time."
             ) {
@@ -21,12 +21,13 @@ struct PhotoAccessStep: View {
                     .buttonStyle(PrimaryButtonStyle())
                     .accessibilityIdentifier("photoAccess.settings")
                 Button("Continue without it", action: onFinished)
-                    .font(.subheadline)
+                    .font(.system(size: 14))
+                    .foregroundStyle(OttoColor.barkSoft)
                     .accessibilityIdentifier("photoAccess.skip")
             }
         } else {
             OnboardingPage(
-                step: step, total: total, icon: "photo.on.rectangle.angled",
+                step: step, total: total, mascot: .floating, icon: "photo",
                 title: "Let otto see your photos",
                 message: "When you take a photo with a friend in it, otto sends it to them automatically.",
                 bullets: [
@@ -56,7 +57,7 @@ struct NotificationStep: View {
 
     var body: some View {
         OnboardingPage(
-            step: step, total: total, icon: "bell.badge",
+            step: step, total: total, mascot: .friends, icon: "bell",
             title: "Know when photos arrive",
             message: "Get a nudge when a friend shares a photo of you, or when a friend request comes in."
         ) {
@@ -74,7 +75,8 @@ struct NotificationStep: View {
                 OnboardingStep.markNotificationsOffered()
                 onFinished()
             }
-                .font(.subheadline)
+                .font(.system(size: 14))
+                .foregroundStyle(OttoColor.barkSoft)
                 .accessibilityIdentifier("notifications.skip")
         }
     }
