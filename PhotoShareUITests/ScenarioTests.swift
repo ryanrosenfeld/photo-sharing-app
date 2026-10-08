@@ -98,8 +98,13 @@ final class ScenarioTests: XCTestCase {
     // MARK: - Friends v3 (invite / accept / toggles / unfriend)
 
     private func openFriendsTab() {
-        app.tabBars.buttons["Friends"].tap()
+        app.buttons["tab.friends"].tap()
         app.tap()  // lets the interruption monitor handle the Photos permission alert
+    }
+
+    /// The friend's row button (accessibility label is "<name>, <status>").
+    private func friendRow(_ name: String) -> XCUIElement {
+        app.buttons.matching(identifier: "friends.row").matching(NSPredicate(format: "label BEGINSWITH %@", name + ",")).firstMatch
     }
 
     /// Inviter: open Add Friend, capture the generated link (written to VERIFY_OUT_FILE for the runner to compare with the DB).
@@ -111,8 +116,8 @@ final class ScenarioTests: XCTestCase {
         add.tap()
         let link = app.staticTexts["invite.link"]
         XCTAssertTrue(link.waitForExistence(timeout: 15), "invite link shown")
-        shot("invite-sheet")
         if let path = env["VERIFY_OUT_FILE"] { try? link.label.write(toFile: path, atomically: true, encoding: .utf8) }
+        shot("invite-sheet")
         XCTAssertTrue(link.label.hasPrefix("photoshare://invite/"), "link format: \(link.label)")
         XCTAssertTrue(app.buttons["invite.share"].exists, "share button")
     }
@@ -139,7 +144,7 @@ final class ScenarioTests: XCTestCase {
         shot("invite-accepted")
         app.buttons["invite.done"].tap()
         openFriendsTab()
-        XCTAssertTrue(app.staticTexts[who].waitForExistence(timeout: 10), "friend row for \(who)")
+        XCTAssertTrue(friendRow(who).waitForExistence(timeout: 10), "friend row for \(who)")
         shot("friends-after-accept")
     }
 
@@ -165,14 +170,14 @@ final class ScenarioTests: XCTestCase {
         ensureSignedIn()
         openFriendsTab()
         let name = env["VERIFY_FRIEND"] ?? ""
-        let row = app.staticTexts[name].firstMatch
+        let row = friendRow(name)
         XCTAssertTrue(row.waitForExistence(timeout: 15), "friend row \(name)")
         row.tap()
         let toggle = app.switches["friend.\(env["VERIFY_TOGGLE"] ?? "send")"]
         XCTAssertTrue(toggle.waitForExistence(timeout: 5), "toggle")
         let want = (env["VERIFY_VALUE"] ?? "off") == "on" ? "1" : "0"
         shot("friend-detail-before")
-        if (toggle.value as? String) != want { toggle.switches.firstMatch.tap() }
+        if (toggle.value as? String) != want { toggle.tap() }
         let settled = Date().addingTimeInterval(10)
         while (toggle.value as? String) != want && Date() < settled { usleep(300_000) }
         sleep(2)  // let the RPC + reload land
@@ -184,8 +189,8 @@ final class ScenarioTests: XCTestCase {
     func testFriendRowStatus() {
         ensureSignedIn()
         openFriendsTab()
-        let status = app.staticTexts.matching(identifier: "friends.row.status").firstMatch
-        XCTAssertTrue(status.waitForExistence(timeout: 15), "row status")
+        let status = app.buttons["friends.row"].firstMatch
+        XCTAssertTrue(status.waitForExistence(timeout: 15), "friend row")
         shot("friends-row-status")
         XCTAssertTrue(status.label.contains(env["VERIFY_EXPECT_STATUS"] ?? ""), "status was: \(status.label)")
     }
@@ -194,11 +199,11 @@ final class ScenarioTests: XCTestCase {
     func testUnfriend() {
         ensureSignedIn()
         openFriendsTab()
-        let row = app.staticTexts[env["VERIFY_FRIEND"] ?? ""].firstMatch
+        let row = friendRow(env["VERIFY_FRIEND"] ?? "")
         XCTAssertTrue(row.waitForExistence(timeout: 15), "friend row")
         row.tap()
         app.buttons["friend.unfriend"].tap()
-        let confirm = app.buttons["Unfriend"].firstMatch
+        let confirm = app.buttons["friend.unfriend.confirm"].exists ? app.buttons["friend.unfriend.confirm"] : app.sheets.buttons["Unfriend"].firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), "confirmation")
         shot("unfriend-confirm")
         confirm.tap()
