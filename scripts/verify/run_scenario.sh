@@ -8,6 +8,8 @@
 # Evidence: verification-output/scenario-<timestamp>/{summary.md,screens/,logs/,db/}
 set -uo pipefail
 cd "$(dirname "$0")/../.."
+source scripts/verify/simlock.sh
+simlock_acquire   # one simulator run at a time across worktrees
 
 BUNDLE=com.ryanrosenfeld.photoshare
 PASSWORD='Test1234!'
