@@ -157,6 +157,7 @@ rec_stop
 [ "$(rpc carol list_friends)" = "[]" ]; check "API: carol's friends list is empty" $?
 [ "$(psql_q "select count(*) from photos where sender_id in ('$DAN','$CAROL')")" -ge 2 ]; check "previously shared photos remain after unfriend" $?
 
+for u in $A $B; do xcrun simctl shutdown "$u" 2>/dev/null; done
 echo >> "$SUMMARY"; echo "Artifacts: screens/, videos/, logs/, db/ in $OUT" >> "$SUMMARY"
 log "done: $FAILS failure(s). Summary: $SUMMARY"; cat "$SUMMARY"
 exit $((FAILS>0))

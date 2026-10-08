@@ -66,7 +66,7 @@ sim() { # name -> udid (create if missing)
 A=$(sim verify-alice); B=$(sim verify-bob)
 # Personas run one simulator at a time (16 GB MacBook Air thrashes with 2 sims + Xcode + Docker);
 # the hard cap is 2, and the personas are independent apart from the shared backend.
-xcrun simctl shutdown all 2>/dev/null
+for u in $A $B; do xcrun simctl shutdown "$u" 2>/dev/null; done
 for u in $A $B; do xcrun simctl erase "$u"; done
 boot() { xcrun simctl boot "$1" 2>/dev/null; xcrun simctl bootstatus "$1" -b >/dev/null 2>&1; }
 log "simulators: alice=$A bob=$B"
@@ -139,6 +139,7 @@ uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTO
 skip "simctl push: app has no APNs registration / device_tokens / edge function yet (SPEC v3 feature), nothing to verify"
 skip "simctl openurl: only auth callbacks (photoshare://) are handled; friend-invite deep links are not implemented yet"
 
+xcrun simctl shutdown "$A" 2>/dev/null; xcrun simctl shutdown "$B" 2>/dev/null
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
 log "done: $FAILS failure(s). Summary: $SUMMARY"
 cat "$SUMMARY"

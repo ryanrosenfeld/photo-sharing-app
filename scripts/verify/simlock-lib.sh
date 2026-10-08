@@ -10,5 +10,5 @@ simlock_acquire() {
     sleep 5; waited=$((waited+5))
   done
   echo $$ > "$LOCK/pid"
-  trap 'xcrun simctl shutdown all >/dev/null 2>&1; rm -rf "$LOCK"' EXIT
+  trap 'rm -rf "$LOCK"' EXIT   # callers shut down only their own devices (never shutdown all: other sessions share the Mac)
 }
