@@ -1,5 +1,7 @@
+import Photos
 import PhotosUI
 import SwiftUI
+import UserNotifications
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -122,6 +124,26 @@ struct OttoTabBarView: View {
 // MARK: - Profile tab
 
 struct OttoProfileView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    @State private var notifStatus = UNAuthorizationStatus.notDetermined
+
+    private var photosOK: Bool { photoStatus == .authorized || photoStatus == .limited }
+    private var photoSub: String {
+        switch photoStatus {
+        case .authorized: "All photos · allowed"
+        case .limited: "Only selected photos · tap to allow all"
+        default: "Off · new photos aren't being shared. Tap to fix"
+        }
+    }
+    private var notifSub: String {
+        notifStatus == .authorized ? "Allowed" : "Off · tap to turn on in Settings"
+    }
+    private func refreshPermissions() async {
+        photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        notifStatus = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    }
+
     @EnvironmentObject var authManager: AuthManager
     @State private var showEditName = false
     @State private var editedName = ""
@@ -130,6 +152,10 @@ struct OttoProfileView: View {
     private var profile: UserProfile? { authManager.currentProfile }
 
     var body: some View {
+        content.task(id: scenePhase) { await refreshPermissions() }
+    }
+
+    private var content: some View {
         ZStack {
             OttoColor.canvas.ignoresSafeArea()
 
@@ -196,10 +222,10 @@ struct OttoProfileView: View {
                             VStack(spacing: 0) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(profile?.faceProfileEnabled == true ? "5 photos · best" : "Not set up")
+                                        Text(profile?.faceProfileEnabled == true ? "Set up" : "Not set up")
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundStyle(OttoColor.ink)
-                                        Text("The more you add, the better recognition gets")
+                                        Text("Fresh, clear photos help friends' phones recognize you")
                                             .font(.system(size: 13))
                                             .foregroundStyle(OttoColor.barkSoft)
                                     }
@@ -261,8 +287,22 @@ struct OttoProfileView: View {
                     // Permissions
                     profileSection(title: "Permissions") {
                         OttoSectionCard {
-                            settingsRow(label: "Photos", sub: "All photos · allowed", dot: true, isLast: false)
-                            settingsRow(label: "Notifications", sub: "Allowed", dot: true, isLast: false)
+                            Button { if !photosOK || photoStatus == .limited { openSettings() } } label: {
+                                settingsRowLabel(label: "Photos", sub: photoSub, dot: photosOK && photoStatus != .limited, hasChev: !photosOK || photoStatus == .limited)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(16)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("profile.photoStatus")
+                            Divider().padding(.leading, 16)
+                            Button { if notifStatus != .authorized { openSettings() } } label: {
+                                settingsRowLabel(label: "Notifications", sub: notifSub, dot: notifStatus == .authorized, hasChev: notifStatus != .authorized)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(16)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("profile.notificationStatus")
+                            Divider().padding(.leading, 16)
                             settingsRow(label: "Location", sub: "When in use", dot: true, isLast: true)
                         }
                     }
@@ -487,224 +527,28 @@ struct OttoToggleStyle: ToggleStyle {
 
 // MARK: - Face profile setup sheet (unchanged functionality, reskinned)
 
+/// Profile-tab entry to the same photo picker + on-device check used in onboarding.
+/// The face profile is required, so there is deliberately no "turn off".
 struct FaceProfileSetupSheet: View {
     let isEnabled: Bool
     let userId: UUID
     let onComplete: () -> Void
 
     @Environment(\.dismiss) var dismiss
-    @State private var selectedItems: [PhotosPickerItem] = []
-    @State private var previewImages: [UIImage] = []
-    @State private var isWorking = false
-    @State private var error: String?
-
-    private let manager = FaceProfileManager()
 
     var body: some View {
-        ZStack {
-            OttoColor.canvas.ignoresSafeArea()
-
-            NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // heading
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(isEnabled ? "Your reference photos" : "Set up your reference photos")
-                                .font(OttoFont.serifBold(size: 24))
-                                .foregroundStyle(OttoColor.ink)
-                            Text(isEnabled
-                                 ? "Upload new photos to improve recognition accuracy. At least 3 required, up to 5."
-                                 : "Upload 3–5 photos of yourself. Friends' devices use them to recognize you in photos they take.")
-                                .font(.system(size: 15))
-                                .foregroundStyle(OttoColor.bark)
-                                .lineSpacing(2)
-                        }
-
-                        // encryption note
-                        HStack(alignment: .top, spacing: 10) {
-                            Circle().fill(OttoColor.sage).frame(width: 6, height: 6).padding(.top, 6)
-                            Text("Encrypted before they leave your phone. Only your friends' devices can use them — and only to recognize you.")
-                                .font(.system(size: 13))
-                                .foregroundStyle(OttoColor.bark)
-                                .lineSpacing(2)
-                        }
-                        .padding(14)
-                        .background(OttoColor.chip)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                        // photo picker
-                        PhotosPicker(
-                            selection: $selectedItems,
-                            maxSelectionCount: 5,
-                            matching: .images
-                        ) {
-                            HStack {
-                                Image(systemName: "photo.badge.plus")
-                                Text("Select photos of yourself (\(selectedItems.count) of 5)")
-                            }
-                            .font(.system(size: 15, weight: .medium))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(OttoColor.surface)
-                            .foregroundStyle(OttoColor.ink)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(OttoColor.line, lineWidth: 1))
-                        }
-                        .onChange(of: selectedItems) {
-                            Task { await loadPreviews() }
-                        }
-
-                        // previews
-                        if !previewImages.isEmpty {
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88))], spacing: 8) {
-                                ForEach(Array(previewImages.enumerated()), id: \.offset) { _, image in
-                                    Image(uiImage: image)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: 88, height: 88)
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                }
-                            }
-                        }
-
-                        // quality nudge
-                        if !selectedItems.isEmpty {
-                            qualityNudge
-                        }
-
-                        // action
-                        Button {
-                            Task { await uploadAndEnable() }
-                        } label: {
-                            Group {
-                                if isWorking {
-                                    ProgressView().tint(.white)
-                                } else {
-                                    Text(isEnabled ? "Update photos" : "Share my reference photos")
-                                        .font(.system(size: 16, weight: .semibold))
-                                }
-                            }
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(canContinue ? OttoColor.sage : OttoColor.chip)
-                            .foregroundStyle(canContinue ? .white : OttoColor.barkSoft)
-                            .clipShape(Capsule())
-                        }
-                        .disabled(!canContinue)
-
-                        if isEnabled {
-                            Button("Turn off reference photos", role: .destructive) {
-                                Task { await disableProfile() }
-                            }
-                            .font(.system(size: 14))
-                            .foregroundStyle(OttoColor.wax)
-                            .frame(maxWidth: .infinity)
-                            .disabled(isWorking)
-                        }
-                    }
-                    .padding(24)
-                }
-                .background(OttoColor.canvas.ignoresSafeArea())
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Done") { dismiss() }
-                            .foregroundStyle(OttoColor.sage)
-                    }
+        NavigationStack {
+            FaceProfileStep(userId: userId, step: nil, total: 0, title: "Your reference photos", showsUploadedNote: isEnabled) {
+                onComplete()
+                dismiss()
+            }
+            .background(OttoColor.canvas.ignoresSafeArea())
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }.foregroundStyle(OttoColor.sage)
                 }
             }
-        }
-        .alert("Error", isPresented: Binding(
-            get: { error != nil },
-            set: { if !$0 { error = nil } }
-        )) {
-            Button("OK") { error = nil }
-        } message: {
-            Text(error ?? "")
-        }
-    }
-
-    private var canContinue: Bool { selectedItems.count >= 3 && !isWorking }
-
-    private var qualityNudge: some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 4) {
-                ForEach(1...5, id: \.self) { i in
-                    Circle()
-                        .fill(i <= selectedItems.count ? OttoColor.sage : OttoColor.chip)
-                        .frame(width: 9, height: 9)
-                        .overlay(
-                            i <= selectedItems.count ? nil :
-                                Circle().stroke(OttoColor.line, lineWidth: 1)
-                        )
-                }
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text(qualityLabel)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(OttoColor.ink)
-                Text(qualityHint)
-                    .font(.system(size: 12))
-                    .foregroundStyle(OttoColor.barkSoft)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(OttoColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(selectedItems.count >= 3 ? OttoColor.lineSoft : OttoColor.sage, lineWidth: 1)
-        )
-    }
-
-    private var qualityLabel: String {
-        let n = selectedItems.count
-        if n >= 5 { return "\(n) added — best" }
-        if n == 4 { return "\(n) added — better" }
-        if n >= 3 { return "\(n) added — good" }
-        return "\(n) of 3 minimum"
-    }
-
-    private var qualityHint: String {
-        let n = selectedItems.count
-        if n >= 5 { return "Looking great" }
-        if n >= 3 { return "Add more for sharper recognition" }
-        return "Add at least \(3 - n) more to continue"
-    }
-
-    private func loadPreviews() async {
-        var images: [UIImage] = []
-        for item in selectedItems {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let image = UIImage(data: data) {
-                images.append(image)
-            }
-        }
-        previewImages = images
-    }
-
-    private func uploadAndEnable() async {
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await manager.enable(photos: previewImages, for: userId)
-            onComplete()
-            dismiss()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func disableProfile() async {
-        isWorking = true
-        defer { isWorking = false }
-        do {
-            try await manager.disable(for: userId)
-            onComplete()
-            dismiss()
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 }

@@ -50,6 +50,9 @@ final class ScenarioTests: XCTestCase {
         let pw = app.secureTextFields["emailAuth.password"]
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         app.buttons["emailAuth.submit"].tap()
+        // Existing personas already have a face profile; a fresh simulator still shows the notifications step.
+        let notNow = app.buttons["notifications.skip"]
+        if notNow.waitForExistence(timeout: 10) { notNow.tap() }
         XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "signed in -> main tabs")
     }
 
