@@ -1,66 +1,92 @@
 [
   {
     "identity": "alice",
-    "file": "alice_1.jpg"
+    "file": "alice_1.jpg",
+    "kind": "normal"
   },
   {
     "identity": "alice",
-    "file": "alice_2.jpg"
+    "file": "alice_2.jpg",
+    "kind": "normal"
   },
   {
     "identity": "alice",
-    "file": "alice_3.jpg"
+    "file": "alice_3.jpg",
+    "kind": "normal"
   },
   {
     "identity": "alice",
-    "file": "alice_4.jpg"
+    "file": "alice_4.jpg",
+    "kind": "normal"
   },
   {
     "identity": "bob",
-    "file": "bob_1.jpg"
+    "file": "bob_1.jpg",
+    "kind": "normal"
   },
   {
     "identity": "bob",
-    "file": "bob_2.jpg"
+    "file": "bob_2.jpg",
+    "kind": "normal"
   },
   {
     "identity": "bob",
-    "file": "bob_3.jpg"
+    "file": "bob_3.jpg",
+    "kind": "normal"
   },
   {
     "identity": "bob",
-    "file": "bob_4.jpg"
+    "file": "bob_4.jpg",
+    "kind": "normal"
   },
   {
     "identity": "carol",
-    "file": "carol_1.jpg"
+    "file": "carol_1.jpg",
+    "kind": "normal"
   },
   {
     "identity": "carol",
-    "file": "carol_2.jpg"
+    "file": "carol_2.jpg",
+    "kind": "normal"
   },
   {
     "identity": "carol",
-    "file": "carol_3.jpg"
+    "file": "carol_3.jpg",
+    "kind": "normal"
   },
   {
     "identity": "carol",
-    "file": "carol_4.jpg"
+    "file": "carol_4.jpg",
+    "kind": "normal"
   },
   {
     "identity": "dan",
-    "file": "dan_1.jpg"
+    "file": "dan_1.jpg",
+    "kind": "normal"
   },
   {
     "identity": "dan",
-    "file": "dan_2.jpg"
+    "file": "dan_2.jpg",
+    "kind": "normal"
   },
   {
     "identity": "dan",
-    "file": "dan_3.jpg"
+    "file": "dan_3.jpg",
+    "kind": "normal"
   },
   {
     "identity": "dan",
-    "file": "dan_4.jpg"
+    "file": "dan_4.jpg",
+    "kind": "normal"
+  },
+  {
+    "identity": "alice",
+    "file": "alice_5_exif_rotated.jpg",
+    "kind": "exif_rotated"
+  },
+  {
+    "identity": "alice",
+    "file": "alice_6_large.jpg",
+    "kind": "large"
   }
 ]

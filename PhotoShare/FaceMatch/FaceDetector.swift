@@ -91,7 +91,12 @@ struct FaceDetector: Sendable {
         guard let url = Bundle.main.url(forResource: "MobileFaceNet", withExtension: "mlmodelc") else {
             return nil
         }
-        return try? MLModel(contentsOf: url)
+        let config = MLModelConfiguration()
+        #if targetEnvironment(simulator)
+        // Default compute units yield an all-zero embedding on the Simulator; CPU-only is correct.
+        config.computeUnits = .cpuOnly
+        #endif
+        return try? MLModel(contentsOf: url, configuration: config)
     }()
 
     // MARK: - Internals

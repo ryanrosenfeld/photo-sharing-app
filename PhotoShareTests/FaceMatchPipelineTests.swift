@@ -91,6 +91,17 @@ final class FaceMatchPipelineTests: XCTestCase {
         if !falseMatches.isEmpty { lines.append("FALSE:  " + falseMatches.joined(separator: ", ")) }
         if !missedMatches.isEmpty { lines.append("MISSED: " + missedMatches.joined(separator: ", ")) }
 
+        // Regression baseline at threshold 15 for the committed fixtures (see scripts/verify/make_fixtures.py).
+        // The `_4` probes are small faces inside a wider scene, and `alice_6_large` is a 4032px frame with a
+        // small off-centre face: the pipeline currently misses them. If this set changes (better OR worse),
+        // review the report and update the baseline deliberately.
+        let expectedMissed: Set<String> = [
+            "alice_4.jpg vs alice", "bob_4.jpg vs bob", "carol_4.jpg vs carol", "dan_4.jpg vs dan",
+            "alice_6_large.jpg vs alice",
+        ]
+        XCTAssertEqual(falseMatches, [], "false matches at threshold \(threshold)")
+        XCTAssertEqual(Set(missedMatches), expectedMissed, "missed-match set changed vs baseline")
+
         let report = lines.joined(separator: "\n")
         print("\n=== FACE MATCH REPORT ===\n\(report)\n=========================\n")
         let att = XCTAttachment(string: report)
@@ -101,5 +112,37 @@ final class FaceMatchPipelineTests: XCTestCase {
             try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
             try? report.write(toFile: dir + "/face-match-report.txt", atomically: true, encoding: .utf8)
         }
+    }
+
+    // MARK: - Regression tests for past sandbox bugs
+
+    /// EXIF-rotated photo (pixels stored sideways) must be normalized to .up and still match its owner.
+    func testExifRotatedPhotoIsNormalizedAndMatches() throws {
+        let fixtures = try loadFixtures()
+        let rotated = try XCTUnwrap(fixtures.first { $0.file == "alice_5_exif_rotated.jpg" })
+        XCTAssertNotEqual(rotated.image.imageOrientation, .up, "fixture should carry a non-up EXIF orientation")
+        let prepared = rotated.image.preparedForFaceDetection()
+        XCTAssertEqual(prepared.imageOrientation, .up)
+
+        let enrolled = try fixtures.filter { $0.identity == "alice" }.prefix(enrollCount)
+            .compactMap { try detector.largestFaceEmbedding(in: $0.image) }
+        let faces = try detector.allFaceEmbeddings(in: rotated.image)
+        XCTAssertFalse(faces.isEmpty, "no face found in EXIF-rotated photo")
+        XCTAssertTrue(detector.isMatch(photoFaces: faces, enrolled: enrolled))
+    }
+
+    /// Large camera-size frames are downsampled to <= 1024px (the earlier OOM bug) and crops use pixel dimensions.
+    func testLargePhotoIsDownsampledAndCropUsesPixelDimensions() throws {
+        let large = try XCTUnwrap(try loadFixtures().first { $0.file == "alice_6_large.jpg" })
+        XCTAssertEqual(large.image.cgImage?.width, 4032)
+        let prepared = large.image.preparedForFaceDetection()
+        let w = try XCTUnwrap(prepared.cgImage).width, h = try XCTUnwrap(prepared.cgImage).height
+        XCTAssertLessThanOrEqual(max(w, h) , 1024 * Int(prepared.scale), "longest pixel side must be downsampled")
+
+        let crop = try XCTUnwrap(try detector.largestFaceCrop(in: large.image), "no face crop for large photo")
+        let cw = try XCTUnwrap(crop.cgImage).width
+        // The face is ~900px of 4032 (22%); a crop sized in points instead of pixels would be ~1/scale^2 of that.
+        XCTAssertGreaterThan(Double(cw) / Double(w), 0.15, "crop too small, likely point/pixel mix-up")
+        XCTAssertLessThan(Double(cw) / Double(w), 0.7, "crop too large, should be the face not the frame")
     }
 }
