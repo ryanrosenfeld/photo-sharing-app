@@ -59,6 +59,10 @@ id_of() { psql_q "select id from auth.users where email='$1@test.local'"; }
 DAN=$(id_of dan); CAROL=$(id_of carol); ALICE=$(id_of alice)
 fr() { psql_q "select send_enabled::int || receive_enabled::int from friendships where user_id='$1' and friend_id='$2'"; }
 
+# The local DB is shared with other worktrees; if another session resets it with its own migrations, ours vanish.
+db_intact() { [ "$(psql_q "select count(*) from pg_proc where proname='list_friends'")" = 1 ] || {
+  fail "database was reset by another session mid-run (mutual_friendships migration is gone); aborting"; exit 3; }; }
+
 # ---- simulators ---------------------------------------------------------------------------------
 sim() { local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
   [ -n "$u" ] || u=$(xcrun simctl create "$1" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro); echo "$u"; }
@@ -89,7 +93,7 @@ open_when_ready() { # udid url readyfile : fire `simctl openurl` once the UI tes
   ( for _ in $(seq 1 180); do [ -f "$3" ] && break; sleep 1; done; sleep 2; xcrun simctl openurl "$1" "$2" ) & }
 
 # ---- 1. dan creates an invite -------------------------------------------------------------------------
-setup_sim "$A"; rec_start "$A" 1-dan-creates-invite
+db_intact; setup_sim "$A"; rec_start "$A" 1-dan-creates-invite
 uistep dan "$A" testCreateInvite TEST_RUNNER_VERIFY_OUT_FILE="$OUT/logs/invite-link.txt"; check "dan: Add Friend shows an invite link (UI)" $?
 rec_stop
 CODE=$(psql_q "select code from invites where inviter_id='$DAN' order by created_at desc limit 1")
@@ -98,7 +102,7 @@ UI_LINK=$(cat "$OUT/logs/invite-link.txt" 2>/dev/null)
 xcrun simctl shutdown "$A"
 
 # ---- 2. carol opens the link with simctl openurl and accepts -------------------------------------------
-setup_sim "$B"; rec_start "$B" 2-carol-accepts-via-deep-link
+db_intact; setup_sim "$B"; rec_start "$B" 2-carol-accepts-via-deep-link
 rm -f "$OUT/logs/carol-ready"
 open_when_ready "$B" "$UI_LINK" "$OUT/logs/carol-ready"
 uistep carol "$B" testAcceptInviteViaDeepLink TEST_RUNNER_VERIFY_EXPECT_NAME=Dan TEST_RUNNER_VERIFY_READY_FILE="$OUT/logs/carol-ready"
@@ -123,7 +127,7 @@ rec_stop
 xcrun simctl shutdown "$B"
 
 # ---- 4. dan turns Receive OFF for carol --------------------------------------------------------------------
-boot "$A"; rec_start "$A" 4-dan-turns-receive-off
+db_intact; boot "$A"; rec_start "$A" 4-dan-turns-receive-off
 uistep dan "$A" testSetFriendToggle TEST_RUNNER_VERIFY_FRIEND=Carol TEST_RUNNER_VERIFY_TOGGLE=receive TEST_RUNNER_VERIFY_VALUE=off
 check "dan: Carol -> Receive OFF (UI)" $?
 rec_stop
@@ -131,7 +135,7 @@ rec_stop
 xcrun simctl shutdown "$A"
 
 # ---- 5. carol sees Paused; server enforcement ---------------------------------------------------------------
-boot "$B"; rec_start "$B" 5-carol-paused-then-send-off
+db_intact; boot "$B"; rec_start "$B" 5-carol-paused-then-send-off
 uistep carol "$B" testFriendRowStatus TEST_RUNNER_VERIFY_EXPECT_STATUS="Paused"
 check "carol: Dan row says Paused (her Send is ON but Dan's Receive is OFF) (UI)" $?
 deliver() { # persona(sender) recipient_id -> HTTP code of the photo_recipients insert; echoes it
@@ -153,7 +157,7 @@ psql_q "select sender_id, recipient_id from photo_recipients pr join photos p on
 xcrun simctl shutdown "$B"
 
 # ---- 6. dan unfriends carol -------------------------------------------------------------------------------------
-boot "$A"; rec_start "$A" 6-dan-unfriends
+db_intact; boot "$A"; rec_start "$A" 6-dan-unfriends
 uistep dan "$A" testUnfriend TEST_RUNNER_VERIFY_FRIEND=Carol; check "dan: Carol -> Unfriend -> empty list (UI)" $?
 rec_stop
 [ "$(psql_q "select count(*) from friendships where user_id in ('$DAN','$CAROL') and friend_id in ('$DAN','$CAROL')")" = 0 ]; check "DB: both friendship rows removed (unilateral, immediate)" $?
