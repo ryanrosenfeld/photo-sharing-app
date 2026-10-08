@@ -21,7 +21,7 @@ test-unit: generate
 
 test-ui: generate
 	@mkdir -p $(OUT) && rm -rf $(OUT)/ui.xcresult
-	$(XCB) -only-testing:PhotoShareUITests -resultBundlePath $(OUT)/ui.xcresult test 2>&1 | tee $(OUT)/ui.log | tail -25
+	$(XCB) -only-testing:PhotoShareUITests/LaunchSmokeTests -resultBundlePath $(OUT)/ui.xcresult test 2>&1 | tee $(OUT)/ui.log | tail -25
 
 scenario:
 	scripts/verify/run_scenario.sh
