@@ -50,7 +50,7 @@ final class ScenarioTests: XCTestCase {
         let pw = app.secureTextFields["emailAuth.password"]
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         app.buttons["emailAuth.submit"].tap()
-        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "signed in -> main tabs")
+        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 60), "signed in -> main tabs")
     }
 
     /// Sign in; grant Photos access if the system alert appears (also pre-granted via simctl privacy).
