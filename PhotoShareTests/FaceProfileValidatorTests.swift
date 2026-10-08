@@ -17,8 +17,9 @@ final class FaceProfileValidatorTests: XCTestCase {
         XCTAssertEqual(FaceProfileValidator().validate(try fixture("alice_5_exif_rotated.jpg")), .ok)
     }
 
-    func testLargePortraitIsAccepted() throws {
-        XCTAssertEqual(FaceProfileValidator().validate(try fixture("alice_6_large.jpg")), .ok)
+    /// alice_6_large is a 4032x3024 camera frame with the face small in it: too small to enroll from.
+    func testFaceSmallInLargeFrameIsRejected() throws {
+        XCTAssertEqual(FaceProfileValidator().validate(try fixture("alice_6_large.jpg")), .faceTooSmall)
     }
 
     func testImageWithoutFaceIsRejected() {
