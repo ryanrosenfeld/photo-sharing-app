@@ -3,7 +3,7 @@
 # Resets the database first (takes the shared lock). Usage: scripts/verify/check_friends_api.sh   (make verify-friends-api)
 set -uo pipefail
 cd "$(dirname "$0")/../.."
-source scripts/verify/simlock.sh; simlock_acquire   # db reset is exclusive too
+source scripts/verify/simlock-lib.sh; simlock_acquire   # db reset is exclusive too
 FAILS=0
 pass() { echo "PASS: $*"; }; fail() { echo "FAIL: $*"; FAILS=$((FAILS+1)); }
 check() { if [ "$2" = 0 ]; then pass "$1"; else fail "$1"; fi; }
