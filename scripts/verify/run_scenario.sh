@@ -137,7 +137,7 @@ uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTO
 
 # ---- not covered ----------------------------------------------------------------------------------
 skip "simctl push: app has no APNs registration / device_tokens / edge function yet (SPEC v3 feature), nothing to verify"
-skip "simctl openurl: only auth callbacks (photoshare://) are handled; friend-invite deep links are not implemented yet"
+skip "simctl openurl: covered by run_friends_scenario.sh (make scenario-friends)"
 
 xcrun simctl shutdown "$A" 2>/dev/null; xcrun simctl shutdown "$B" 2>/dev/null
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
