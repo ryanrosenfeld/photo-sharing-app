@@ -1,12 +1,11 @@
 -- Verification personas for LOCAL Supabase only (supabase db reset applies this file; see config.toml).
 -- Test accounts: <name>@test.local, password Test1234! (local-only throwaway credentials).
 --
---   alice  free   alice <-> bob active links (each sends photos of the other to the other)
+--   alice  free   friends with bob
 --   bob    free   face_profile_enabled (reference photos uploaded by scripts/verify/run_scenario.sh)
---   carol  pro    carol -> alice pending request (Alice accepts it in a scenario)
---   dan    free   no links (clean slate for friend-request scenarios)
--- Link semantics (current code): sender -> recipient = sender's phone auto-shares photos of the
--- recipient's face with the recipient.
+--   carol  pro    no friendships
+--   dan    free   no friendships (clean slate for the invite scenario)
+-- Friendship semantics: friendships(user_id, friend_id) holds user_id's Send/Receive toggles for friend_id.
 
 create extension if not exists pgcrypto;
 
@@ -30,10 +29,11 @@ on conflict do nothing;
 update public.profiles set plan = 'pro' where id = 'c3333333-3333-3333-3333-333333333333';
 update public.profiles set face_profile_enabled = true where id = 'b2222222-2222-2222-2222-222222222222';
 
-insert into public.links (sender_id, recipient_id, status) values
-  ('a1111111-1111-1111-1111-111111111111','b2222222-2222-2222-2222-222222222222','active'),
-  ('b2222222-2222-2222-2222-222222222222','a1111111-1111-1111-1111-111111111111','active'),
-  ('c3333333-3333-3333-3333-333333333333','a1111111-1111-1111-1111-111111111111','pending')
+-- alice <-> bob are friends (both Send/Receive ON). carol and dan have no friendships:
+-- the invite scenario has dan invite carol.
+insert into public.friendships (user_id, friend_id) values
+  ('a1111111-1111-1111-1111-111111111111','b2222222-2222-2222-2222-222222222222'),
+  ('b2222222-2222-2222-2222-222222222222','a1111111-1111-1111-1111-111111111111')
 on conflict do nothing;
 
 insert into storage.buckets (id, name, public) values ('photos', 'photos', true) on conflict (id) do nothing;

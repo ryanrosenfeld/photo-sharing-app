@@ -11,18 +11,20 @@
 		022F6B28B41FA39B9ECC6EE7 /* FaceEnrollmentStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C95806FBAC23A00DC260C4F9 /* FaceEnrollmentStore.swift */; };
 		0A5C5808DB1867C5DA9F3757 /* LaunchSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4774F76467506EC5393B7455 /* LaunchSmokeTests.swift */; };
 		0B6D4555E9BFF42E39CC4ED2 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 9EBEE59E170A3AE0B93874D5 /* Supabase */; };
+		12B2A0D50EDEA7185D8C597E /* FaceMatchEvaluation.swift in Sources */ = {isa = PBXBuildFile; fileRef = B37B81BDF2C22BE61D400BF9 /* FaceMatchEvaluation.swift */; };
 		32BD19CBF7ABE5B1294FEF9A /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = CDD4532DA400B92DDEF0251A /* GoogleSignInSwift */; };
 		38DDA2E1FAEEE891E0A1A0C4 /* FaceMatchPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */; };
 		39C16DFBB981B2C61B48A25C /* PhotoShareApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FBB3CEE2891F401750B675 /* PhotoShareApp.swift */; };
 		4079ED4FD6DAC6A196092CFB /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9AA4AD1706FBD780F04012B /* Secrets.swift */; };
 		45BDEC76AF49E08ADD2302B2 /* PhotoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D043016613E24A9D1AB566C /* PhotoDetailView.swift */; };
 		4A21B9BFF73D2B18D82FC723 /* ReceivedPhoto.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5202D45E8361FDB0E38A177D /* ReceivedPhoto.swift */; };
-		5F9F07026F69069369465982 /* FriendLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2072A8EA320E49746FA2A86C /* FriendLink.swift */; };
 		60541EF3A672BDADACFD85AC /* FaceDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 352B52E24CE88F1A05A50F01 /* FaceDetector.swift */; };
 		64016C5658C68844F8BE38C5 /* FaceMatchSandboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6914BCD3C714010FE0FFECDC /* FaceMatchSandboxView.swift */; };
 		6526F764E6DBB581137F34FC /* PhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40C13AF38AEBB02CE44A0B1 /* PhotosView.swift */; };
+		67EB8B22FA0AFA5556B69391 /* InviteRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E992C210BEE52F9019E1F7 /* InviteRouter.swift */; };
 		6C13DDBB25091EBC104FA28D /* SmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD745F4A993CBCF1BC99F8F /* SmokeTests.swift */; };
 		737447D219C181A4960D8496 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 49AAC4B6484BE9C81C2238CD /* GoogleSignIn */; };
+		77A8F17EB83715BB19E08251 /* Friend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B1ABB7C3FA252E166264BE /* Friend.swift */; };
 		869E0ADDCFCAFF5A2FCEF0F2 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE08CBC5DEB28B3ED4E1DC0E /* SupabaseClient.swift */; };
 		8F806C9E6BB6F86BE02421BA /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584D5226329672B2E971F1BA /* WelcomeView.swift */; };
 		9104AF698354AA9955DA3EAF /* FaceProfileManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F645D869937923F3FA8FDB8D /* FaceProfileManager.swift */; };
@@ -65,9 +67,9 @@
 
 /* Begin PBXFileReference section */
 		007E72AD9EA606FC397944D2 /* FaceEnrollmentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentViewModel.swift; sourceTree = "<group>"; };
+		06B1ABB7C3FA252E166264BE /* Friend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Friend.swift; sourceTree = "<group>"; };
 		09FBB3CEE2891F401750B675 /* PhotoShareApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoShareApp.swift; sourceTree = "<group>"; };
 		1364C9B61887A9B2894F01B5 /* PhotosViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosViewModel.swift; sourceTree = "<group>"; };
-		2072A8EA320E49746FA2A86C /* FriendLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendLink.swift; sourceTree = "<group>"; };
 		2595B0E3D3E3F0D5275F8FCE /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		2E8E180047F52D9C5FBA1A05 /* AutoShareProcessor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoShareProcessor.swift; sourceTree = "<group>"; };
 		332F6CD8F094B923BA3FCE69 /* PhotoShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PhotoShare.entitlements; sourceTree = "<group>"; };
@@ -84,6 +86,7 @@
 		79FC852BA3ED5C9E7E8CD016 /* MobileFaceNet.mlpackage */ = {isa = PBXFileReference; path = MobileFaceNet.mlpackage; sourceTree = "<group>"; };
 		7C13B0B5662D46D62B044BA4 /* PhotoShare.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PhotoShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E0B7D8E3546ED65435C1BEB /* Fixtures */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Fixtures; path = PhotoShareTests/Fixtures; sourceTree = SOURCE_ROOT; };
+		85E992C210BEE52F9019E1F7 /* InviteRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteRouter.swift; sourceTree = "<group>"; };
 		89B26AB9AFB08DE629D4EFA0 /* FriendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendsView.swift; sourceTree = "<group>"; };
 		96C4B7159BF6F4F8B8AEF7D4 /* ScenarioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenarioTests.swift; sourceTree = "<group>"; };
 		9AD6A0F749CF95E89543531E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -91,6 +94,7 @@
 		9D96132110D32DEF02A31223 /* FaceEnrollmentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentView.swift; sourceTree = "<group>"; };
 		AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchPipelineTests.swift; sourceTree = "<group>"; };
 		B02E1AE70B3434EB89F682E5 /* PhotoShareUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PhotoShareUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B37B81BDF2C22BE61D400BF9 /* FaceMatchEvaluation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchEvaluation.swift; sourceTree = "<group>"; };
 		BA3F0616493E6E029E33B2B2 /* FaceMatchSandboxViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceMatchSandboxViewModel.swift; sourceTree = "<group>"; };
 		C40C13AF38AEBB02CE44A0B1 /* PhotosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotosView.swift; sourceTree = "<group>"; };
 		C95806FBAC23A00DC260C4F9 /* FaceEnrollmentStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceEnrollmentStore.swift; sourceTree = "<group>"; };
@@ -132,6 +136,7 @@
 			children = (
 				89B26AB9AFB08DE629D4EFA0 /* FriendsView.swift */,
 				FA0EC327D1F445FFDF392AC3 /* FriendsViewModel.swift */,
+				85E992C210BEE52F9019E1F7 /* InviteRouter.swift */,
 			);
 			path = Friends;
 			sourceTree = "<group>";
@@ -157,6 +162,7 @@
 		61DF05F6E50E7CD20D4763DB /* PhotoShareTests */ = {
 			isa = PBXGroup;
 			children = (
+				B37B81BDF2C22BE61D400BF9 /* FaceMatchEvaluation.swift */,
 				AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */,
 				EAD745F4A993CBCF1BC99F8F /* SmokeTests.swift */,
 			);
@@ -166,7 +172,7 @@
 		7A320BF8A7FF529C7A3C492C /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				2072A8EA320E49746FA2A86C /* FriendLink.swift */,
+				06B1ABB7C3FA252E166264BE /* Friend.swift */,
 				5202D45E8361FDB0E38A177D /* ReceivedPhoto.swift */,
 				4CFEF091CD9374625BF7B6CF /* UserProfile.swift */,
 			);
@@ -396,6 +402,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				12B2A0D50EDEA7185D8C597E /* FaceMatchEvaluation.swift in Sources */,
 				38DDA2E1FAEEE891E0A1A0C4 /* FaceMatchPipelineTests.swift in Sources */,
 				6C13DDBB25091EBC104FA28D /* SmokeTests.swift in Sources */,
 			);
@@ -417,9 +424,10 @@
 				64016C5658C68844F8BE38C5 /* FaceMatchSandboxView.swift in Sources */,
 				A613BAB1514A428B2FB27348 /* FaceMatchSandboxViewModel.swift in Sources */,
 				9104AF698354AA9955DA3EAF /* FaceProfileManager.swift in Sources */,
-				5F9F07026F69069369465982 /* FriendLink.swift in Sources */,
+				77A8F17EB83715BB19E08251 /* Friend.swift in Sources */,
 				9FCC4A9C71B47B18E4CDEE1D /* FriendsView.swift in Sources */,
 				C52018AE9AAB82B0F1A16B68 /* FriendsViewModel.swift in Sources */,
+				67EB8B22FA0AFA5556B69391 /* InviteRouter.swift in Sources */,
 				D301ABC01A3934FDFC3882DD /* MainTabView.swift in Sources */,
 				E5BEDD9800AD84F1BE5E4ECD /* MobileFaceNet.mlpackage in Sources */,
 				EBBCB8017CE3B57F6868FB59 /* OttoTheme.swift in Sources */,

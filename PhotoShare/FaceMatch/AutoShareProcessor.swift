@@ -21,14 +21,15 @@ final class AutoShareProcessor: ObservableObject {
 
     // MARK: - Entry point
 
-    func processNewPhotos(userId: UUID, outgoingLinks: [OutgoingLink]) async {
+    func processNewPhotos(userId: UUID, friends: [Friend]) async {
         guard !isProcessing else {
             print("[AutoShare] Already processing, skipping.")
             return
         }
 
-        let enrolledLinks = outgoingLinks.filter { store.hasEnrollment(for: $0.recipientId) }
-        print("[AutoShare] Outgoing links: \(outgoingLinks.count), enrolled: \(enrolledLinks.count)")
+        // Only friends with Send ON whose Receive is ON too (the server enforces the same rule).
+        let enrolledLinks = friends.filter { $0.mySend && $0.theirReceive && store.hasEnrollment(for: $0.friendId) }
+        print("[AutoShare] Friends: \(friends.count), sendable+enrolled: \(enrolledLinks.count)")
         guard !enrolledLinks.isEmpty else { return }
 
         let newAssets = libraryManager.fetchNewAssets()
@@ -60,10 +61,10 @@ final class AutoShareProcessor: ObservableObject {
             guard !faceEmbeddings.isEmpty else { continue }
 
             let matchedIds: [UUID] = enrolledLinks.compactMap { link in
-                guard let enrolled = store.load(for: link.recipientId) else { return nil }
+                guard let enrolled = store.load(for: link.friendId) else { return nil }
                 let matched = detector.isMatch(photoFaces: faceEmbeddings, enrolled: enrolled)
-                print("[AutoShare]   ↳ \(link.recipient.displayName): \(matched ? "MATCH" : "no match")")
-                return matched ? link.recipientId : nil
+                print("[AutoShare]   ↳ \(link.displayName): \(matched ? "MATCH" : "no match")")
+                return matched ? link.friendId : nil
             }
 
             if !matchedIds.isEmpty {
