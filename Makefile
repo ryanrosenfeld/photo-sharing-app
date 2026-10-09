@@ -8,12 +8,16 @@ DEST     := platform=iOS Simulator,name=$(SIM_NAME)
 OUT      := verification-output
 XCB      := xcodebuild -project PhotoShare.xcodeproj -scheme PhotoShare -destination '$(DEST)' -derivedDataPath $(OUT)/DerivedData
 
-.PHONY: verify generate test-unit test-ui scenario
+.PHONY: verify facematch generate test-unit test-ui scenario
 
 generate:
 	xcodegen generate
 
-verify: generate test-unit test-ui
+verify: generate facematch test-unit test-ui
+
+# face matching on the Mac with real Vision landmarks (no Simulator): gates 0 false matches + full recall on the fixtures
+facematch:
+	scripts/verify/facematch-mac.sh --min-recall 114
 
 test-unit: generate
 	@mkdir -p $(OUT) && rm -rf $(OUT)/unit.xcresult

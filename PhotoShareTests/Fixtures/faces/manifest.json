@@ -2,91 +2,1187 @@
   {
     "identity": "alice",
     "file": "alice_1.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "alice"
+    ]
   },
   {
     "identity": "alice",
     "file": "alice_2.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "alice"
+    ]
   },
   {
     "identity": "alice",
     "file": "alice_3.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
   },
   {
     "identity": "alice",
     "file": "alice_4.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
   },
   {
     "identity": "bob",
     "file": "bob_1.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "bob"
+    ]
   },
   {
     "identity": "bob",
     "file": "bob_2.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "bob"
+    ]
   },
   {
     "identity": "bob",
     "file": "bob_3.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "bob"
+    ]
   },
   {
     "identity": "bob",
     "file": "bob_4.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "bob"
+    ]
   },
   {
     "identity": "carol",
     "file": "carol_1.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "carol"
+    ]
   },
   {
     "identity": "carol",
     "file": "carol_2.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "carol"
+    ]
   },
   {
     "identity": "carol",
     "file": "carol_3.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "carol"
+    ]
   },
   {
     "identity": "carol",
     "file": "carol_4.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "carol"
+    ]
   },
   {
     "identity": "dan",
     "file": "dan_1.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "dan"
+    ]
   },
   {
     "identity": "dan",
     "file": "dan_2.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "dan"
+    ]
   },
   {
     "identity": "dan",
     "file": "dan_3.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "dan"
+    ]
   },
   {
     "identity": "dan",
     "file": "dan_4.jpg",
-    "kind": "normal"
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "dan"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_1.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "pete"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_2.jpg",
+    "kind": "normal",
+    "role": "enroll",
+    "identities": [
+      "pete"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_3.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "pete"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_4.jpg",
+    "kind": "normal",
+    "role": "probe",
+    "identities": [
+      "pete"
+    ]
   },
   {
     "identity": "alice",
     "file": "alice_5_exif_rotated.jpg",
-    "kind": "exif_rotated"
+    "kind": "exif_rotated",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
   },
   {
     "identity": "alice",
     "file": "alice_6_large.jpg",
-    "kind": "large"
+    "kind": "large",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
+  },
+  {
+    "identity": "alice",
+    "file": "alice_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
+  },
+  {
+    "identity": "alice",
+    "file": "alice_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
+  },
+  {
+    "identity": "alice",
+    "file": "alice_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "alice",
+      "heidi"
+    ]
+  },
+  {
+    "identity": "alice",
+    "file": "alice_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "alice"
+    ]
+  },
+  {
+    "identity": "bob",
+    "file": "bob_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "bob"
+    ]
+  },
+  {
+    "identity": "bob",
+    "file": "bob_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "bob"
+    ]
+  },
+  {
+    "identity": "bob",
+    "file": "bob_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "bob",
+      "ivan"
+    ]
+  },
+  {
+    "identity": "bob",
+    "file": "bob_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "bob"
+    ]
+  },
+  {
+    "identity": "carol",
+    "file": "carol_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "carol"
+    ]
+  },
+  {
+    "identity": "carol",
+    "file": "carol_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "carol"
+    ]
+  },
+  {
+    "identity": "carol",
+    "file": "carol_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "carol",
+      "judy"
+    ]
+  },
+  {
+    "identity": "carol",
+    "file": "carol_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "carol"
+    ]
+  },
+  {
+    "identity": "dan",
+    "file": "dan_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "dan"
+    ]
+  },
+  {
+    "identity": "dan",
+    "file": "dan_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "dan"
+    ]
+  },
+  {
+    "identity": "dan",
+    "file": "dan_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "dan",
+      "ken"
+    ]
+  },
+  {
+    "identity": "dan",
+    "file": "dan_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "dan"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "erin",
+      "lena"
+    ]
+  },
+  {
+    "identity": "erin",
+    "file": "erin_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "erin"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "frank",
+      "mia"
+    ]
+  },
+  {
+    "identity": "frank",
+    "file": "frank_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "frank"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "grace",
+      "nick"
+    ]
+  },
+  {
+    "identity": "grace",
+    "file": "grace_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "grace"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "heidi",
+      "olga"
+    ]
+  },
+  {
+    "identity": "heidi",
+    "file": "heidi_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "heidi"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "ivan",
+      "pete"
+    ]
+  },
+  {
+    "identity": "ivan",
+    "file": "ivan_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "ivan"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "judy",
+      "alice"
+    ]
+  },
+  {
+    "identity": "judy",
+    "file": "judy_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "judy"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "ken",
+      "bob"
+    ]
+  },
+  {
+    "identity": "ken",
+    "file": "ken_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "ken"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "lena",
+      "carol"
+    ]
+  },
+  {
+    "identity": "lena",
+    "file": "lena_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "lena"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "mia",
+      "dan"
+    ]
+  },
+  {
+    "identity": "mia",
+    "file": "mia_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "mia"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "nick",
+      "erin"
+    ]
+  },
+  {
+    "identity": "nick",
+    "file": "nick_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "nick"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "olga",
+      "frank"
+    ]
+  },
+  {
+    "identity": "olga",
+    "file": "olga_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "olga"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_7_wide.jpg",
+    "kind": "wide",
+    "role": "probe",
+    "identities": [
+      "pete"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_8_tiny.jpg",
+    "kind": "tiny",
+    "role": "probe",
+    "identities": [
+      "pete"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_9_group.jpg",
+    "kind": "group",
+    "role": "probe",
+    "identities": [
+      "pete",
+      "grace"
+    ]
+  },
+  {
+    "identity": "pete",
+    "file": "pete_10_roll_dim_noise.jpg",
+    "kind": "roll_dim_noise",
+    "role": "probe",
+    "identities": [
+      "pete"
+    ]
   }
 ]
