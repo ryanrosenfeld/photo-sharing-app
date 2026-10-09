@@ -11,7 +11,8 @@ psql_q() { docker exec supabase_db_photo-sharing-app psql -U postgres -At -c "$1
 docker info >/dev/null 2>&1 || { echo "docker not running"; exit 2; }
 supabase status >/dev/null 2>&1 || supabase start -x studio,imgproxy,edge-runtime,logflare,vector,mailpit,realtime,supavisor,postgres-meta >/dev/null 2>&1
 eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY)=')"
-supabase db reset >/dev/null 2>&1 || { echo "db reset failed"; exit 1; }; sleep 5
+supabase db reset >/dev/null 2>&1 || { echo "db reset failed"; exit 1; }
+for _ in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H 'Content-Type: application/json' -d '{"email":"dan@test.local","password":"Test1234!"}')" = 200 ] && break; sleep 3; done  # auth restarts after a reset
 token() { curl -s -X POST "$API_URL/auth/v1/token?grant_type=password" -H "apikey: $ANON_KEY" -H 'Content-Type: application/json' \
   -d "{\"email\":\"$1@test.local\",\"password\":\"Test1234!\"}" | jq -r .access_token; }
 EMPTY_JSON='{}'
