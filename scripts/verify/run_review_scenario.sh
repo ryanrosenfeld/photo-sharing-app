@@ -83,17 +83,19 @@ APP=$DD/Build/Products/Debug-iphonesimulator/PhotoShare.app
 setup_sim() { boot "$1"; xcrun simctl install "$1" "$APP"; xcrun simctl privacy "$1" grant photos "$BUNDLE"; }
 
 shot() { xcrun simctl io "$1" screenshot "$OUT/screens/$2.png" >/dev/null 2>&1; }
+STEPN=0
 uistep() { # persona udid step [extra env...]
   local who=$1 udid=$2 step=$3; shift 3
-  local res=$OUT/logs/$who-$step.xcresult
+  STEPN=$((STEPN+1)); local tag=$(printf "%02d" $STEPN)-$step
+  local res=$OUT/logs/$who-$tag.xcresult
   env TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
       TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@" \
     xcodebuild test-without-building -project PhotoShare.xcodeproj -scheme PhotoShare \
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD" \
       -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$res" \
-      >"$OUT/logs/$who-$step.log" 2>&1
+      >"$OUT/logs/$who-$tag.log" 2>&1
   local rc=$?
-  shot "$udid" "$who-$step"
+  shot "$udid" "$who-$tag"
   return $rc
 }
 
@@ -136,15 +138,14 @@ n_photos() { psql_q "select count(*) from photos"; }; n_obj() { psql_q "select c
 xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
 uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=2 TEST_RUNNER_VERIFY_REVIEW_ACTION=approve \
   && pass "alice: queue (2) survived relaunch; Send tapped on the first photo (UI)" \
-  || fail "alice: approve (UI) — see logs/alice-testReviewQueue.log"
+  || fail "alice: approve (UI) — see logs/alice-*-testReviewQueue.log"
 sleep 3
 [ "$(n_photos)" = 1 ] && [ "$(n_obj)" = 1 ] && [ "$(psql_q "select count(*) from photo_recipients where recipient_id='$BOB_ID'")" = 1 ] \
   && pass "approve uploaded exactly 1 photo, to Bob" || fail "after approve: photos=$(n_photos) objects=$(n_obj)"
-cp "$OUT/logs/alice-testReviewQueue.log" "$OUT/logs/alice-approve.log"
 
 uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=1 TEST_RUNNER_VERIFY_REVIEW_ACTION=reject \
   && pass "alice: Discard tapped on the remaining photo; queue empty (UI)" \
-  || fail "alice: reject (UI) — see logs/alice-testReviewQueue.log"
+  || fail "alice: reject (UI) — see logs/alice-*-testReviewQueue.log"
 sleep 2
 [ "$(n_photos)" = 1 ] && [ "$(n_obj)" = 1 ] \
   && pass "discard uploaded nothing: still photos=1, storage objects=1" || fail "after discard: photos=$(n_photos) objects=$(n_obj)"
