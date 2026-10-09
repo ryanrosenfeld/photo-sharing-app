@@ -48,6 +48,11 @@ photo-sharing-app/
     │   ├── KeyPairManager.swift    # Keypair generation, Keychain storage, iCloud Keychain sync, public key upload
     │   ├── PhotoEncryption.swift   # Encrypt/decrypt photo blobs to/from recipient public key
     │   └── FaceProfileCrypto.swift # Symmetric key generation, per-friend key wrapping, encrypt/decrypt reference photos
+    ├── Review/                          # Manual review mode
+    │   ├── ReviewSettings.swift         # Global + per-friend override policy (pure, unit-tested)
+    │   ├── ReviewQueueStore.swift       # On-device queue (JSON in Application Support, per user) + approve/reject
+    │   ├── ReviewQueueView.swift        # Sheet opened from the Friends tab
+    │   └── ShareUploader.swift          # The only code path that uploads a photo (auto-send and approve)
     ├── FaceMatch/
     │   ├── FaceDetector.swift              # Vision face detection + MobileFaceNet embedding
     │   ├── FaceEnrollmentStore.swift       # JSON persistence for [[Float]] embeddings per friend

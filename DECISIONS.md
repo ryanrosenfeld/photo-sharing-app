@@ -239,3 +239,13 @@ A record of significant architectural and product decisions. Add an entry whenev
 - Phone number auth (original spec) dropped: higher friction, SMS cost, no meaningful benefit over email for early-stage.
 
 **Note:** Original spec used phone number as the primary identity anchor for friend discovery. With invite-link-only discovery, phone number is no longer needed for that purpose.
+
+---
+
+### 2026-10-08 — Manual review: on-device queue of asset identifiers, global setting first
+
+**Decision:** `AutoShareProcessor` asks `ReviewSettings.partition` whether each matched friend needs review. Friends that do are queued in `ReviewQueueStore` (a JSON file per user in Application Support) as a PHAsset local identifier plus recipient ids/names. Nothing is encrypted or uploaded until the user approves; approval calls `ShareUploader`, the same path auto-send uses. The setting is device-local (UserDefaults, per user), global for now, with a `friendOverrides` map already honoured so the per-friend toggle only needs to call `setOverride`.
+
+**Alternatives considered:** copying the JPEG into the queue (rejected: duplicates the user's library, stale if they edit or delete it); storing the setting server-side (rejected: nothing else needs it and it would leak the user's review habits as metadata); a queue per photo+friend (rejected: one card per photo with recipient chips is easier to review).
+
+**Trade-offs accepted:** a photo deleted from the library before approval is lost from the queue (dropped with a notice). Queue contents are not synced across a user's devices. Also fixed while there: paused links no longer receive auto-shares.
