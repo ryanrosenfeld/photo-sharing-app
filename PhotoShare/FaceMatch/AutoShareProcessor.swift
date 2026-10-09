@@ -21,13 +21,13 @@ final class AutoShareProcessor: ObservableObject {
 
     // MARK: - Entry point
 
-    func processNewPhotos(userId: UUID, outgoingLinks: [OutgoingLink]) async {
+    func processNewPhotos(userId: UUID, outgoingLinks: [OutgoingLink], review: ReviewQueueStore) async {
         guard !isProcessing else {
             print("[AutoShare] Already processing, skipping.")
             return
         }
 
-        let enrolledLinks = outgoingLinks.filter { store.hasEnrollment(for: $0.recipientId) }
+        let enrolledLinks = outgoingLinks.filter { !$0.isPaused && store.hasEnrollment(for: $0.recipientId) }
         print("[AutoShare] Outgoing links: \(outgoingLinks.count), enrolled: \(enrolledLinks.count)")
         guard !enrolledLinks.isEmpty else { return }
 
@@ -66,9 +66,20 @@ final class AutoShareProcessor: ObservableObject {
                 return matched ? link.recipientId : nil
             }
 
-            if !matchedIds.isEmpty {
-                print("[AutoShare]   ↳ Uploading for \(matchedIds.count) recipient(s)…")
-                await uploadAndShare(image: image, asset: asset, senderId: userId, recipientIds: matchedIds)
+            let (sendNow, toReview) = review.settings.partition(matchedIds)
+
+            if !toReview.isEmpty {
+                // Held on device: nothing is uploaded until the user approves it in the review queue.
+                let recipients = enrolledLinks
+                    .filter { toReview.contains($0.recipientId) }
+                    .map { ReviewItem.Recipient(id: $0.recipientId, name: $0.recipient.displayName) }
+                review.enqueue(assetId: asset.localIdentifier, takenAt: asset.creationDate ?? Date(), recipients: recipients)
+                print("[AutoShare]   ↳ Queued for review (\(recipients.count) recipient(s)); not uploaded.")
+            }
+
+            if !sendNow.isEmpty {
+                print("[AutoShare]   ↳ Uploading for \(sendNow.count) recipient(s)…")
+                await uploadAndShare(image: image, asset: asset, senderId: userId, recipientIds: sendNow)
                 print("[AutoShare]   ↳ Done.")
             }
         }
@@ -80,94 +91,17 @@ final class AutoShareProcessor: ObservableObject {
     // MARK: - Image loading
 
     private func loadFullImage(from asset: PHAsset) async -> UIImage? {
-        await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .highQualityFormat
-            options.isNetworkAccessAllowed = true
-            PHImageManager.default().requestImage(
-                for: asset,
-                targetSize: PHImageManagerMaximumSize,
-                contentMode: .aspectFit,
-                options: options
-            ) { image, _ in
-                continuation.resume(returning: image)
-            }
-        }
+        await AssetImageLoader.fullImage(for: asset)
     }
 
-    // MARK: - Upload + DB write
+    // MARK: - Upload
 
-    private func uploadAndShare(
-        image: UIImage,
-        asset: PHAsset,
-        senderId: UUID,
-        recipientIds: [UUID]
-    ) async {
-        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
-        let storagePath = "photos/\(UUID().uuidString).jpg"
-
+    private func uploadAndShare(image: UIImage, asset: PHAsset, senderId: UUID, recipientIds: [UUID]) async {
         do {
-            try await supabase.storage
-                .from("photos")
-                .upload(path: storagePath, file: data, options: FileOptions(contentType: "image/jpeg"))
-
-            let inserted: InsertedPhoto = try await supabase
-                .from("photos")
-                .insert(NewPhoto(
-                    senderId: senderId,
-                    storagePath: storagePath,
-                    takenAt: asset.creationDate ?? Date(),
-                    locationLat: asset.location?.coordinate.latitude,
-                    locationLng: asset.location?.coordinate.longitude
-                ))
-                .select("id")
-                .single()
-                .execute()
-                .value
-
-            let isoNow = ISO8601DateFormatter().string(from: Date())
-            let recipients = recipientIds.map {
-                NewRecipient(photoId: inserted.id, recipientId: $0, deliveredAt: isoNow)
-            }
-            try await supabase.from("photo_recipients").insert(recipients).execute()
-
+            try await ShareUploader.upload(image: image, asset: asset, senderId: senderId, recipientIds: recipientIds)
         } catch {
             lastError = error.localizedDescription
             print("[AutoShare] Upload/DB error: \(error)")
         }
-    }
-}
-
-// MARK: - Local Encodable types
-
-private struct NewPhoto: Encodable {
-    let senderId: UUID
-    let storagePath: String
-    let takenAt: Date
-    let locationLat: Double?
-    let locationLng: Double?
-
-    enum CodingKeys: String, CodingKey {
-        case senderId = "sender_id"
-        case storagePath = "storage_path"
-        case takenAt = "taken_at"
-        case locationLat = "location_lat"
-        case locationLng = "location_lng"
-    }
-}
-
-private struct InsertedPhoto: Decodable {
-    let id: UUID
-}
-
-private struct NewRecipient: Encodable {
-    let photoId: UUID
-    let recipientId: UUID
-    let deliveredAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case photoId = "photo_id"
-        case recipientId = "recipient_id"
-        case deliveredAt = "delivered_at"
     }
 }

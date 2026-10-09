@@ -78,6 +78,51 @@ final class ScenarioTests: XCTestCase {
         app.buttons["enroll.done"].tap()
     }
 
+    // MARK: - Manual review mode
+
+    /// Profile -> "Review before sending" set to `VERIFY_REVIEW` ("on"/"off").
+    func testSetManualReview() {
+        ensureSignedIn()
+        app.buttons["tab.profile"].tap()
+        let toggle = app.switches["profile.manualReview"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 30), "manual review toggle")
+        let want = (env["VERIFY_REVIEW"] ?? "on") == "on"
+        if (toggle.value as? String == "1") != want { toggle.tap() }
+        XCTAssertEqual(toggle.value as? String, want ? "1" : "0", "toggle state")
+        shot("profile-manual-review-\(want ? "on" : "off")")
+    }
+
+    /// Friends tab -> review queue. Asserts `VERIFY_EXPECT_QUEUE` rows, then performs VERIFY_REVIEW_ACTION
+    /// (`none`, `approve` or `reject`) on the first row, and checks the queue shrank by one.
+    func testReviewQueue() {
+        ensureSignedIn()
+        app.buttons["tab.friends"].tap()
+        let expected = Int(env["VERIFY_EXPECT_QUEUE"] ?? "1") ?? 1
+        let entry = app.buttons["friends.reviewQueue"]
+        if expected == 0 {
+            sleep(2)
+            XCTAssertFalse(entry.exists, "no review queue row when nothing is waiting")
+            shot("friends-no-review-queue")
+            return
+        }
+        XCTAssertTrue(entry.waitForExistence(timeout: 20), "Photos to Review row")
+        shot("friends-with-review-badge")
+        entry.tap()
+        let rows = app.descendants(matching: .any).matching(identifier: "review.row")
+        XCTAssertTrue(rows.firstMatch.waitForExistence(timeout: 10), "review card")
+        XCTAssertEqual(rows.count, expected, "queued photos")
+        sleep(2)  // let thumbnails load
+        shot("review-queue")
+        let action = env["VERIFY_REVIEW_ACTION"] ?? "none"
+        guard action != "none" else { return }
+        app.buttons[action == "approve" ? "review.approve" : "review.reject"].firstMatch.tap()
+        let deadline = Date().addingTimeInterval(40)
+        while rows.count > expected - 1 && Date() < deadline { usleep(500_000) }
+        XCTAssertEqual(rows.count, expected - 1, "queue after \(action)")
+        if expected == 1 { XCTAssertTrue(app.descendants(matching: .any)["review.empty"].waitForExistence(timeout: 8), "empty state") }
+        shot("review-after-\(action)")
+    }
+
     /// Bob: Photos tab shows a polaroid stack from Alice (the stack groups photos by sender).
     func testPhotosTabShowsReceivedPhotos() {
         ensureSignedIn()
