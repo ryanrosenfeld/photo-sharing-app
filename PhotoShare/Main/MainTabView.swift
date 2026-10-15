@@ -9,6 +9,7 @@ struct MainTabView: View {
     @StateObject private var photosVM = PhotosViewModel()
     @StateObject private var friendsVM = FriendsViewModel()
     @StateObject private var processor = AutoShareProcessor()
+    @StateObject private var reviewStore = ReviewQueueStore()
     @State private var selectedTab: OttoTab = .photos
 
     var body: some View {
@@ -36,9 +37,10 @@ struct MainTabView: View {
                 .allowsHitTesting(selectedTab == .profile)
             }
 
-            OttoTabBarView(selected: $selectedTab)
+            OttoTabBarView(selected: $selectedTab, friendsBadge: reviewStore.count)
         }
         .ignoresSafeArea(.keyboard)
+        .environmentObject(reviewStore)
         .environmentObject(friendsVM)
         .sheet(item: Binding(
             get: { inviteRouter.pendingCode.map(PendingInvite.init) },
@@ -52,17 +54,19 @@ struct MainTabView: View {
         }
         .task {
             guard let userId = authManager.session?.user.id else { return }
+            reviewStore.bind(userId: userId)
             await processor.libraryManager.requestAccess()
             async let p: () = photosVM.load(userId: userId)
             async let f: () = friendsVM.load()
             _ = await (p, f)
-            await processor.processNewPhotos(userId: userId, friends: friendsVM.friends)
+            await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             guard let userId = authManager.session?.user.id else { return }
+            reviewStore.bind(userId: userId)
             Task {
                 await friendsVM.load()   // pick up new friends and the other side's toggle changes
-                await processor.processNewPhotos(userId: userId, friends: friendsVM.friends)
+                await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
             }
         }
     }
@@ -83,11 +87,13 @@ enum OttoTab: Hashable {
 
 struct OttoTabBarView: View {
     @Binding var selected: OttoTab
+    /// Photos waiting in the manual-review queue, shown on the Friends tab.
+    var friendsBadge: Int = 0
 
     var body: some View {
         HStack(spacing: 0) {
             tabItem(tab: .photos, label: "Photos", icon: "photo.stack")
-            tabItem(tab: .friends, label: "Friends", icon: "person.2")
+            tabItem(tab: .friends, label: "Friends", icon: "person.2", badge: friendsBadge)
             tabItem(tab: .profile, label: "Profile", icon: "person.circle")
         }
         .padding(.top, 8)
@@ -165,6 +171,7 @@ struct OttoProfileView: View {
     @State private var showEditName = false
     @State private var editedName = ""
     @State private var showFaceProfileSetup = false
+    @EnvironmentObject var reviewStore: ReviewQueueStore
 
     private var profile: UserProfile? { authManager.currentProfile }
 
@@ -284,9 +291,15 @@ struct OttoProfileView: View {
                         OttoSectionCard {
                             settingsRow(
                                 label: "Review all photos before sending",
-                                sub: "Approve every match before it goes",
+                                sub: reviewStore.settings.globalEnabled
+                                    ? "Matches wait in Friends until you send them"
+                                    : "Approve every match before it goes",
                                 hasToggle: true,
-                                isOn: .constant(false),
+                                isOn: Binding(
+                                    get: { reviewStore.settings.globalEnabled },
+                                    set: { reviewStore.setGlobalEnabled($0) }
+                                ),
+                                toggleId: "profile.manualReview",
                                 isLast: false
                             )
                             settingsRow(
@@ -467,6 +480,7 @@ struct OttoProfileView: View {
         sub: String? = nil,
         hasToggle: Bool = false,
         isOn: Binding<Bool> = .constant(false),
+        toggleId: String? = nil,
         hasChev: Bool = false,
         dot: Bool = false,
         isLast: Bool
@@ -476,7 +490,7 @@ struct OttoProfileView: View {
                 settingsRowLabel(label: label, sub: sub, dot: dot, hasChev: hasChev)
                 if hasToggle {
                     Toggle("", isOn: isOn)
-                        .toggleStyle(OttoToggleStyle())
+                        .toggleStyle(OttoToggleStyle(id: toggleId))
                         .labelsHidden()
                 }
                 if hasChev {
@@ -522,6 +536,8 @@ struct OttoProfileView: View {
 // MARK: - Otto toggle style
 
 struct OttoToggleStyle: ToggleStyle {
+    var id: String? = nil
+
     func makeBody(configuration: Configuration) -> some View {
         Button {
             configuration.isOn.toggle()
@@ -538,6 +554,7 @@ struct OttoToggleStyle: ToggleStyle {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(id ?? "")
         .animation(.spring(response: 0.2), value: configuration.isOn)
     }
 }

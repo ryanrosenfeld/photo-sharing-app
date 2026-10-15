@@ -154,9 +154,12 @@ A share is triggered when:
 - Global setting, default OFF (auto-send)
 - Can be overridden per friend (e.g. auto-send to some friends, review before sending to others)
 - When ON: matched photos are queued locally on device for review before any upload occurs
-- Review queue lives in a dedicated section of the Friends tab (badged)
+- Review queue lives in a dedicated section of the Friends tab (badged): a "photos to review" card at the top opens the queue screen
 - Queue shows: the photo, which friend(s) it matched, approve/reject controls
-- Bulk approve/reject supported
+- Bulk approve/reject supported (Send All asks for confirmation; Discard All does not touch the library)
+- Each card has a chip per matched friend; tapping a chip excludes that friend, so approve can send to a subset of the matched friends. Excluded friends are dropped, not re-queued
+- The queue holds only the library asset identifier, never a copy of the photo; the photo is read from the library at approval time. If it was deleted in the meantime the item is dropped with a notice. A failed upload leaves the item queued
+- The queue and the setting are per signed-in user and stored on device only
 - Approved → photo is encrypted and uploaded; rejected → photo is discarded, never leaves device
 - No expiry on queued photos — stored locally, no server involvement until approved
 - If a photo matches multiple friends with different review settings (e.g. auto-send to Ryan, review before Sarah): Ryan's copy sends immediately, Sarah's copy queues independently
