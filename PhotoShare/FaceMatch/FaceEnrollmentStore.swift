@@ -28,6 +28,14 @@ struct FaceEnrollmentStore: Sendable {
         UserDefaults.standard.removeObject(forKey: key(for: friendId))
     }
 
+    /// Remove embeddings for everyone not in `friendIds` (e.g. they unfriended me).
+    func prune(keeping friendIds: Set<UUID>) {
+        for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix(Self.keyPrefix) {
+            let id = UUID(uuidString: String(key.dropFirst(Self.keyPrefix.count)))
+            if let id, !friendIds.contains(id) { UserDefaults.standard.removeObject(forKey: key) }
+        }
+    }
+
     private func key(for friendId: UUID) -> String {
         "\(Self.keyPrefix)\(friendId.uuidString)"
     }

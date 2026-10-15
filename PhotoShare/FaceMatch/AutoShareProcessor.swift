@@ -21,14 +21,15 @@ final class AutoShareProcessor: ObservableObject {
 
     // MARK: - Entry point
 
-    func processNewPhotos(userId: UUID, outgoingLinks: [OutgoingLink], review: ReviewQueueStore) async {
+    func processNewPhotos(userId: UUID, friends: [Friend], review: ReviewQueueStore) async {
         guard !isProcessing else {
             print("[AutoShare] Already processing, skipping.")
             return
         }
 
-        let enrolledLinks = outgoingLinks.filter { !$0.isPaused && store.hasEnrollment(for: $0.recipientId) }
-        print("[AutoShare] Outgoing links: \(outgoingLinks.count), enrolled: \(enrolledLinks.count)")
+        // Only friends with Send ON whose Receive is ON too (the server enforces the same rule).
+        let enrolledLinks = friends.filter { $0.mySend && $0.theirReceive && store.hasEnrollment(for: $0.friendId) }
+        print("[AutoShare] Friends: \(friends.count), sendable+enrolled: \(enrolledLinks.count)")
         guard !enrolledLinks.isEmpty else { return }
 
         let newAssets = libraryManager.fetchNewAssets()
@@ -60,10 +61,10 @@ final class AutoShareProcessor: ObservableObject {
             guard !faceEmbeddings.isEmpty else { continue }
 
             let matchedIds: [UUID] = enrolledLinks.compactMap { link in
-                guard let enrolled = store.load(for: link.recipientId) else { return nil }
+                guard let enrolled = store.load(for: link.friendId) else { return nil }
                 let matched = detector.isMatch(photoFaces: faceEmbeddings, enrolled: enrolled)
-                print("[AutoShare]   ↳ \(link.recipient.displayName): \(matched ? "MATCH" : "no match")")
-                return matched ? link.recipientId : nil
+                print("[AutoShare]   ↳ \(link.displayName): \(matched ? "MATCH" : "no match")")
+                return matched ? link.friendId : nil
             }
 
             let (sendNow, toReview) = review.settings.partition(matchedIds)
@@ -71,8 +72,8 @@ final class AutoShareProcessor: ObservableObject {
             if !toReview.isEmpty {
                 // Held on device: nothing is uploaded until the user approves it in the review queue.
                 let recipients = enrolledLinks
-                    .filter { toReview.contains($0.recipientId) }
-                    .map { ReviewItem.Recipient(id: $0.recipientId, name: $0.recipient.displayName) }
+                    .filter { toReview.contains($0.friendId) }
+                    .map { ReviewItem.Recipient(id: $0.friendId, name: $0.displayName) }
                 review.enqueue(assetId: asset.localIdentifier, takenAt: asset.creationDate ?? Date(), recipients: recipients)
                 print("[AutoShare]   ↳ Queued for review (\(recipients.count) recipient(s)); not uploaded.")
             }

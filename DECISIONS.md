@@ -14,6 +14,25 @@ A record of significant architectural and product decisions. Add an entry whenev
 
 **Trade-offs accepted:** Vision landmarks don't work in the Simulator, so Simulator tests cover only the fallback path and alignment is verified on the Mac, not yet on a physical iPhone. Pyramid detection costs up to ~27 Vision calls per 12 MP photo. Existing enrollments are invalidated (`face_enrollment_v3_`). Threshold chosen on LFW (easy) so real phone photos may need re-tuning.
 
+### 2026-10-08 — Friends v3 implementation: invites + two-row friendships behind RPCs (diverges from the planned schema)
+
+**Decision:** Ship the mutual-friendship model now with a smaller schema than ARCHITECTURE.md's E2E plan:
+- `invites(code, inviter_id, expires_at, accepted_by, accepted_at)`: single-use link `photoshare://invite/<32-hex code>`, 14-day expiry.
+- `friendships(user_id, friend_id, send_enabled, receive_enabled)`: **two directional rows per friendship, each owned by one user**, holding that user's Send and Receive toggles for the other. Replaces the planned `friendships` + `send_toggles` + `receive_toggles` trio.
+- Clients never write these tables. All changes go through SECURITY DEFINER RPCs (`create_invite`, `preview_invite`, `accept_invite`, `list_friends`, `set_friend_prefs`, `unfriend`).
+- `photo_recipients` INSERT policy now requires `can_share_with(sender, recipient)`: friends, sender Send ON, recipient Receive ON. So Receive OFF is enforced by the server, not just by the sender's app.
+- The old `links` table is left in place (deprecated) and backfilled into friendships; migrations stay additive.
+
+**Alternatives considered:** (1) the spec's pending-friendship row created by the inviter, then activated by the invitee: needs a pending state, cleanup of abandoned rows and realtime to finish the handshake, while the invite row already records the inviter's consent. (2) One row per pair with four booleans: simpler joins but each user's toggles live in columns the other user would need write access to.
+
+**Reasoning:** An invite is the inviter's consent; accepting is the invitee's. A single atomic RPC creates both rows, so there is no half-friendship state. Per-user rows make "I only change my own toggles" a property of the RPC rather than column-level policy. The paused indicator ("my Send is ON but their Receive is OFF") needs the friend's Receive value, so `list_friends` returns both sides.
+
+**Free-plan limit:** Send ON for at most 3 friends is checked in `set_friend_prefs`; `accept_invite` defaults Send to OFF if the accepting free user is already at the limit.
+
+**Not done yet (deliberately):** push notifications for "[Name] accepted" (no APNs in the app; the inviter sees the friend on next foreground/refresh), E2E-encrypted reference photos and automatic enrollment on acceptance (the Enroll button stays), manual review queue.
+
+**Trade-off accepted:** `list_friends` exposes a friend's Receive toggle to the sender. The spec calls Receive OFF "silent to sender" but also requires the paused indicator; the indicator won out.
+
 ---
 
 ### 2026-04-25 — Backend: Supabase over Firebase
