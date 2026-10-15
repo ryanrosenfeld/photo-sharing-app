@@ -158,7 +158,6 @@ struct FriendsView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("friends.reviewQueue")
     }
-    }
 
     // MARK: - Friends list
 
@@ -255,6 +254,7 @@ extension Friend {
 
 struct FriendDetailSheet: View {
     @EnvironmentObject var vm: FriendsViewModel
+    @EnvironmentObject var reviewStore: ReviewQueueStore
     @Environment(\.dismiss) private var dismiss
     let friendId: UUID
     @State private var confirmUnfriend = false
@@ -302,9 +302,29 @@ struct FriendDetailSheet: View {
                                 id: "friend.receive",
                                 isOn: Binding(get: { friend.myReceive }, set: { on in Task { await vm.setReceive(on, for: friend) } })
                             )
+                            Divider().background(OttoColor.line).padding(.leading, 16)
+                            toggleRow(
+                                title: "Review before sending",
+                                detail: reviewDetail(for: friend),
+                                id: "friend.review",
+                                isOn: Binding(
+                                    get: { reviewStore.settings.requiresReview(for: friend.friendId) },
+                                    set: { reviewStore.setOverride($0, for: friend.friendId) }
+                                )
+                            )
                         }
                     }
                     .padding(.horizontal, 16)
+
+                    if reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil {
+                        Button("Use my default (\(reviewStore.settings.globalEnabled ? "review" : "send automatically"))") {
+                            reviewStore.setOverride(nil, for: friend.friendId)
+                        }
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(OttoColor.sage)
+                        .padding(.top, 10)
+                        .accessibilityIdentifier("friend.review.reset")
+                    }
 
                     if friend.isPaused {
                         Text("\(friend.displayName) has turned off receiving, so your photos of them aren't being delivered.")
@@ -333,6 +353,15 @@ struct FriendDetailSheet: View {
             }
         }
         .presentationDetents([.large])
+    }
+
+    private func reviewDetail(for friend: Friend) -> String {
+        let overridden = reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil
+        let on = reviewStore.settings.requiresReview(for: friend.friendId)
+        let base = on
+            ? "Photos of \(friend.displayName) wait in Friends until you approve them."
+            : "Photos of \(friend.displayName) are sent as soon as they're matched."
+        return overridden ? base : base + " (Following your default.)"
     }
 
     private func toggleRow(title: String, detail: String, id: String, isOn: Binding<Bool>) -> some View {

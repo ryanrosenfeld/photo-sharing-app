@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Manual-review scenario (Alice with "Review before sending" ON, Bob receives).
+# Manual-review scenario (Alice with "Review before sending" ON for Bob only, via Friend Detail; Bob receives).
 #
 #   1. Alice enrolls Bob, turns Review ON.
 #   2. Photos of Bob (x2) and Dan land in her library -> matched on device, QUEUED, nothing uploaded
@@ -106,9 +106,10 @@ uistep alice "$A" testEnrollFriendFromFaceProfile \
   && pass "alice: enrolled Bob from his face profile (UI; embeddings computed on-device)" \
   || fail "alice: enroll Bob (UI) — see logs/alice-testEnrollFriendFromFaceProfile.log"
 
-# ---- 2b. Alice turns Review ON (UI) ------------------------------------------------------------
-uistep alice "$A" testSetManualReview TEST_RUNNER_VERIFY_REVIEW=on \
-  && pass "alice: Profile > Review before sending ON (UI)" || fail "alice: set review ON (UI)"
+# ---- 2b. Alice turns Review ON for Bob only, via Friend Detail (UI); the global setting stays OFF --------
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=on \
+  && pass "alice: Friend Detail > Review before sending ON for Bob (global setting left OFF) (UI)" \
+  || fail "alice: per-friend review ON (UI)"
 
 # ---- 3. new photos land in Alice's library -------------------------------------------------------
 sleep 2
@@ -157,11 +158,28 @@ uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
   && pass "after relaunch the queue stays empty (rejected photos are not re-queued)" || fail "queue not empty after relaunch"
 xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
 
+# ---- 4c. Review OFF for Bob again: the next matched photo is sent immediately, never queued ---------------
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=off \
+  && pass "alice: Friend Detail > Review before sending OFF for Bob (UI)" || fail "alice: per-friend review OFF (UI)"
+cp "$FIX/bob_1.jpg" "$OUT/addmedia/"
+xcrun simctl addmedia "$A" "$OUT/addmedia/bob_1.jpg"
+: > "$OUT/logs/alice-app-stdout.log"
+launch_alice
+for i in $(seq 1 40); do grep -q "Finished" "$OUT/logs/alice-app-stdout.log" 2>/dev/null && break; sleep 2; done
+shot "$A" alice-after-auto-send
+sleep 3
+[ "$(n_photos)" = 2 ] && [ "$(n_obj)" = 2 ] \
+  && pass "review OFF for Bob: new photo of Bob auto-sent (photos=2), not queued" \
+  || fail "review OFF should auto-send: photos=$(n_photos) objects=$(n_obj)"
+xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
+uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
+  && pass "queue empty after auto-send" || fail "queue should be empty after auto-send"
+
 # ---- 5. Bob sees exactly the approved photo ----------------------------------------------------------
 xcrun simctl shutdown "$A"
 setup_sim "$B" && pass "bob sim: booted, app installed"
-uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTOS=1 \
-  && pass "bob: Photos tab shows exactly the 1 approved photo from Alice (UI)" \
+uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTOS=2 \
+  && pass "bob: Photos tab shows the approved photo and the auto-sent one (2) from Alice (UI)" \
   || fail "bob: Photos tab (UI) — see logs/bob-testPhotosTabShowsReceivedPhotos.log"
 
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
