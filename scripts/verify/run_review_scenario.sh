@@ -60,13 +60,17 @@ done
 [ "$(psql_q "select count(*) from storage.objects where bucket_id='face-profiles'")" = 2 ] \
   && pass "Bob's face profile: 2 reference photos in storage" || fail "face profile photos not in storage"
 
+# Onboarding derives from server state: personas need face_profile_enabled or the UI lands in onboarding, not the tabs.
+psql_q "update profiles set face_profile_enabled=true where id in ('$ALICE_ID','$BOB_ID')" >/dev/null \
+  && pass "personas marked as having a face profile (skips onboarding)" || fail "mark face_profile_enabled"
+
 # ---- 1. simulators (dedicated, capped at 2) ---------------------------------------------------
 sim() { # name -> udid (create if missing)
   local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
   [ -n "$u" ] || u=$(xcrun simctl create "$1" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
   echo "$u"
 }
-A=$(sim verify-alice); B=$(sim verify-bob)
+A=$(sim verify-rt-alice); B=$(sim verify-rt-bob)
 # Personas run one simulator at a time (16 GB MacBook Air thrashes with 2 sims + Xcode + Docker);
 # the hard cap is 2, and the personas are independent apart from the shared backend.
 for n in "$A" "$B"; do xcrun simctl shutdown "$n" 2>/dev/null; done
