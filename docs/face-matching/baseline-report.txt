@@ -1,0 +1,26 @@
+FACE MATCH REPORT  threshold 15.0  identities 16  probes 98  genuine pairs 114  impostor pairs 1454
+genuine  distance: min 4.7  p50 19.5  p95 24.4  max 25.0   undetected(no face): 0
+impostor distance: min 17.8  p50 23.9  p95 27.0  max 29.9
+recall 28/114 = 24.6%   false matches 0/1454
+per kind (recall):
+  exif_rotated   1/  1   genuine min 4.7  p50 4.7  p95 4.7  max 4.7
+  group   1/ 32   genuine min 14.6  p50 21.0  p95 24.4  max 24.8
+  large   0/  1   genuine min 22.4  p50 22.4  p95 22.4  max 22.4
+  normal  17/ 32   genuine min 5.6  p50 12.7  p95 24.0  max 25.0
+  roll_dim_noise   7/ 16   genuine min 12.6  p50 15.5  p95 17.5  max 18.8
+  tiny   1/ 16   genuine min 12.4  p50 20.8  p95 24.7  max 25.0
+  wide   1/ 16   genuine min 8.3  p50 21.1  p95 24.3  max 24.4
+threshold sweep (recall / false matches):
+  t=   8  recall  14/114  false 0
+  t=  10  recall  17/114  false 0
+  t=  12  recall  18/114  false 0
+  t=  13  recall  21/114  false 0
+  t=  14  recall  23/114  false 0
+  t=  15  recall  28/114  false 0
+  t=  16  recall  31/114  false 0
+  t=  17  recall  35/114  false 0
+  t=  18  recall  42/114  false 3
+  t=  19  recall  53/114  false 9
+  t=  20  recall  60/114  false 25
+worst genuine 24.97 vs closest impostor 17.75 (gap -7.22)
+MISSED: alice_4.jpg~alice, bob_4.jpg~bob, carol_4.jpg~carol, dan_4.jpg~dan, erin_4.jpg~erin, frank_4.jpg~frank, grace_4.jpg~grace, heidi_4.jpg~heidi, ivan_4.jpg~ivan, judy_4.jpg~judy, ken_4.jpg~ken, lena_4.jpg~lena, mia_4.jpg~mia, nick_4.jpg~nick, olga_4.jpg~olga, alice_6_large.jpg~alice, alice_7_wide.jpg~alice, alice_8_tiny.jpg~alice, alice_9_group.jpg~alice, alice_9_group.jpg~heidi, bob_7_wide.jpg~bob, bob_8_tiny.jpg~bob, bob_9_group.jpg~bob, bob_9_group.jpg~ivan, bob_10_roll_dim_noise.jpg~bob, carol_7_wide.jpg~carol, carol_8_tiny.jpg~carol, carol_9_group.jpg~carol, carol_9_group.jpg~judy, carol_10_roll_dim_noise.jpg~carol, dan_7_wide.jpg~dan, dan_8_tiny.jpg~dan, dan_9_group.jpg~dan, dan_9_group.jpg~ken, dan_10_roll_dim_noise.jpg~dan, erin_7_wide.jpg~erin, erin_8_tiny.jpg~erin, erin_9_group.jpg~erin, erin_9_group.jpg~lena, frank_7_wide.jpg~frank, frank_8_tiny.jpg~frank, frank_9_group.jpg~frank, frank_9_group.jpg~mia, frank_10_roll_dim_noise.jpg~frank, grace_7_wide.jpg~grace, grace_8_tiny.jpg~grace, grace_9_group.jpg~grace, grace_9_group.jpg~nick, heidi_7_wide.jpg~heidi, heidi_8_tiny.jpg~heidi, heidi_9_group.jpg~heidi, heidi_9_group.jpg~olga, ivan_7_wide.jpg~ivan, ivan_8_tiny.jpg~ivan, ivan_9_group.jpg~ivan, ivan_10_roll_dim_noise.jpg~ivan, judy_7_wide.jpg~judy, judy_8_tiny.jpg~judy, judy_9_group.jpg~alice, judy_9_group.jpg~judy, ken_7_wide.jpg~ken, ken_8_tiny.jpg~ken, ken_9_group.jpg~bob, ken_9_group.jpg~ken, lena_7_wide.jpg~lena, lena_8_tiny.jpg~lena, lena_9_group.jpg~carol, lena_9_group.jpg~lena, lena_10_roll_dim_noise.jpg~lena, mia_7_wide.jpg~mia, mia_8_tiny.jpg~mia, mia_9_group.jpg~dan, mia_9_group.jpg~mia, nick_7_wide.jpg~nick, nick_8_tiny.jpg~nick, nick_9_group.jpg~erin, nick_9_group.jpg~nick, nick_10_roll_dim_noise.jpg~nick, olga_7_wide.jpg~olga, olga_8_tiny.jpg~olga, olga_9_group.jpg~frank, olga_9_group.jpg~olga, olga_10_roll_dim_noise.jpg~olga, pete_9_group.jpg~grace, pete_9_group.jpg~pete, pete_10_roll_dim_noise.jpg~pete

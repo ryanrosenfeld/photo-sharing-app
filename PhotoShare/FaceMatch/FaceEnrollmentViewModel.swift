@@ -83,7 +83,7 @@ final class FaceEnrollmentViewModel: ObservableObject {
     }
 
     private func generateAndSaveEmbeddings(from images: [UIImage]) async {
-        var embeddings: [[Float]] = []
+        var embeddings: [FaceEmbedding] = []
         for image in images {
             do {
                 let embedding = try await Task.detached(priority: .userInitiated) { [detector, image] in

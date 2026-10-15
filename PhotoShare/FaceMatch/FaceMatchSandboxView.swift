@@ -160,7 +160,7 @@ struct FaceMatchSandboxView: View {
                         Text("0.1")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Slider(value: $vm.threshold, in: 0.1...20, step: 0.1)
+                        Slider(value: $vm.threshold, in: 0.05...1.0, step: 0.01)
                         Text("20")
                             .font(.caption)
                             .foregroundStyle(.secondary)

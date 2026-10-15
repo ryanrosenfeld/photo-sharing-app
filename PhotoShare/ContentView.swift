@@ -1,7 +1,9 @@
+import GoogleSignIn
 import SwiftUI
 
 struct ContentView: View {
     @StateObject private var authManager = AuthManager()
+    @StateObject private var inviteRouter = InviteRouter()
 
     private enum Onboarding { case checking, needed(OnboardingStep), done }
     @State private var onboarding: Onboarding = .checking
@@ -27,6 +29,12 @@ struct ContentView: View {
             }
         }
         .environmentObject(authManager)
+        .environmentObject(inviteRouter)
+        .onOpenURL { url in
+            if inviteRouter.handle(url) { return }
+            GIDSignIn.sharedInstance.handle(url)
+            Task { try? await supabase.auth.session(from: url) }
+        }
         // Decide once per signed-in user; the flow itself drives later transitions.
         .task(id: authManager.currentProfile?.id) {
             guard let profile = authManager.currentProfile else {

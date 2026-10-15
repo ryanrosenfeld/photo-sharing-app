@@ -105,6 +105,9 @@ App launch
 
 See `supabase/migrations/` for the full schema with RLS policies.
 
+> **Implemented in v3 (friends):** the `friendships` / toggle tables above are realised as `invites` + `friendships(user_id, friend_id, send_enabled, receive_enabled)` (two rows per friendship) behind RPCs; see `supabase/migrations/20260610093000_mutual_friendships.sql` and DECISIONS.md (2026-10-08). `friendship_keys`, `manual_review` and E2E encryption are still planned. Invite links are `photoshare://invite/<code>`, handled by `InviteRouter` (ContentView `onOpenURL`) and `InviteAcceptSheet`.
+
+
 ```
 profiles           id (→ auth.users), display_name, avatar_url, plan (free|pro),
                    public_key (base64 DER — user's asymmetric public key)
@@ -218,12 +221,13 @@ Photo captured on device
   → AutoShareProcessor wakes on app foreground
   → For each new asset (deduped by PHAsset.localIdentifier + perceptual hash):
       1. Load full-res image
-      2. Downsample to 1024px (orientation-normalized) for face processing
-      3. Vision face detection → bounding boxes
-      4. Crop each face (25% padding) → resize to 112×112
+      2. Normalize orientation, cap at 4096px
+      3. Vision face detection over an image pyramid of 1024px tiles (small faces in wide shots), duplicates merged
+      4. Re-detect landmarks on a crop of each face; warp eyes/nose/mouth onto the ArcFace 112×112 template
+         (box-crop fallback if landmarks are missing/implausible, e.g. the Simulator)
       5. MobileFaceNet CoreML inference → 512-D embedding per face
       6. Compare embeddings to enrolled friends with Send toggle ON
-         (Euclidean distance < threshold = match)
+         (cosine distance < 0.55 = match; unaligned faces get +0.2 penalty)
   → For each matching friend:
       ├─ If manual review ON for this friend:
       │    → Queue photo locally; no upload; badge review queue
@@ -295,5 +299,6 @@ Lets Claude (or CI later) change the app and check it works without a human in t
 - `make verify` — `xcodegen`, then `PhotoShareTests` (hosted XCTest incl. the face-match pipeline over `PhotoShareTests/Fixtures/faces`) and a `PhotoShareUITests` launch smoke test on the iPhone 17 Pro simulator.
 - `make scenario` — `scripts/verify/run_scenario.sh`: local Supabase in Docker (repo migrations + `supabase/seed_personas.sql`: Alice, Bob, Carol, Dan) and an end-to-end scenario across two simulators (one booted at a time; cap is 2), with evidence under `verification-output/` (gitignored).
 - Debug builds read `PHOTOSHARE_SUPABASE_URL` / `PHOTOSHARE_SUPABASE_ANON_KEY` from the environment (see `SupabaseClient.swift`), so simulators can point at local Supabase without touching `Secrets.swift`.
+- Face matching is evaluated on the Mac with real Vision landmarks (`scripts/verify/facematch-mac.sh`, no Simulator needed) because Simulator landmarks are unusable; evidence and limits in `docs/face-matching/README.md`. Enrollment key is `face_enrollment_v3_` (v2 vectors are incompatible).
 - Face fixtures are AI-generated (non-real) portraits plus augmented variants: they guard pipeline regressions, not real-world recognition accuracy (threshold 15 was tuned on real device photos).
 - On the Simulator, `FaceDetector` forces Vision to CPU and CoreML to `.cpuOnly`; the default compute units yield "Could not create inference context" (Vision) and an all-zero embedding (CoreML).
