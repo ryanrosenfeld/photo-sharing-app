@@ -2,6 +2,8 @@
 
 ```
 make verify      # unit tests (face-match pipeline) + UI launch smoke test, ~2 min
+make verify-friends-api  # friends backend (invites, toggles, RLS) against local Supabase, no simulator, ~1 min
+make scenario-friends    # Dan invites Carol: invite link, simctl openurl deep link, accept, toggles, unfriend (2 sims), ~10 min
 make scenario    # Alice/Bob end-to-end on 2 simulators vs local Supabase, ~10 min
 ```
 
@@ -23,3 +25,6 @@ Evidence: `verification-output/scenario-<ts>/{summary.md,screens/,logs/,db/}` (g
 `PhotoShareTests/Fixtures/sources/*.jpg` are AI-generated portraits (SFHQ "Synthetic Faces High Quality", via the
 `bitmind/SyntheticFacesHQ` Hugging Face preview rows); `make_fixtures.py` derives the test photos (pose/zoom/lighting variants,
 an EXIF-rotated photo and a 4032x3024 frame). Re-run it after editing. Verify the SFHQ licence terms before any redistribution beyond this repo.
+
+## Shared Mac etiquette
+`scripts/verify/simlock.sh` takes `/tmp/photoshare-sim.lock` (pid inside, stale locks are cleared) so only one simulator/DB-reset run happens at a time across worktrees; every scenario script sources it and shuts simulators down on exit. `run_friends_scenario.sh` uses its own devices (`verify-friends-a/b`) and writes screenshots plus `simctl io recordVideo` clips to `verification-output/friends-<ts>/{screens,videos}`.

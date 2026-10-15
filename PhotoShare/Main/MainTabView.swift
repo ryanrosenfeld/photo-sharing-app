@@ -3,6 +3,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var inviteRouter: InviteRouter
     @StateObject private var photosVM = PhotosViewModel()
     @StateObject private var friendsVM = FriendsViewModel()
     @StateObject private var processor = AutoShareProcessor()
@@ -33,24 +34,41 @@ struct MainTabView: View {
                 .allowsHitTesting(selectedTab == .profile)
             }
 
-            OttoTabBarView(selected: $selectedTab, friendsBadge: friendsVM.pendingCount)
+            OttoTabBarView(selected: $selectedTab)
         }
         .ignoresSafeArea(.keyboard)
+        .environmentObject(friendsVM)
+        .sheet(item: Binding(
+            get: { inviteRouter.pendingCode.map(PendingInvite.init) },
+            set: { if $0 == nil { inviteRouter.pendingCode = nil } }
+        )) { invite in
+            InviteAcceptSheet(code: invite.code).environmentObject(friendsVM)
+        }
+        // A deep link can arrive while another tab is showing; the accept sheet is global, but land on Friends afterwards.
+        .onChange(of: inviteRouter.pendingCode) { _, code in
+            if code != nil { selectedTab = .friends }
+        }
         .task {
             guard let userId = authManager.session?.user.id else { return }
             await processor.libraryManager.requestAccess()
             async let p: () = photosVM.load(userId: userId)
-            async let f: () = friendsVM.load(userId: userId)
+            async let f: () = friendsVM.load()
             _ = await (p, f)
-            await processor.processNewPhotos(userId: userId, outgoingLinks: friendsVM.outgoingLinks)
+            await processor.processNewPhotos(userId: userId, friends: friendsVM.friends)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             guard let userId = authManager.session?.user.id else { return }
             Task {
-                await processor.processNewPhotos(userId: userId, outgoingLinks: friendsVM.outgoingLinks)
+                await friendsVM.load()   // pick up new friends and the other side's toggle changes
+                await processor.processNewPhotos(userId: userId, friends: friendsVM.friends)
             }
         }
     }
+}
+
+private struct PendingInvite: Identifiable {
+    let code: String
+    var id: String { code }
 }
 
 // MARK: - Tab enum
@@ -63,12 +81,11 @@ enum OttoTab: Hashable {
 
 struct OttoTabBarView: View {
     @Binding var selected: OttoTab
-    var friendsBadge: Int = 0
 
     var body: some View {
         HStack(spacing: 0) {
             tabItem(tab: .photos, label: "Photos", icon: "photo.stack")
-            tabItem(tab: .friends, label: "Friends", icon: "person.2", badge: friendsBadge)
+            tabItem(tab: .friends, label: "Friends", icon: "person.2")
             tabItem(tab: .profile, label: "Profile", icon: "person.circle")
         }
         .padding(.top, 8)
