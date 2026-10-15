@@ -121,7 +121,7 @@ struct OttoTabBarView: View {
                         .foregroundStyle(selected == tab ? OttoColor.sage : OttoColor.barkSoft)
 
                     if badge > 0 {
-                        Text("\(badge)")
+                        Text(badge > 9 ? "9+" : "\(badge)")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
@@ -140,6 +140,8 @@ struct OttoTabBarView: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(badge > 0 ? "\(label), \(badge) to review" : label)
+        .accessibilityAddTraits(selected == tab ? .isSelected : [])
         .accessibilityIdentifier("tab.\(label.lowercased())")
     }
 }
