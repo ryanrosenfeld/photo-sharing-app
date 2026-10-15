@@ -51,9 +51,17 @@ final class ScenarioTests: XCTestCase {
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         app.buttons["emailAuth.submit"].tap()
         // Existing personas already have a face profile; a fresh simulator still shows the notifications step.
-        let notNow = app.buttons["notifications.skip"]
-        if notNow.waitForExistence(timeout: 10) { notNow.tap() }
-        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 60), "signed in -> main tabs")
+        // Onboarding steps are derived from device state, so a fresh simulator can show photo access and/or
+        // notifications before the tabs. Dismiss whatever appears until the tabs are there.
+        let deadline = Date().addingTimeInterval(90)
+        while !app.buttons["tab.photos"].exists && Date() < deadline {
+            allowPhotosAccessIfAsked(timeout: 1)
+            for id in ["notifications.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
+                app.buttons[id].tap()
+            }
+            usleep(500_000)
+        }
+        XCTAssertTrue(app.buttons["tab.photos"].exists, "signed in -> main tabs")
     }
 
     /// Sign in; grant Photos access if the system alert appears (also pre-granted via simctl privacy).
