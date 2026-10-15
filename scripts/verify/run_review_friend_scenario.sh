@@ -8,7 +8,7 @@
 #   4. Alice REJECTS the other -> never uploaded. Queue empty.
 #   5. Bob's Photos tab shows exactly the 1 approved photo.
 #
-# Usage: scripts/verify/with_sim_lock.sh scripts/verify/run_review_scenario.sh   (needs docker/colima running)
+# Usage: scripts/verify/with_sim_lock.sh scripts/verify/run_review_friend_scenario.sh   (needs docker/colima running)
 # Shares its setup with run_scenario.sh (copied, so the original stays untouched).
 # Evidence: verification-output/scenario-<timestamp>/{summary.md,screens/,logs/,db/}
 set -uo pipefail
