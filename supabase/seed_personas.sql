@@ -27,7 +27,9 @@ on conflict do nothing;
 
 -- handle_new_user trigger already created profiles; set the persona specifics.
 update public.profiles set plan = 'pro' where id = 'c3333333-3333-3333-3333-333333333333';
-update public.profiles set face_profile_enabled = true where id = 'b2222222-2222-2222-2222-222222222222';
+-- Onboarding requires a face profile, so every persona counts as onboarded for that step
+-- (bob's reference photos are uploaded by scripts/verify/run_scenario.sh; the others never serve as the enrollment source).
+update public.profiles set face_profile_enabled = true;
 
 -- alice <-> bob are friends (both Send/Receive ON). carol and dan have no friendships:
 -- the invite scenario has dan invite carol.

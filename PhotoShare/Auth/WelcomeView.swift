@@ -55,10 +55,10 @@ struct WelcomeView: View {
                 }
             }
             .navigationDestination(isPresented: $showGetStarted) {
-                AuthView()
+                AuthView(startInSignUp: true)
             }
             .navigationDestination(isPresented: $showSignIn) {
-                AuthView()
+                AuthView(startInSignUp: false)
             }
         }
     }

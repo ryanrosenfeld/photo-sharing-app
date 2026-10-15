@@ -52,6 +52,12 @@ photo-sharing-app/
     │   ├── FaceDetector.swift              # Vision face detection + MobileFaceNet embedding
     │   ├── FaceEnrollmentStore.swift       # JSON persistence for [[Float]] embeddings per friend
     │   ├── FaceProfileSetupView/VM.swift   # Required onboarding step: select + upload encrypted reference photos
+    ├── Onboarding/
+    │   ├── OnboardingFlow.swift            # OnboardingStep enum: next step derived from server + permission state (no stored flag)
+    │   ├── FaceProfileStep.swift           # Picker + per-photo on-device validation; reused by Profile → Manage
+    │   ├── FaceProfileValidator.swift      # Vision check: exactly one prominent face
+    │   ├── PermissionSteps.swift           # Photo library + notifications explainers (denial never traps)
+    │   └── OnboardingComponents.swift      # Progress bar, page layout, primary button
     │   ├── FaceProfileManager.swift        # Manages encrypted reference photo upload, symmetric key, per-friend key distribution
     │   ├── FaceEnrollmentSync.swift        # On friendship acceptance: fetch + decrypt friend's reference photos → generate embeddings → discard photos
     │   ├── PhotoLibraryManager.swift       # Camera roll cursor + permissions
