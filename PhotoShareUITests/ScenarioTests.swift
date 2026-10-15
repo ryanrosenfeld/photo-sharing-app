@@ -51,9 +51,17 @@ final class ScenarioTests: XCTestCase {
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         app.buttons["emailAuth.submit"].tap()
         // Existing personas already have a face profile; a fresh simulator still shows the notifications step.
-        let notNow = app.buttons["notifications.skip"]
-        if notNow.waitForExistence(timeout: 10) { notNow.tap() }
-        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 60), "signed in -> main tabs")
+        // Onboarding steps are derived from device state, so a fresh simulator can show photo access and/or
+        // notifications before the tabs. Dismiss whatever appears until the tabs are there.
+        let deadline = Date().addingTimeInterval(90)
+        while !app.buttons["tab.photos"].exists && Date() < deadline {
+            allowPhotosAccessIfAsked(timeout: 1)
+            for id in ["notifications.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
+                app.buttons[id].tap()
+            }
+            usleep(500_000)
+        }
+        XCTAssertTrue(app.buttons["tab.photos"].exists, "signed in -> main tabs")
     }
 
     /// Sign in; grant Photos access if the system alert appears (also pre-granted via simctl privacy).
@@ -232,6 +240,25 @@ final class ScenarioTests: XCTestCase {
         sleep(2)  // let the RPC + reload land
         shot("friend-detail-after")
         XCTAssertEqual(toggle.value as? String, want, "toggle value")
+    }
+
+    /// Friend detail -> "Review before sending" for VERIFY_FRIEND set to VERIFY_VALUE (on|off). The global setting is untouched.
+    func testSetFriendReview() {
+        ensureSignedIn()
+        openFriendsTab()
+        let row = friendRow(env["VERIFY_FRIEND"] ?? "")
+        XCTAssertTrue(row.waitForExistence(timeout: 15), "friend row")
+        row.tap()
+        let toggle = app.switches["friend.review"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "per-friend review toggle")
+        let want = (env["VERIFY_VALUE"] ?? "on") == "on" ? "1" : "0"
+        shot("friend-review-before")
+        if (toggle.value as? String) != want { toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
+        let settled = Date().addingTimeInterval(10)
+        while (toggle.value as? String) != want && Date() < settled { usleep(300_000) }
+        XCTAssertEqual(toggle.value as? String, want, "review toggle value")
+        shot("friend-review-after")
+        app.buttons["friend.done"].tap()
     }
 
     /// Friends list row status text. env: VERIFY_FRIEND, VERIFY_EXPECT_STATUS (substring).

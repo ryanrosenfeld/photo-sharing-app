@@ -104,4 +104,22 @@ final class ReviewQueueTests: XCTestCase {
         XCTAssertTrue(ok)
         XCTAssertEqual(s.count, 0)
     }
+
+    func testClearingOverrideFollowsGlobalAgain() {
+        let s = makeStore()
+        s.setGlobalEnabled(true)
+        s.setOverride(false, for: bob.id)
+        XCTAssertFalse(s.settings.requiresReview(for: bob.id))
+        s.setOverride(nil, for: bob.id)
+        XCTAssertTrue(s.settings.requiresReview(for: bob.id))
+        XCTAssertNil(makeStore().settings.friendOverrides[bob.id.uuidString])
+    }
+
+    func testPerFriendOverrideOnWithGlobalOffQueuesOnlyThatFriend() {
+        let s = makeStore()
+        s.setOverride(true, for: bob.id)
+        let (now, review) = s.settings.partition([bob.id, carol.id])
+        XCTAssertEqual(review, [bob.id])
+        XCTAssertEqual(now, [carol.id])
+    }
 }
