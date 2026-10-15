@@ -24,25 +24,31 @@ struct PhotosView: View {
                 .padding(.bottom, 12)
 
                 // content
-                if vm.isLoading {
+                if vm.isLoading && vm.photos.isEmpty {
                     Spacer()
                     ProgressView().tint(OttoColor.sage)
+                        .accessibilityIdentifier("photos.loading")
                     Spacer()
+                } else if vm.photos.isEmpty && vm.loadFailed {
+                    errorState
                 } else if vm.photos.isEmpty {
                     emptyState
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
                             ForEach(groupedPhotos, id: \.senderName) { group in
-                                PolaroidStackGroupView(group: group)
+                                PolaroidStackGroupView(group: group) {
+                                    Task { await vm.saveAll(group.photos) }
+                                }
                                     .accessibilityElement(children: .contain)
                                     .accessibilityIdentifier("photos.stack.\(group.senderName)")
                                     .padding(.bottom, 26)
                             }
                         }
                         .padding(.top, 4)
-                        .padding(.bottom, 16)
+                        .padding(.bottom, 110)   // clear the floating tab bar
                     }
+                    .refreshable { await reload() }
                 }
             }
         }
@@ -54,6 +60,33 @@ struct PhotosView: View {
         } message: {
             Text(vm.error ?? "")
         }
+    }
+
+    private func reload() async {
+        guard let userId = authManager.session?.user.id else { return }
+        await vm.load(userId: userId)
+    }
+
+    private var errorState: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            OttoMascot(pose: .sleeping, width: 160)
+            VStack(spacing: 8) {
+                Text("Couldn't load your photos.")
+                    .font(OttoFont.serifBoldItalic(size: 22))
+                    .foregroundStyle(OttoColor.ink)
+                Text("Check your connection and try again.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(OttoColor.bark)
+            }
+            OttoPillButton(title: "Try again", isFullWidth: false) {
+                Task { await reload() }
+            }
+            .accessibilityIdentifier("photos.retry")
+            Spacer()
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("photos.error")
     }
 
     private var emptyState: some View {
@@ -103,6 +136,7 @@ struct SenderGroup {
 
 struct PolaroidStackGroupView: View {
     let group: SenderGroup
+    var onSaveAll: () -> Void = {}
 
     @State private var topIndex: Int = 0
     @State private var dragOffset: CGFloat = 0
@@ -143,9 +177,16 @@ struct PolaroidStackGroupView: View {
 
                 Spacer()
 
-                Button("Save all") {}
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(OttoColor.sage)
+                if group.photos.contains(where: { !$0.isSaved }) {
+                    Button("Save all", action: onSaveAll)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(OttoColor.sage)
+                        .accessibilityIdentifier("photos.saveAll.\(group.senderName)")
+                } else {
+                    Label("Saved", systemImage: "checkmark")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(OttoColor.barkSoft)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
