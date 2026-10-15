@@ -2,6 +2,7 @@
 #   make verify        build + unit tests + UI smoke on the simulator
 #   make test-unit     unit tests only (incl. face-match pipeline)
 #   make test-ui       UI tests only
+#   make scenario-review per-friend manual review: queued until approved, auto-send when off (2 sims, local Supabase)
 #   make scenario-friends  invite link / deep link / accept / Send+Receive toggles / unfriend (2 sims, local Supabase)
 #   make verify-friends-api  friends backend (invites, toggles, RLS) against local Supabase, no simulator
 #   make scenario      2-persona e2e on simulators vs local Supabase (slow, ~10 min; needs Docker/colima)
@@ -10,7 +11,7 @@ DEST     := platform=iOS Simulator,name=$(SIM_NAME)
 OUT      := verification-output
 XCB      := xcodebuild -project PhotoShare.xcodeproj -scheme PhotoShare -destination '$(DEST)' -derivedDataPath $(OUT)/DerivedData
 
-.PHONY: scenario-friends verify-friends-api verify facematch generate test-unit test-ui scenario onboarding
+.PHONY: scenario-review scenario-friends verify-friends-api verify facematch generate test-unit test-ui scenario onboarding
 
 generate:
 	xcodegen generate
@@ -34,6 +35,9 @@ onboarding:
 
 scenario:
 	scripts/verify/run_scenario.sh
+
+scenario-review:
+	scripts/verify/run_review_friend_scenario.sh
 
 scenario-friends:
 	scripts/verify/run_friends_scenario.sh

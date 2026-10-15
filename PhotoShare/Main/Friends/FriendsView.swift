@@ -177,6 +177,7 @@ struct FriendsView: View {
                         FriendRow(
                             friend: friend,
                             isEnrolled: enrollmentStore.hasEnrollment(for: friend.friendId),
+                            reviewOn: reviewStore.settings.requiresReview(for: friend.friendId),
                             onOpen: { detailFriend = friend },
                             onEnroll: { enrollingFriend = friend }
                         )
@@ -195,6 +196,7 @@ struct FriendsView: View {
 private struct FriendRow: View {
     let friend: Friend
     let isEnrolled: Bool
+    let reviewOn: Bool
     let onOpen: () -> Void
     let onEnroll: () -> Void
 
@@ -204,9 +206,20 @@ private struct FriendRow: View {
                 HStack(spacing: 12) {
                     OttoAvatarCircle(name: friend.displayName, size: 42)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(friend.displayName)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(OttoColor.ink)
+                        HStack(spacing: 6) {
+                            Text(friend.displayName)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(OttoColor.ink)
+                            if reviewOn {
+                                Text("Review")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .padding(.horizontal, 7).padding(.vertical, 2)
+                                    .background(OttoColor.sage.opacity(0.15))
+                                    .foregroundStyle(OttoColor.sageDark)
+                                    .clipShape(Capsule())
+                                    .accessibilityIdentifier("friends.row.review")
+                            }
+                        }
                         Text(friend.statusLine)
                             .font(.system(size: 13))
                             .foregroundStyle(friend.isPaused ? OttoColor.wax : OttoColor.barkSoft)
@@ -217,7 +230,7 @@ private struct FriendRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(friend.displayName), \(friend.statusLine)")
+            .accessibilityLabel("\(friend.displayName), \(friend.statusLine)" + (reviewOn ? ", review before sending" : ""))
             .accessibilityIdentifier("friends.row")
 
             Button(action: onEnroll) {

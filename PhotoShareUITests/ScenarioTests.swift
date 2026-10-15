@@ -259,6 +259,15 @@ final class ScenarioTests: XCTestCase {
         XCTAssertEqual(toggle.value as? String, want, "review toggle value")
         shot("friend-review-after")
         app.buttons["friend.done"].tap()
+        // The Friends list shows a "Review" chip next to the name while review is on for this friend.
+        let chip = app.staticTexts["friends.row.review"]
+        if want == "1" {
+            XCTAssertTrue(chip.waitForExistence(timeout: 5), "Review chip on friend row")
+        } else {
+            sleep(1)
+            XCTAssertFalse(chip.exists, "no Review chip when review is off")
+        }
+        shot("friends-row-review-chip-\(want)")
     }
 
     /// Friends list row status text. env: VERIFY_FRIEND, VERIFY_EXPECT_STATUS (substring).
