@@ -268,3 +268,15 @@ A record of significant architectural and product decisions. Add an entry whenev
 **Alternatives considered:** copying the JPEG into the queue (rejected: duplicates the user's library, stale if they edit or delete it); storing the setting server-side (rejected: nothing else needs it and it would leak the user's review habits as metadata); a queue per photo+friend (rejected: one card per photo with recipient chips is easier to review).
 
 **Trade-offs accepted:** a photo deleted from the library before approval is lost from the queue (dropped with a notice). Queue contents are not synced across a user's devices. Also fixed while there: paused links no longer receive auto-shares.
+### 2026-10-08 — Onboarding: derived state, validate-on-pick, no dead ends
+
+**Decision:** Onboarding progress is computed from real state (face profile on the server, system permission status) instead of a stored "completed" flag. Reference photos are validated on-device at pick time. Declining Photos or Notifications never blocks the app. The account is created at sign-up and a half-finished onboarding resumes.
+
+**Alternatives considered:**
+- Stored `onboarding_completed` flag (needs a migration, can disagree with reality, re-asks after reinstall).
+- Validating after upload or not at all (the user finds out only when friends fail to match them).
+- Hard-blocking on a denied Photos permission as the v3 spec implies (traps people with a flow they can't finish; the permission can only be changed in Settings anyway).
+- v3 "no account until face profile is done" (loses a verified email/password the user just typed).
+
+**Trade-offs accepted:** Existing accounts without a face profile are routed through onboarding on next launch. "Not now" on notifications is remembered per device in UserDefaults. The face-profile "turn off" control was removed because the profile is required.
+
