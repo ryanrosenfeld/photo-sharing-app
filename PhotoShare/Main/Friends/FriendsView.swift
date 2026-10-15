@@ -158,7 +158,6 @@ struct FriendsView: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("friends.reviewQueue")
     }
-    }
 
     // MARK: - Friends list
 

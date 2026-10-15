@@ -7,10 +7,13 @@ final class PhotosViewModel: ObservableObject {
     @Published var photos: [ReceivedPhoto] = []
     @Published var isLoading = false
     @Published var error: String?
+    /// True when the last load failed (drives the retry state while there is nothing to show).
+    @Published var loadFailed = false
 
     func load(userId: UUID) async {
         isLoading = true
         defer { isLoading = false }
+        loadFailed = false
         do {
             photos = try await supabase
                 .from("photo_recipients")
@@ -20,7 +23,16 @@ final class PhotosViewModel: ObservableObject {
                 .execute()
                 .value
         } catch {
-            self.error = error.localizedDescription
+            loadFailed = true
+            // Refreshing with content on screen: keep the content and tell the user. Otherwise the retry state says it.
+            if !photos.isEmpty { self.error = error.localizedDescription }
+        }
+    }
+
+    func saveAll(_ batch: [ReceivedPhoto]) async {
+        for photo in batch where !photo.isSaved {
+            await saveToLibrary(photo)
+            if error != nil { break }   // e.g. library access denied: one alert, not one per photo
         }
     }
 
