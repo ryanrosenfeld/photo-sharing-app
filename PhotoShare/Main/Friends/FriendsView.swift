@@ -52,6 +52,10 @@ struct FriendsView: View {
         } message: {
             Text(vm.error ?? "")
         }
+        .onChange(of: vm.friends) { _, friends in
+            // Unfriended people must not linger as review recipients or overrides.
+            reviewStore.prune(keeping: Set(friends.map(\.friendId)))
+        }
         .sheet(isPresented: $showReview) { ReviewQueueView() }
         .sheet(isPresented: $showInvite) { AddFriendSheet() }
         .sheet(item: $detailFriend) { friend in FriendDetailSheet(friendId: friend.friendId) }

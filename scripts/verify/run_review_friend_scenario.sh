@@ -186,6 +186,25 @@ uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTO
   && pass "bob: Photos tab shows the approved photo and the auto-sent one (2) from Alice (UI)" \
   || fail "bob: Photos tab (UI) — see logs/bob-testPhotosTabShowsReceivedPhotos.log"
 
+# ---- 6. Unfriending drops queued photos for that friend (queue must not hold an ex-friend) -----------------
+xcrun simctl shutdown "$B" 2>/dev/null
+setup_sim "$A"
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=on \
+  && pass "alice: review ON for Bob again (UI)" || fail "alice: review ON again (UI)"
+cp "$FIX/bob_2.jpg" "$OUT/addmedia/bob_2_again.jpg"
+xcrun simctl addmedia "$A" "$OUT/addmedia/bob_2_again.jpg"
+: > "$OUT/logs/alice-app-stdout.log"
+launch_alice
+for i in $(seq 1 40); do grep -q "Finished" "$OUT/logs/alice-app-stdout.log" 2>/dev/null && break; sleep 2; done
+grep -q "Queued for review" "$OUT/logs/alice-app-stdout.log" \
+  && pass "a new photo of Bob was queued for review again" || fail "new photo was not queued"
+xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
+uistep alice "$A" testUnfriend TEST_RUNNER_VERIFY_FRIEND=Bob \
+  && pass "alice: unfriended Bob (UI)" || fail "alice: unfriend (UI)"
+uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
+  && pass "unfriending Bob emptied the review queue (no ex-friend recipients)" || fail "queue still has photos for an unfriended friend"
+xcrun simctl shutdown "$A" 2>/dev/null
+
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
 log "done: $FAILS failure(s). Summary: $SUMMARY"
 cat "$SUMMARY"

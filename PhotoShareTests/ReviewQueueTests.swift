@@ -122,4 +122,23 @@ final class ReviewQueueTests: XCTestCase {
         XCTAssertEqual(review, [bob.id])
         XCTAssertEqual(now, [carol.id])
     }
+
+    func testPruneDropsUnfriendedRecipientsOverridesAndEmptyItems() {
+        let s = makeStore()
+        s.setOverride(true, for: bob.id)
+        s.setOverride(false, for: carol.id)
+        s.enqueue(assetId: "A", takenAt: Date(), recipients: [bob, carol])
+        s.enqueue(assetId: "B", takenAt: Date(), recipients: [bob])
+
+        s.prune(keeping: [carol.id])
+
+        XCTAssertEqual(s.items.map(\.assetId), ["A"])
+        XCTAssertEqual(s.items[0].recipients, [carol])
+        XCTAssertNil(s.settings.friendOverrides[bob.id.uuidString])
+        XCTAssertEqual(s.settings.friendOverrides[carol.id.uuidString], false)
+
+        let relaunched = makeStore()
+        XCTAssertEqual(relaunched.items.map(\.assetId), ["A"])
+        XCTAssertNil(relaunched.settings.friendOverrides[bob.id.uuidString])
+    }
 }
