@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Manual-review scenario (Alice with "Review before sending" ON, Bob receives).
+# Manual-review scenario (Alice with "Review before sending" ON for Bob only, via Friend Detail; Bob receives).
 #
 #   1. Alice enrolls Bob, turns Review ON.
 #   2. Photos of Bob (x2) and Dan land in her library -> matched on device, QUEUED, nothing uploaded
@@ -8,7 +8,7 @@
 #   4. Alice REJECTS the other -> never uploaded. Queue empty.
 #   5. Bob's Photos tab shows exactly the 1 approved photo.
 #
-# Usage: scripts/verify/with_sim_lock.sh scripts/verify/run_review_scenario.sh   (needs docker/colima running)
+# Usage: scripts/verify/with_sim_lock.sh scripts/verify/run_review_friend_scenario.sh   (needs docker/colima running)
 # Shares its setup with run_scenario.sh (copied, so the original stays untouched).
 # Evidence: verification-output/scenario-<timestamp>/{summary.md,screens/,logs/,db/}
 set -uo pipefail
@@ -60,13 +60,17 @@ done
 [ "$(psql_q "select count(*) from storage.objects where bucket_id='face-profiles'")" = 2 ] \
   && pass "Bob's face profile: 2 reference photos in storage" || fail "face profile photos not in storage"
 
+# Onboarding derives from server state: personas need face_profile_enabled or the UI lands in onboarding, not the tabs.
+psql_q "update profiles set face_profile_enabled=true where id in ('$ALICE_ID','$BOB_ID')" >/dev/null \
+  && pass "personas marked as having a face profile (skips onboarding)" || fail "mark face_profile_enabled"
+
 # ---- 1. simulators (dedicated, capped at 2) ---------------------------------------------------
 sim() { # name -> udid (create if missing)
   local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
   [ -n "$u" ] || u=$(xcrun simctl create "$1" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro)
   echo "$u"
 }
-A=$(sim verify-alice); B=$(sim verify-bob)
+A=$(sim verify-rt-alice); B=$(sim verify-rt-bob)
 # Personas run one simulator at a time (16 GB MacBook Air thrashes with 2 sims + Xcode + Docker);
 # the hard cap is 2, and the personas are independent apart from the shared backend.
 for n in "$A" "$B"; do xcrun simctl shutdown "$n" 2>/dev/null; done
@@ -106,9 +110,10 @@ uistep alice "$A" testEnrollFriendFromFaceProfile \
   && pass "alice: enrolled Bob from his face profile (UI; embeddings computed on-device)" \
   || fail "alice: enroll Bob (UI) — see logs/alice-testEnrollFriendFromFaceProfile.log"
 
-# ---- 2b. Alice turns Review ON (UI) ------------------------------------------------------------
-uistep alice "$A" testSetManualReview TEST_RUNNER_VERIFY_REVIEW=on \
-  && pass "alice: Profile > Review before sending ON (UI)" || fail "alice: set review ON (UI)"
+# ---- 2b. Alice turns Review ON for Bob only, via Friend Detail (UI); the global setting stays OFF --------
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=on \
+  && pass "alice: Friend Detail > Review before sending ON for Bob (global setting left OFF) (UI)" \
+  || fail "alice: per-friend review ON (UI)"
 
 # ---- 3. new photos land in Alice's library -------------------------------------------------------
 sleep 2
@@ -157,12 +162,48 @@ uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
   && pass "after relaunch the queue stays empty (rejected photos are not re-queued)" || fail "queue not empty after relaunch"
 xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
 
+# ---- 4c. Review OFF for Bob again: the next matched photo is sent immediately, never queued ---------------
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=off \
+  && pass "alice: Friend Detail > Review before sending OFF for Bob (UI)" || fail "alice: per-friend review OFF (UI)"
+cp "$FIX/bob_1.jpg" "$OUT/addmedia/"
+xcrun simctl addmedia "$A" "$OUT/addmedia/bob_1.jpg"
+: > "$OUT/logs/alice-app-stdout.log"
+launch_alice
+for i in $(seq 1 40); do grep -q "Finished" "$OUT/logs/alice-app-stdout.log" 2>/dev/null && break; sleep 2; done
+shot "$A" alice-after-auto-send
+sleep 3
+[ "$(n_photos)" = 2 ] && [ "$(n_obj)" = 2 ] \
+  && pass "review OFF for Bob: new photo of Bob auto-sent (photos=2), not queued" \
+  || fail "review OFF should auto-send: photos=$(n_photos) objects=$(n_obj)"
+xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
+uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
+  && pass "queue empty after auto-send" || fail "queue should be empty after auto-send"
+
 # ---- 5. Bob sees exactly the approved photo ----------------------------------------------------------
 xcrun simctl shutdown "$A"
 setup_sim "$B" && pass "bob sim: booted, app installed"
-uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTOS=1 \
-  && pass "bob: Photos tab shows exactly the 1 approved photo from Alice (UI)" \
+uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTOS=2 \
+  && pass "bob: Photos tab shows the approved photo and the auto-sent one (2) from Alice (UI)" \
   || fail "bob: Photos tab (UI) — see logs/bob-testPhotosTabShowsReceivedPhotos.log"
+
+# ---- 6. Unfriending drops queued photos for that friend (queue must not hold an ex-friend) -----------------
+xcrun simctl shutdown "$B" 2>/dev/null
+setup_sim "$A"
+uistep alice "$A" testSetFriendReview TEST_RUNNER_VERIFY_FRIEND=Bob TEST_RUNNER_VERIFY_VALUE=on \
+  && pass "alice: review ON for Bob again (UI)" || fail "alice: review ON again (UI)"
+cp "$FIX/bob_2.jpg" "$OUT/addmedia/bob_2_again.jpg"
+xcrun simctl addmedia "$A" "$OUT/addmedia/bob_2_again.jpg"
+: > "$OUT/logs/alice-app-stdout.log"
+launch_alice
+for i in $(seq 1 40); do grep -q "Finished" "$OUT/logs/alice-app-stdout.log" 2>/dev/null && break; sleep 2; done
+grep -q "Queued for review" "$OUT/logs/alice-app-stdout.log" \
+  && pass "a new photo of Bob was queued for review again" || fail "new photo was not queued"
+xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
+uistep alice "$A" testUnfriend TEST_RUNNER_VERIFY_FRIEND=Bob \
+  && pass "alice: unfriended Bob (UI)" || fail "alice: unfriend (UI)"
+uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
+  && pass "unfriending Bob emptied the review queue (no ex-friend recipients)" || fail "queue still has photos for an unfriended friend"
+xcrun simctl shutdown "$A" 2>/dev/null
 
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
 log "done: $FAILS failure(s). Summary: $SUMMARY"

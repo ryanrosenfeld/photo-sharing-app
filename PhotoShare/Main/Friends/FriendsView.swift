@@ -52,6 +52,10 @@ struct FriendsView: View {
         } message: {
             Text(vm.error ?? "")
         }
+        .onChange(of: vm.friends) { _, friends in
+            // Unfriended people must not linger as review recipients or overrides.
+            reviewStore.prune(keeping: Set(friends.map(\.friendId)))
+        }
         .sheet(isPresented: $showReview) { ReviewQueueView() }
         .sheet(isPresented: $showInvite) { AddFriendSheet() }
         .sheet(item: $detailFriend) { friend in FriendDetailSheet(friendId: friend.friendId) }
@@ -177,6 +181,7 @@ struct FriendsView: View {
                         FriendRow(
                             friend: friend,
                             isEnrolled: enrollmentStore.hasEnrollment(for: friend.friendId),
+                            reviewOn: reviewStore.settings.requiresReview(for: friend.friendId),
                             onOpen: { detailFriend = friend },
                             onEnroll: { enrollingFriend = friend }
                         )
@@ -195,6 +200,7 @@ struct FriendsView: View {
 private struct FriendRow: View {
     let friend: Friend
     let isEnrolled: Bool
+    let reviewOn: Bool
     let onOpen: () -> Void
     let onEnroll: () -> Void
 
@@ -204,9 +210,20 @@ private struct FriendRow: View {
                 HStack(spacing: 12) {
                     OttoAvatarCircle(name: friend.displayName, size: 42)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(friend.displayName)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(OttoColor.ink)
+                        HStack(spacing: 6) {
+                            Text(friend.displayName)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(OttoColor.ink)
+                            if reviewOn {
+                                Text("Review")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .padding(.horizontal, 7).padding(.vertical, 2)
+                                    .background(OttoColor.sage.opacity(0.15))
+                                    .foregroundStyle(OttoColor.sageDark)
+                                    .clipShape(Capsule())
+                                    .accessibilityIdentifier("friends.row.review")
+                            }
+                        }
                         Text(friend.statusLine)
                             .font(.system(size: 13))
                             .foregroundStyle(friend.isPaused ? OttoColor.wax : OttoColor.barkSoft)
@@ -217,7 +234,7 @@ private struct FriendRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(friend.displayName), \(friend.statusLine)")
+            .accessibilityLabel("\(friend.displayName), \(friend.statusLine)" + (reviewOn ? ", review before sending" : ""))
             .accessibilityIdentifier("friends.row")
 
             Button(action: onEnroll) {
@@ -254,6 +271,7 @@ extension Friend {
 
 struct FriendDetailSheet: View {
     @EnvironmentObject var vm: FriendsViewModel
+    @EnvironmentObject var reviewStore: ReviewQueueStore
     @Environment(\.dismiss) private var dismiss
     let friendId: UUID
     @State private var confirmUnfriend = false
@@ -301,9 +319,29 @@ struct FriendDetailSheet: View {
                                 id: "friend.receive",
                                 isOn: Binding(get: { friend.myReceive }, set: { on in Task { await vm.setReceive(on, for: friend) } })
                             )
+                            Divider().background(OttoColor.line).padding(.leading, 16)
+                            toggleRow(
+                                title: "Review before sending",
+                                detail: reviewDetail(for: friend),
+                                id: "friend.review",
+                                isOn: Binding(
+                                    get: { reviewStore.settings.requiresReview(for: friend.friendId) },
+                                    set: { reviewStore.setOverride($0, for: friend.friendId) }
+                                )
+                            )
                         }
                     }
                     .padding(.horizontal, 16)
+
+                    if reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil {
+                        Button("Use my default (\(reviewStore.settings.globalEnabled ? "review" : "send automatically"))") {
+                            reviewStore.setOverride(nil, for: friend.friendId)
+                        }
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(OttoColor.sage)
+                        .padding(.top, 10)
+                        .accessibilityIdentifier("friend.review.reset")
+                    }
 
                     if friend.isPaused {
                         Text("\(friend.displayName) has turned off receiving, so your photos of them aren't being delivered.")
@@ -332,6 +370,15 @@ struct FriendDetailSheet: View {
             }
         }
         .presentationDetents([.large])
+    }
+
+    private func reviewDetail(for friend: Friend) -> String {
+        let overridden = reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil
+        let on = reviewStore.settings.requiresReview(for: friend.friendId)
+        let base = on
+            ? "Photos of \(friend.displayName) wait in Friends until you approve them."
+            : "Photos of \(friend.displayName) are sent as soon as they're matched."
+        return overridden ? base : base + " (Following your default.)"
     }
 
     private func toggleRow(title: String, detail: String, id: String, isOn: Binding<Bool>) -> some View {
