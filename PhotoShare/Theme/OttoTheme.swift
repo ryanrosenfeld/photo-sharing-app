@@ -82,7 +82,7 @@ struct OttoPillButton: View {
             Text(title)
                 .font(.system(size: 16, weight: .medium))
                 .frame(maxWidth: isFullWidth ? .infinity : nil)
-                .padding(.horizontal, isFullWidth ? 22 : 22)
+                .padding(.horizontal, 22)
                 .padding(.vertical, 14)
                 .background(background)
                 .foregroundStyle(foreground)
