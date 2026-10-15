@@ -116,6 +116,24 @@ final class ReviewQueueStore: ObservableObject {
         }
     }
 
+    // MARK: - Friend changes
+
+    /// Forgets everything about people who are no longer friends (unfriended from either side): their overrides,
+    /// and their place as a recipient of queued photos. A photo left with no recipients leaves the queue, so an
+    /// approve can never try to send to someone who is no longer a friend. Pass only a successfully loaded list.
+    func prune(keeping friendIds: Set<UUID>) {
+        let keptKeys = Set(friendIds.map(\.uuidString))
+        let staleOverrides = settings.friendOverrides.keys.filter { !keptKeys.contains($0) }
+        if !staleOverrides.isEmpty {
+            staleOverrides.forEach { settings.friendOverrides.removeValue(forKey: $0) }
+            saveSettings()
+        }
+        let before = items
+        for idx in items.indices { items[idx].recipients.removeAll { !friendIds.contains($0.id) } }
+        items.removeAll { $0.recipients.isEmpty }
+        if items != before { saveQueue() }
+    }
+
     // MARK: - Persistence
 
     private func remove(_ item: ReviewItem) {

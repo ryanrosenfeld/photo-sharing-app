@@ -280,3 +280,18 @@ A record of significant architectural and product decisions. Add an entry whenev
 
 **Trade-offs accepted:** Existing accounts without a face profile are routed through onboarding on next launch. "Not now" on notifications is remembered per device in UserDefaults. The face-profile "turn off" control was removed because the profile is required.
 
+### 2026-10-15 — Per-friend review override on Friend Detail
+
+**Decision:** Friend Detail has a "Review before sending" toggle that writes an explicit override via `ReviewQueueStore.setOverride`. Once toggled it stays pinned (it does not silently follow later changes to the global setting); a "Use my default" link clears it. The toggle shows the effective value, so a friend following the global setting reads correctly.
+
+**Alternatives considered:** clearing the override whenever it equals the global value (rejected: turning global review on later would silently change a friend the user deliberately set to auto-send); a three-state control (rejected: heavier than a toggle plus reset link).
+
+**Trade-offs accepted:** overrides are device-local like the rest of the review settings. Verified by `scripts/verify/run_review_friend_scenario.sh` (evidence in `docs/review-toggle-evidence/`).
+
+### 2026-10-15 — Unfriending prunes the review queue and overrides
+
+**Decision:** When the loaded friends list changes, `ReviewQueueStore.prune(keeping:)` removes people who are no longer friends from queued photos' recipients and from per-friend overrides; a photo with no recipients left leaves the queue. Run from the Friends tab on `vm.friends` changes (covers unfriending from either side after a refresh).
+
+**Why:** otherwise an ex-friend stayed a recipient, so approving would try to send to someone who is no longer a friend (and fail, leaving the item stuck), and the queue could show a person who is gone.
+
+**Trade-off:** pruning needs the Friends tab to have loaded; a removal done from the other side is picked up at the next load.
