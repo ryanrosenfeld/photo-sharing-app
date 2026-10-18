@@ -12,6 +12,7 @@
 # Shares its setup with run_scenario.sh (copied, so the original stays untouched).
 # Evidence: verification-output/scenario-<timestamp>/{summary.md,screens/,logs/,db/}
 set -uo pipefail
+source "$(dirname "$0")/recording-lib.sh"
 cd "$(dirname "$0")/../.."
 
 BUNDLE=com.ryanrosenfeld.photoshare
@@ -92,15 +93,15 @@ uistep() { # persona udid step [extra env...]
   local who=$1 udid=$2 step=$3; shift 3
   STEPN=$((STEPN+1)); local tag=$(printf "%02d" $STEPN)-$step
   local res=$OUT/logs/$who-$tag.xcresult
-  mkdir -p "$OUT/videos"; xcrun simctl io "$udid" recordVideo --codec h264 --force "$OUT/videos/$who-$tag.mp4" >/dev/null 2>&1 & local REC=$!; sleep 1
-  env TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
-      TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@" \
-    xcodebuild test-without-building -project PhotoShare.xcodeproj -scheme PhotoShare \
-      -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD" \
-      -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$res" \
-      >"$OUT/logs/$who-$tag.log" 2>&1
+  mkdir -p "$OUT/videos"
+  ( export TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
+           TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY"
+    [ $# -gt 0 ] && export "$@"
+    run_recorded "$udid" "$OUT/videos/$tag-$who.mp4" "$OUT/logs/$who-$tag.log" \
+      xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
+        -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD" \
+        -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$res" )
   local rc=$?
-  sleep 1; kill -INT $REC 2>/dev/null; wait $REC 2>/dev/null
   shot "$udid" "$who-$tag"
   return $rc
 }
@@ -207,6 +208,7 @@ uistep alice "$A" testReviewQueue TEST_RUNNER_VERIFY_EXPECT_QUEUE=0 \
   && pass "unfriending Bob emptied the review queue (no ex-friend recipients)" || fail "queue still has photos for an unfriended friend"
 xcrun simctl shutdown "$A" 2>/dev/null
 
+join_clips "$OUT/review-flow.mp4" "$OUT"/videos/*.mp4 && log "joined walkthrough: $OUT/review-flow.mp4"
 echo >> "$SUMMARY"; echo "Artifacts: screens/, logs/, db/ in $OUT" >> "$SUMMARY"
 log "done: $FAILS failure(s). Summary: $SUMMARY"
 cat "$SUMMARY"

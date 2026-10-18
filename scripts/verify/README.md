@@ -28,3 +28,6 @@ an EXIF-rotated photo and a 4032x3024 frame). Re-run it after editing. Verify th
 
 ## Shared Mac etiquette
 `scripts/verify/simlock.sh` takes `/tmp/photoshare-sim.lock` (pid inside, stale locks are cleared) so only one simulator/DB-reset run happens at a time across worktrees; every scenario script sources it and shuts simulators down on exit. `run_friends_scenario.sh` uses its own devices (`verify-friends-a/b`) and writes screenshots plus `simctl io recordVideo` clips to `verification-output/friends-<ts>/{screens,videos}`.
+
+## Recordings
+`recording-lib.sh` (`run_recorded`, `join_clips`) makes tight walkthrough videos: it records only while a UI test runs, stops when the test case reports passed/failed, cuts the home-screen wait before launch and compresses (needs ffmpeg). `run_onboarding.sh` (RECORD=0 to skip), `record_review_walkthrough.sh` and `record_photos_walkthrough.sh` use it and write one clip per step plus a joined video. Every scenario script passes `-collect-test-diagnostics never`: without it xcodebuild idled ~10 minutes after each UI test collecting simulator diagnostics.
