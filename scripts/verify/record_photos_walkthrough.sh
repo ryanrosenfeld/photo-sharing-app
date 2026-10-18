@@ -3,6 +3,7 @@
 # Bob (seeded) receives photos from Alice; the API is stopped before the Photos tab loads, restored after the error shows.
 # Output: verification-output/photos-<ts>/{photos.mp4,screens/,logs/}
 set -uo pipefail
+source "$(dirname "$0")/recording-lib.sh"
 cd "$(dirname "$0")/../.."
 source scripts/verify/simlock-lib.sh
 simlock_acquire
@@ -56,7 +57,7 @@ step() { # step [extra env...]
   env TEST_RUNNER_VERIFY_EMAIL=bob@test.local TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
       TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@" \
     xcodebuild test-without-building -project PhotoShare.xcodeproj -scheme PhotoShare -destination "platform=iOS Simulator,id=$S" \
-      -derivedDataPath "$DD" -only-testing:PhotoShareUITests/ScenarioTests/$st -resultBundlePath "$OUT/logs/$st.xcresult" >"$OUT/logs/$st.log" 2>&1
+      -collect-test-diagnostics never -derivedDataPath "$DD" -only-testing:PhotoShareUITests/ScenarioTests/$st -resultBundlePath "$OUT/logs/$st.xcresult" >"$OUT/logs/$st.log" 2>&1
   local rc=$?
   xcrun xcresulttool export attachments --path "$OUT/logs/$st.xcresult" --output-path "$OUT/screens/$st" >/dev/null 2>&1
   return $rc
@@ -67,9 +68,12 @@ break_api
 ( while [ ! -e "$M/error-seen" ]; do sleep 1; done; sleep 8; fix_api
   while [ ! -e "$M/stack-seen" ]; do sleep 1; done; sleep 4; seed_photo bob_2 ) &
 WATCH=$!
-xcrun simctl io "$S" recordVideo --codec h264 --force "$OUT/photos.mp4" >"$OUT/logs/record.log" 2>&1 &
-VIDPID=$!; sleep 2
-step testPhotosWalkthrough TEST_RUNNER_VERIFY_MARKER_DIR="$M" && log "PASS photos walkthrough" || log "FAIL photos walkthrough (logs/testPhotosWalkthrough.log)"
-kill -INT $VIDPID 2>/dev/null; wait $VIDPID 2>/dev/null; VIDPID=""
+( export TEST_RUNNER_VERIFY_EMAIL=bob@test.local TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
+         TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" TEST_RUNNER_VERIFY_MARKER_DIR="$M"
+  run_recorded "$S" "$OUT/photos.mp4" "$OUT/logs/testPhotosWalkthrough.log" \
+    xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
+      -destination "platform=iOS Simulator,id=$S" -derivedDataPath "$DD" \
+      -only-testing:PhotoShareUITests/ScenarioTests/testPhotosWalkthrough -resultBundlePath "$OUT/logs/testPhotosWalkthrough.xcresult" ) \
+  && log "PASS photos walkthrough" || log "FAIL photos walkthrough (logs/testPhotosWalkthrough.log)"
 kill $WATCH 2>/dev/null
 log "done: $OUT"

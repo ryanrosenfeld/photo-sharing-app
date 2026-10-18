@@ -84,7 +84,7 @@ uistep() { # persona udid step [env...]
   local who=$1 udid=$2 step=$3; shift 3
   env TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
       TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@" \
-    xcodebuild test-without-building -project PhotoShare.xcodeproj -scheme PhotoShare \
+    xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
       -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD" \
       -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$OUT/logs/$who-$step.xcresult" \
       >"$OUT/logs/$who-$step.log" 2>&1

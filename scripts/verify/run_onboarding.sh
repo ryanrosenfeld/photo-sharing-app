@@ -4,6 +4,7 @@
 # Evidence: verification-output/onboarding-<ts>/{summary.md,onboarding.mp4,screens/,logs/}
 # Takes the shared simulator lock (/tmp/photoshare-sim.lock) and shuts down only its own simulator afterwards.
 set -uo pipefail
+source "$(dirname "$0")/recording-lib.sh"
 cd "$(dirname "$0")/../.."
 
 BUNDLE=com.ryanrosenfeld.photoshare
@@ -25,9 +26,7 @@ fail() { log "FAIL: $*"; echo "- FAIL: $*" >> "$SUMMARY"; FAILS=$((FAILS+1)); }
 LOCK=/tmp/photoshare-sim.lock
 until mkdir "$LOCK" 2>/dev/null; do log "waiting for simulator lock"; sleep 15; done
 echo $$ > "$LOCK/pid"
-VIDPID=""
 cleanup() {
-  [ -n "$VIDPID" ] && kill -INT "$VIDPID" 2>/dev/null
   xcrun simctl shutdown "${S:-}" 2>/dev/null
   rm -rf "$LOCK"
 }
@@ -69,19 +68,21 @@ xcodebuild build-for-testing -project PhotoShare.xcodeproj -scheme PhotoShare \
   && pass "build-for-testing" || { fail "build-for-testing (logs/build.log)"; exit 1; }
 xcrun simctl addmedia "$S" "$OUT"/media/*.jpg && pass "4 photos added to the library (3 portraits, 1 landscape without a face)"
 
-if [ "${RECORD:-1}" = 1 ]; then
-  xcrun simctl io "$S" recordVideo --codec h264 --force "$OUT/onboarding.mp4" >"$OUT/logs/record.log" 2>&1 &
-  VIDPID=$!
-  sleep 2
-fi
-
-run() { # test name
+run() { # test name; RECORD=0 skips the video (default: tight clip per test in videos/, joined into onboarding.mp4)
   local res=$OUT/logs/$1.xcresult
-  env TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" \
-      TEST_RUNNER_VERIFY_NEW_EMAIL="$EMAIL" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
-    xcodebuild test-without-building -project PhotoShare.xcodeproj -scheme PhotoShare \
-      -destination "platform=iOS Simulator,id=$S" -derivedDataPath "$DD" \
-      -only-testing:PhotoShareUITests/OnboardingTests/$1 -resultBundlePath "$res" >"$OUT/logs/$1.log" 2>&1
+  mkdir -p "$OUT/videos"
+  ( export TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" \
+           TEST_RUNNER_VERIFY_NEW_EMAIL="$EMAIL" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD"
+    if [ "${RECORD:-1}" = 1 ]; then
+      run_recorded "$S" "$OUT/videos/$1.mp4" "$OUT/logs/$1.log" \
+        xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
+          -destination "platform=iOS Simulator,id=$S" -derivedDataPath "$DD" \
+          -only-testing:PhotoShareUITests/OnboardingTests/$1 -resultBundlePath "$res"
+    else
+      xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
+        -destination "platform=iOS Simulator,id=$S" -derivedDataPath "$DD" \
+        -only-testing:PhotoShareUITests/OnboardingTests/$1 -resultBundlePath "$res" >"$OUT/logs/$1.log" 2>&1
+    fi )
   local rc=$?
   xcrun xcresulttool export attachments --path "$res" --output-path "$OUT/screens/$1" >/dev/null 2>&1
   return $rc
@@ -97,6 +98,6 @@ run testRelaunchSkipsOnboarding && pass "relaunch goes straight to the app; Prof
 N=$(psql_q "select count(*) from storage.objects o join auth.users u on o.name like u.id::text||'/%' where o.bucket_id='face-profiles' and u.email='$EMAIL'")
 [ "$N" = 3 ] && pass "exactly 3 reference photos uploaded (the rejected landscape was not)" || fail "expected 3 uploaded photos, found $N"
 
-[ -n "$VIDPID" ] && { kill -INT "$VIDPID" 2>/dev/null; wait "$VIDPID" 2>/dev/null; VIDPID=""; }
+[ "${RECORD:-1}" = 1 ] && join_clips "$OUT/onboarding.mp4" "$OUT"/videos/*.mp4
 echo; cat "$SUMMARY"; echo "Evidence: $OUT"
 exit $FAILS
