@@ -63,6 +63,9 @@ final class ScenarioTests: XCTestCase {
         let deadline = Date().addingTimeInterval(90)
         while !app.buttons["tab.photos"].exists && Date() < deadline {
             allowPhotosAccessIfAsked(timeout: 1)
+            // iOS's "Save Password?" sheet (iOS 27) covers the app after sign-in; decline it.
+            let notNow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Not Now"]
+            if notNow.exists { notNow.tap() }
             for id in ["notifications.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
                 app.buttons[id].tap()
             }
@@ -149,6 +152,46 @@ final class ScenarioTests: XCTestCase {
         let found = stack.waitForExistence(timeout: 30)
         shot("photos-tab")
         XCTAssertTrue(found, "photo stack from Alice on the Photos tab")
+    }
+
+    /// Walkthrough: backend down -> error state + Try again, backend back -> photos, pull to refresh picks up a
+    /// new photo, Save all. The runner watches VERIFY_MARKER_DIR for `error-seen` / `stack-seen` and reacts
+    /// (restores the API, inserts a second photo), so the whole flow fits in one recording.
+    func testPhotosWalkthrough() {
+        let dir = env["VERIFY_MARKER_DIR"] ?? "/tmp"
+        func mark(_ n: String) { FileManager.default.createFile(atPath: dir + "/" + n, contents: Data()) }
+        ensureSignedIn()
+        app.buttons["tab.photos"].tap()
+        let error = app.descendants(matching: .any)["photos.error"]
+        let stack = app.descendants(matching: .any)["photos.stack.Alice"]
+        if error.waitForExistence(timeout: 40) {
+            sleep(2); shot("photos-error")
+            mark("error-seen")
+            let deadline = Date().addingTimeInterval(90)
+            while !stack.exists && Date() < deadline {
+                if app.buttons["photos.retry"].exists { app.buttons["photos.retry"].tap() }
+                sleep(4)
+            }
+        }
+        XCTAssertTrue(stack.waitForExistence(timeout: 30), "photos after Try again")
+        sleep(2); shot("photos-loaded")
+        mark("stack-seen")
+        let two = app.staticTexts["2 new"]
+        var pullTries = 0
+        let deadline = Date().addingTimeInterval(60)
+        while !two.exists && Date() < deadline {
+            sleep(5)
+            // pull to refresh from just inside the scroll view's top edge, slowly, so refreshable engages
+            pullTries += 1
+            NSLog("[walkthrough] pull try \(pullTries), scrollViews=\(app.scrollViews.count) frame=\(app.scrollViews.firstMatch.frame)")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.17))
+                .press(forDuration: 0.2, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.7)), withVelocity: .slow, thenHoldForDuration: 1.5)
+        }
+        if !two.waitForExistence(timeout: 10) { NSLog("[walkthrough] pull to refresh did not pick up the second photo; continuing to Save all") }
+        sleep(2); shot("photos-refreshed")
+        app.buttons["photos.saveAll.Alice"].tap()
+        XCTAssertTrue(app.staticTexts["Saved"].waitForExistence(timeout: 30), "Save all -> Saved")
+        sleep(2); shot("photos-saved")
     }
 
     /// Signed-in app sits in the foreground long enough for the auto-share pass to finish.

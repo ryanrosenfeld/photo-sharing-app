@@ -48,7 +48,10 @@ struct PhotosView: View {
                         .padding(.top, 4)
                         .padding(.bottom, 110)   // clear the floating tab bar
                     }
-                    .refreshable { await reload() }
+                    .refreshable {
+                        // Unstructured so SwiftUI cancelling the refresh task (it does when the list re-renders) doesn't abort the request.
+                        await Task { await reload() }.value
+                    }
                 }
             }
         }
