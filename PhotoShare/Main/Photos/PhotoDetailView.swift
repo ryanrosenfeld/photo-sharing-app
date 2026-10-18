@@ -34,26 +34,18 @@ struct PhotoDetailView: View {
     // MARK: - Subviews
 
     private var photoImage: some View {
-        Group {
-            if let url = detail.publicURL {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                    case .failure:
-                        imagePlaceholder
-                    case .empty:
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 300)
-                    @unknown default:
-                        imagePlaceholder
-                    }
-                }
-            } else {
+        PhotoImage(photo: photo) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFit()
+            case .failure:
                 imagePlaceholder
+            case .empty:
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 300)
             }
         }
         .frame(maxWidth: .infinity)

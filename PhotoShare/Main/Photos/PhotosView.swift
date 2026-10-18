@@ -339,17 +339,13 @@ struct PolaroidCard: View {
 
             // photo area
             Group {
-                if let url = photo.photos.publicURL {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let img):
-                            img.resizable().scaledToFill()
-                        default:
-                            Rectangle().fill(OttoColor.cream)
-                        }
+                PhotoImage(photo: photo) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFill()
+                    default:
+                        Rectangle().fill(OttoColor.cream)
                     }
-                } else {
-                    Rectangle().fill(OttoColor.cream)
                 }
             }
             .frame(width: 200, height: 200)
