@@ -154,6 +154,21 @@ final class ScenarioTests: XCTestCase {
         XCTAssertTrue(found, "photo stack from Alice on the Photos tab")
     }
 
+    /// Bob: the photo in the stack is shown (downloaded + decrypted on-device), and Save all decrypts again and saves it.
+    func testReceivedPhotoDecryptsAndSaves() {
+        ensureSignedIn()
+        app.buttons["tab.photos"].tap()
+        let stack = app.descendants(matching: .any)["photos.stack.Alice"]
+        XCTAssertTrue(stack.waitForExistence(timeout: 30), "photo stack from Alice")
+        sleep(4)  // thumbnails download + decrypt
+        shot("photos-decrypted")
+        let saveAll = app.buttons["photos.saveAll.Alice"]
+        XCTAssertTrue(saveAll.waitForExistence(timeout: 10), "Save all")
+        saveAll.tap()
+        XCTAssertTrue(app.staticTexts["Saved"].waitForExistence(timeout: 30), "decrypted + saved to the library")
+        shot("photos-decrypted-saved")
+    }
+
     /// Walkthrough: backend down -> error state + Try again, backend back -> photos, pull to refresh picks up a
     /// new photo, Save all. The runner watches VERIFY_MARKER_DIR for `error-seen` / `stack-seen` and reacts
     /// (restores the API, inserts a second photo), so the whole flow fits in one recording.
