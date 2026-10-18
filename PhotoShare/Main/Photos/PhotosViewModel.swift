@@ -22,11 +22,17 @@ final class PhotosViewModel: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+        } catch where Self.isCancellation(error) {
+            // Pull to refresh cancelled by SwiftUI (view update mid-refresh): nothing failed, nothing to show.
         } catch {
             loadFailed = true
             // Refreshing with content on screen: keep the content and tell the user. Otherwise the retry state says it.
             if !photos.isEmpty { self.error = error.localizedDescription }
         }
+    }
+
+    nonisolated private static func isCancellation(_ error: Error) -> Bool {
+        error is CancellationError || (error as? URLError)?.code == .cancelled
     }
 
     func saveAll(_ batch: [ReceivedPhoto]) async {
@@ -62,9 +68,7 @@ final class PhotosViewModel: ObservableObject {
                 return
             }
 
-            try await PHPhotoLibrary.shared().performChanges {
-                PHAssetChangeRequest.creationRequestForAsset(from: image)
-            }
+            try await Self.addToLibrary(data)
 
             try await supabase
                 .from("photo_recipients")
@@ -78,6 +82,15 @@ final class PhotosViewModel: ObservableObject {
             }
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+
+    /// Nonisolated on purpose: PhotoKit runs the change block on its own queue, and a block created inside a
+    /// @MainActor method inherits main-actor isolation and traps (Swift 6 executor check) when called there.
+    nonisolated private static func addToLibrary(_ data: Data) async throws {
+        try await PHPhotoLibrary.shared().performChanges {
+            guard let image = UIImage(data: data) else { return }
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
         }
     }
 }
