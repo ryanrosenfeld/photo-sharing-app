@@ -155,6 +155,7 @@ final class AuthManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() async {
+        await PushManager.shared.unregister()
         do {
             try await supabase.auth.signOut()
         } catch {

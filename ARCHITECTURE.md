@@ -138,7 +138,12 @@ photos             id, sender_id, storage_path, taken_at, location_lat/lng, expi
 
 photo_recipients   (photo_id, recipient_id) PK, delivered_at, viewed_at
 
-device_tokens      id, user_id, apns_token (unique)
+device_tokens      id, user_id, apns_token (unique), environment ('sandbox'|'production')
+                   — written only via register_device_token / unregister_device_token RPCs
+
+push_outbox        id, user_id, kind ('photo'|'friend_accepted'), title, body, data, sent_at, read_at, attempts
+                   — service-role only. DB triggers on photo_recipients INSERT and invites.accepted_at enqueue rows;
+                     an AFTER INSERT trigger calls the `send-push` Edge Function through pg_net (url/secret in private.push_config)
 
 face_profile_keys  user_id PK, encrypted_symmetric_key (base64)
                    — user's own copy of their face profile symmetric key, wrapped to their own public key
@@ -244,6 +249,14 @@ Photo captured on device
            → Edge Function looks up recipient APNs tokens
            → Edge Function sends HTTP/2 request to APNs
            → Recipient device receives push: "[Name] shared a photo with you"
+
+Push delivery (implemented as DB trigger → push_outbox → `supabase/functions/send-push` → APNs):
+  → payload = alert text ("[Name] shared a photo with you" / "[Name] accepted your friend request"), badge, and routing ids
+    (kind, photo_id, friend_id). No photo content or storage paths ever go through APNs.
+  → Client (PushNotifications.swift): registers for remote notifications once notifications are allowed and a user is signed in,
+    uploads the token via register_device_token (DEBUG builds register as `sandbox`), unregisters on sign out,
+    shows banners in the foreground, routes taps to Photos / Friends, clears the badge when the app opens.
+  → Secrets (APNS_KEY_P8, APNS_KEY_ID, APNS_TEAM_ID, PUSH_WEBHOOK_SECRET) live only in Supabase function secrets.
 
 Manual review approval
   → User approves photo for friend F in review queue

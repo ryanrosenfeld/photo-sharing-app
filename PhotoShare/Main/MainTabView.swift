@@ -10,6 +10,7 @@ struct MainTabView: View {
     @StateObject private var friendsVM = FriendsViewModel()
     @StateObject private var processor = AutoShareProcessor()
     @StateObject private var reviewStore = ReviewQueueStore()
+    @StateObject private var pushRouter = PushRouter.shared
     @State private var selectedTab: OttoTab = .photos
 
     var body: some View {
@@ -52,8 +53,21 @@ struct MainTabView: View {
         .onChange(of: inviteRouter.pendingCode) { _, code in
             if code != nil { selectedTab = .friends }
         }
+        .onChange(of: pushRouter.destination) { _, tab in
+            guard let tab else { return }
+            selectedTab = tab
+            pushRouter.destination = nil
+            if tab == .photos, let userId = authManager.session?.user.id { Task { await photosVM.load(userId: userId) } }
+            if tab == .friends { Task { await friendsVM.load() } }
+        }
+        .onChange(of: pushRouter.photoArrivals) { _, _ in
+            guard let userId = authManager.session?.user.id else { return }
+            Task { await photosVM.load(userId: userId) }
+        }
         .task {
             guard let userId = authManager.session?.user.id else { return }
+            await PushManager.shared.sync(userId: userId)
+            await PushManager.shared.markRead()
             reviewStore.bind(userId: userId)
             await processor.libraryManager.requestAccess()
             async let p: () = photosVM.load(userId: userId)
@@ -65,6 +79,8 @@ struct MainTabView: View {
             guard let userId = authManager.session?.user.id else { return }
             reviewStore.bind(userId: userId)
             Task {
+                await PushManager.shared.sync(userId: userId)
+                await PushManager.shared.markRead()
                 await friendsVM.load()   // pick up new friends and the other side's toggle changes
                 await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
             }

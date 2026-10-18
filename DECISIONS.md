@@ -295,3 +295,11 @@ A record of significant architectural and product decisions. Add an entry whenev
 **Why:** otherwise an ex-friend stayed a recipient, so approving would try to send to someone who is no longer a friend (and fail, leaving the item stuck), and the queue could show a person who is gone.
 
 **Trade-off:** pruning needs the Friends tab to have loaded; a removal done from the other side is picked up at the next load.
+
+### 2026-10-18 — Push notifications: DB triggers + outbox + Edge Function
+
+**Decision:** Notifications are enqueued by Postgres triggers (photo delivered, invite accepted) into `push_outbox`; a trigger pings the `send-push` Edge Function via pg_net, which signs an APNs JWT (ES256, WebCrypto) and sends over HTTP/2. Failures leave the row queued and the function can be invoked with `{}` to sweep. Device tokens are registered through RPCs and tagged sandbox/production.
+
+**Alternatives considered:** client calls the Edge Function after uploading (rejected: the app can die between upload and call, and it trusts the client to say who to notify); dashboard Database Webhooks (rejected: lives outside the repo/migrations); notifying from the `photo_recipients` insert directly in the Edge Function path (rejected: the E2E-encryption work changes the upload path, triggers don't care how the photo got there).
+
+**Trade-offs accepted:** the badge counts unread `photo` outbox rows, not unviewed photos, because the app does not track `viewed_at` yet. No per-type notification settings yet (the OS-level switch and the per-friend Receive toggle are the controls). Real APNs delivery needs the Apple key; until it is set the function returns 503 and rows stay queued. Payloads contain the sender's name, so Apple sees it; no photo content is included.

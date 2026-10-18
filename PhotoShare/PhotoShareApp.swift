@@ -4,6 +4,8 @@ import SwiftUI
 
 @main
 struct PhotoShareApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
     init() {
         #if DEBUG
         // Line-buffer stdout so [AutoShare] logs survive when the harness kills the app (simctl --stdout=file).

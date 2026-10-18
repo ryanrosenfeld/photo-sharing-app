@@ -64,8 +64,9 @@ struct NotificationStep: View {
             Button("Turn on notifications") {
                 Task {
                     OnboardingStep.markNotificationsOffered()
-                    _ = try? await UNUserNotificationCenter.current()
-                        .requestAuthorization(options: [.alert, .badge, .sound])
+                    let granted = (try? await UNUserNotificationCenter.current()
+                        .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+                    if granted { UIApplication.shared.registerForRemoteNotifications() }
                     onFinished()
                 }
             }
