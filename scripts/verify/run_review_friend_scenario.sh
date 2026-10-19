@@ -64,6 +64,11 @@ done
 psql_q "update profiles set face_profile_enabled=true where id in ('$ALICE_ID','$BOB_ID')" >/dev/null \
   && pass "personas marked as having a face profile (skips onboarding)" || fail "mark face_profile_enabled"
 
+# Bob never signs in on a device in this scenario, so seed a (throwaway) public key; senders refuse to send plaintext.
+psql_q "update profiles set public_key='MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEd158djjzBAEa4QF2kxdWHz/ipdooC+jCH3s3bKEdSCYeSAB4yiQdsdsXujp0KsEU/I0ouLgbRY0jnvASUq5rag==' where id='$BOB_ID'" >/dev/null \
+  && pass "Bob has a seeded encryption public key" || fail "seed Bob's public_key"
+sleep 5  # PostgREST must reload its schema cache (public_key column) before the app reads it
+
 # ---- 1. simulators (dedicated, capped at 2) ---------------------------------------------------
 sim() { # name -> udid (create if missing)
   local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)

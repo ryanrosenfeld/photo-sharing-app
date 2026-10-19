@@ -41,17 +41,22 @@ final class PhotoLoader {
     }
 }
 
+enum PhotoImagePhase {
+    case empty
+    case success(Image)
+    case failure(Error)
+}
+
 /// Drop-in for `AsyncImage` that downloads and decrypts a received photo.
 struct PhotoImage<Content: View>: View {
-    enum Phase {
-        case empty
-        case success(Image)
-        case failure(Error)
-    }
-
     let photo: ReceivedPhoto
-    @ViewBuilder let content: (Phase) -> Content
-    @State private var phase: Phase = .empty
+    let content: (PhotoImagePhase) -> Content
+    @State private var phase: PhotoImagePhase = .empty
+
+    init(photo: ReceivedPhoto, @ViewBuilder content: @escaping (PhotoImagePhase) -> Content) {
+        self.photo = photo
+        self.content = content
+    }
 
     var body: some View {
         content(phase)
