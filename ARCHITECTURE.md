@@ -45,8 +45,9 @@ photo-sharing-app/
     │   └── SupabaseClient.swift    # Global `supabase` singleton
     ├── Auth/                       # Apple / Google / Email auth flow
     ├── Crypto/
-    │   ├── KeyPairManager.swift    # Keypair generation, Keychain storage, iCloud Keychain sync, public key upload
-    │   ├── PhotoEncryption.swift   # Encrypt/decrypt photo blobs to/from recipient public key
+    │   ├── KeyPairManager.swift    # Keypair generation, Keychain storage, iCloud Keychain sync, public key upload (ensurePublished at sign-in)
+    │   ├── PhotoEncryption.swift   # AES-GCM seal of the photo + ECIES wrap of its key per recipient (pure, unit-tested)
+    │   ├── PhotoLoader.swift       # Download + decrypt received photos; `PhotoImage` view replaces AsyncImage
     │   └── FaceProfileCrypto.swift # Symmetric key generation, per-friend key wrapping, encrypt/decrypt reference photos
     ├── Review/                          # Manual review mode
     │   ├── ReviewSettings.swift         # Global + per-friend override policy (pure, unit-tested)
@@ -110,7 +111,7 @@ App launch
 
 See `supabase/migrations/` for the full schema with RLS policies.
 
-> **Implemented in v3 (friends):** the `friendships` / toggle tables above are realised as `invites` + `friendships(user_id, friend_id, send_enabled, receive_enabled)` (two rows per friendship) behind RPCs; see `supabase/migrations/20260610093000_mutual_friendships.sql` and DECISIONS.md (2026-10-08). `friendship_keys`, `manual_review` and E2E encryption are still planned. Invite links are `photoshare://invite/<code>`, handled by `InviteRouter` (ContentView `onOpenURL`) and `InviteAcceptSheet`.
+> **Implemented in v3 (friends):** the `friendships` / toggle tables above are realised as `invites` + `friendships(user_id, friend_id, send_enabled, receive_enabled)` (two rows per friendship) behind RPCs; see `supabase/migrations/20260610093000_mutual_friendships.sql` and DECISIONS.md (2026-10-08). `friendship_keys` and `manual_review` are still planned. **E2E photo encryption is implemented (2026-10-18):** `profiles.public_key`, `photo_recipients.wrapped_key` (`20261018000000_e2e_photo_keys.sql`); one sealed blob per photo, content key wrapped per recipient (see DECISIONS.md). Face reference photos are not yet encrypted. Invite links are `photoshare://invite/<code>`, handled by `InviteRouter` (ContentView `onOpenURL`) and `InviteAcceptSheet`.
 
 
 ```
@@ -173,9 +174,9 @@ Onboarding
 
 At send time (AutoShareProcessor)
   → Fetch recipient's public key from profiles
-  → Encrypt photo bytes to recipient public key (ECIES / CryptoKit)
-  → Upload encrypted blob to `photos` bucket
-  → Insert photos + photo_recipients rows (via Edge Function)
+  → Seal photo bytes once with a random AES-256-GCM key; wrap that key to each recipient's public key (ECIES / CryptoKit)
+  → Upload the single encrypted blob to `photos` bucket
+  → Insert photos + photo_recipients rows (photo_recipients.wrapped_key = that recipient's wrapped key)
 
 At receive time
   → Download encrypted blob via signed URL

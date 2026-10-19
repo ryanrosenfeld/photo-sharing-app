@@ -6,6 +6,8 @@ struct ReceivedPhoto: Codable, Identifiable {
     let deliveredAt: Date?
     let viewedAt: Date?
     var savedAt: Date?
+    /// The photo's content key wrapped to this user's public key. nil for photos shared before E2E encryption.
+    let wrappedKey: String?
     let createdAt: Date
     let photos: PhotoDetail
 
@@ -18,6 +20,7 @@ struct ReceivedPhoto: Codable, Identifiable {
         case deliveredAt = "delivered_at"
         case viewedAt = "viewed_at"
         case savedAt = "saved_at"
+        case wrappedKey = "wrapped_key"
         case createdAt = "created_at"
         case photos
     }
@@ -32,10 +35,6 @@ struct PhotoDetail: Codable {
     let locationLng: Double?
     let expiresAt: Date
     let sender: SenderProfile
-
-    var publicURL: URL? {
-        URL(string: "\(Secrets.supabaseURL)/storage/v1/object/public/photos/\(storagePath)")
-    }
 
     var isExpiringSoon: Bool {
         expiresAt.timeIntervalSinceNow < 3 * 24 * 60 * 60

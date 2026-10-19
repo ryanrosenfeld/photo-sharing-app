@@ -295,3 +295,16 @@ A record of significant architectural and product decisions. Add an entry whenev
 **Why:** otherwise an ex-friend stayed a recipient, so approving would try to send to someone who is no longer a friend (and fail, leaving the item stuck), and the queue could show a person who is gone.
 
 **Trade-off:** pruning needs the Friends tab to have loaded; a removal done from the other side is picked up at the next load.
+
+### 2026-10-18 — End-to-end encrypted photos: one sealed blob, content key wrapped per recipient
+
+**Decision:** A shared photo is sealed once on the sender's device with a random AES-256-GCM key; that key is wrapped separately to each recipient's P-256 public key (ephemeral ECDH, HKDF-SHA256 bound to both public keys, AES-GCM) and stored in `photo_recipients.wrapped_key`. Each account's private key lives in the Keychain (iCloud-synced when the device allows it); the public key is published in `profiles.public_key` at sign-in (`KeyPairManager.ensurePublished`). Receivers download the blob via the authenticated storage API and decrypt in `PhotoLoader`. Photos without a wrapped key (shared before this change) still display as plain JPEGs.
+
+**Alternatives considered:** encrypting the whole photo to each recipient (N uploads for N friends, rejected); using a shared per-sender key like the face-profile scheme (needs friend key exchange and rotation on unfriend, rejected for photos since each is sent once); server-side encryption at rest (server can read, rejected by the privacy rules).
+
+**Trade-offs accepted:**
+- A friend who has not yet opened the new build has no public key: the sender skips them and shows an error rather than ever sending plaintext. Photos auto-shared in that gap are not retried.
+- Public keys are trusted from the server (no key verification / safety numbers), so a malicious server could substitute a key. Metadata (sender, recipient, time, location columns) is still plaintext, as disclosed in the spec.
+- If the private key is lost (new device without iCloud Keychain, reinstall), a new keypair is published and older photos cannot be decrypted on that account.
+- Face reference photos are still not encrypted (their symmetric key scheme needs the friendship-key exchange, a separate piece of work).
+- The `photos` bucket stays public-read because legacy plaintext photos exist; new blobs are ciphertext so this exposes nothing new. Tighten after legacy photos expire (30 days).

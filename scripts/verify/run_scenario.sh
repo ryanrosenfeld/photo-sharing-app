@@ -94,6 +94,14 @@ uistep() { # persona udid step [extra env...]
   return $rc
 }
 
+# ---- 1b. Bob signs in once so his phone publishes its encryption key (senders can't encrypt to a friend without one) --------
+setup_sim "$B" && pass "bob sim: booted, app installed"
+uistep bob "$B" testSignIn && pass "bob: first sign-in (UI)" || fail "bob: first sign-in (UI)"
+sleep 3
+[ -n "$(psql_q "select public_key from profiles where id='$BOB_ID'")" ] \
+  && pass "bob's phone published an encryption public key" || fail "bob has no profiles.public_key after sign-in"
+xcrun simctl shutdown "$B" 2>/dev/null
+
 setup_sim "$A" && pass "alice sim: booted, app installed, Photos permission granted (simctl privacy)"
 # ---- 2. Alice signs in and enrolls Bob from Bob's face profile ---------------------------------
 uistep alice "$A" testSignIn && pass "alice: sign in (UI)" || fail "alice: sign in (UI)"
@@ -125,6 +133,14 @@ OBJ=$(psql_q "select count(*) from storage.objects where bucket_id='photos'")
 [ "$SENT" = 1 ] && [ "$TO_BOB" = 1 ] && [ "$OBJ" = 1 ] \
   && pass "alice's phone matched Bob's face and uploaded exactly 1 photo to Bob (and did not upload Dan's)" \
   || fail "auto-share result wrong: photos from alice=$SENT, recipients bob=$TO_BOB, storage objects=$OBJ (expected 1/1/1); see logs/alice-app-stdout.log"
+# E2E: the stored blob must be ciphertext (not a JPEG) and Bob must hold a wrapped key for it.
+WRAPPED=$(psql_q "select count(*) from photo_recipients where recipient_id='$BOB_ID' and wrapped_key is not null")
+BLOB_PATH=$(psql_q "select storage_path from photos limit 1")
+curl -s "$API_URL/storage/v1/object/public/photos/$BLOB_PATH" -o "$OUT/db/stored-blob.bin"
+MAGIC=$(head -c 2 "$OUT/db/stored-blob.bin" | xxd -p)
+[ "$WRAPPED" = 1 ] && [ "$MAGIC" != ffd8 ] && [ -s "$OUT/db/stored-blob.bin" ] \
+  && pass "e2e: server stores ciphertext (first bytes $MAGIC, not a JPEG) plus a wrapped key for Bob" \
+  || fail "e2e: blob looks like plaintext or wrapped_key missing (magic=$MAGIC wrapped=$WRAPPED)"
 grep -E "\[AutoShare\]" "$OUT/logs/alice-app-stdout.log" > "$OUT/logs/alice-autoshare.txt" 2>/dev/null
 xcrun simctl terminate "$A" "$BUNDLE" 2>/dev/null
 
@@ -134,6 +150,10 @@ setup_sim "$B" && pass "bob sim: booted, app installed, Photos permission grante
 uistep bob "$B" testPhotosTabShowsReceivedPhotos TEST_RUNNER_VERIFY_EXPECT_PHOTOS=1 \
   && pass "bob: Photos tab shows the 1 photo from Alice (UI)" \
   || fail "bob: Photos tab (UI) — see logs/bob-testPhotosTabShowsReceivedPhotos.log"
+
+uistep bob "$B" testReceivedPhotoDecryptsAndSaves \
+  && pass "bob: photo downloaded, decrypted on-device and saved to the library (UI)" \
+  || fail "bob: decrypt + save (UI) — see logs/bob-testReceivedPhotoDecryptsAndSaves.log"
 
 # ---- not covered ----------------------------------------------------------------------------------
 skip "simctl push: app has no APNs registration / device_tokens / edge function yet (SPEC v3 feature), nothing to verify"

@@ -53,7 +53,7 @@ final class PhotosViewModel: ObservableObject {
     }
 
     func saveToLibrary(_ photo: ReceivedPhoto) async {
-        guard !photo.isSaved, let url = photo.photos.publicURL else { return }
+        guard !photo.isSaved else { return }
 
         do {
             let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
@@ -62,8 +62,8 @@ final class PhotosViewModel: ObservableObject {
                 return
             }
 
-            let (data, _) = try await URLSession.shared.data(from: url)
-            guard let image = UIImage(data: data) else {
+            let data = try await PhotoLoader.shared.imageData(for: photo)
+            guard UIImage(data: data) != nil else {
                 self.error = "Could not load photo."
                 return
             }

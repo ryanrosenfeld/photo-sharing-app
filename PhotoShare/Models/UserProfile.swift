@@ -6,6 +6,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var avatarUrl: String?
     var plan: Plan
     var faceProfileEnabled: Bool
+    /// Base64 DER of the account's photo-encryption public key (nil until the app has published one).
+    var publicKey: String?
     let createdAt: Date
 
     enum Plan: String, Codable {
@@ -27,6 +29,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
         case avatarUrl         = "avatar_url"
         case plan
         case faceProfileEnabled = "face_profile_enabled"
+        case publicKey         = "public_key"
         case createdAt         = "created_at"
     }
 }

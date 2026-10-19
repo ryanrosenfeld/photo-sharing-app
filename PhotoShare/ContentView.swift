@@ -41,6 +41,7 @@ struct ContentView: View {
                 onboarding = .checking
                 return
             }
+            await KeyPairManager.ensurePublished(for: profile)
             if let step = await OnboardingStep.firstPending(after: nil, profile: profile) {
                 onboarding = .needed(step)
             } else {
