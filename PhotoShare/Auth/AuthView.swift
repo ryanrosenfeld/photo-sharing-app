@@ -9,6 +9,9 @@ struct AuthView: View {
     @State private var password = ""
     @State private var showPassword = false
     @State private var isSigningIn = false
+    @State private var showReset = false
+    @State private var resetEmail = ""
+    @State private var resetResult: String?
     @FocusState private var focus: Field?
 
     private enum Field { case name, email, password }
@@ -108,14 +111,9 @@ struct AuthView: View {
                     .padding(.vertical, 24)
 
                     // SSO options
+                    // Sign in with Apple is not built yet (pending Ryan's call on third-party sign-in in v1), so no button:
+                    // a button that does nothing is worse than none.
                     VStack(spacing: 10) {
-                        ssoButton(label: "Apple") {
-                            // Apple Sign In — not yet implemented
-                        } icon: {
-                            Image(systemName: "apple.logo")
-                                .font(.system(size: 17))
-                        }
-
                         ssoButton(label: "Google") {
                             Task { await authManager.signInWithGoogle() }
                         } icon: {
@@ -145,6 +143,32 @@ struct AuthView: View {
             Button("OK") { authManager.awaitingEmailConfirmation = nil; isSignUp = false }
         } message: {
             Text("We sent a confirmation link to \(authManager.awaitingEmailConfirmation ?? ""). Tap it, then come back and sign in.")
+        }
+        .alert("Reset your password", isPresented: $showReset) {
+            TextField("Email", text: $resetEmail)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .accessibilityIdentifier("reset.email")
+            Button("Send link") {
+                Task {
+                    let address = resetEmail.trimmingCharacters(in: .whitespaces)
+                    let failure = await authManager.sendPasswordReset(email: address)
+                    resetResult = failure ?? "If there's an account for \(address), a reset link is on its way."
+                }
+            }
+            .accessibilityIdentifier("reset.send")
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("We'll email you a link to choose a new one.")
+        }
+        .alert("Password reset", isPresented: Binding(
+            get: { resetResult != nil },
+            set: { if !$0 { resetResult = nil } }
+        )) {
+            Button("OK") { resetResult = nil }
+        } message: {
+            Text(resetResult ?? "")
         }
         .alert(isSignUp ? "Couldn't create account" : "Couldn't sign in", isPresented: Binding(
             get: { authManager.error != nil },
@@ -232,9 +256,13 @@ struct AuthView: View {
                     .foregroundStyle(OttoColor.barkSoft)
                 Spacer()
                 if !isSignUp {
-                    Button("Forgot?") {}
+                    Button("Forgot?") {
+                        resetEmail = trimmedEmail
+                        showReset = true
+                    }
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(OttoColor.sage)
+                        .accessibilityIdentifier("emailAuth.forgot")
                 }
             }
 
@@ -300,9 +328,9 @@ struct AuthView: View {
     private var termsLabel: some View {
         (Text("By continuing, you agree to otto's ")
             .foregroundStyle(OttoColor.barkSoft) +
-        Text("Terms").foregroundStyle(OttoColor.sage) +
+        Text("Terms").foregroundStyle(OttoColor.bark) +
         Text(" and ").foregroundStyle(OttoColor.barkSoft) +
-        Text("Privacy Policy").foregroundStyle(OttoColor.sage))
+        Text("Privacy Policy").foregroundStyle(OttoColor.bark))
             .font(.system(size: 13))
             .multilineTextAlignment(.center)
             .padding(.horizontal, 32)

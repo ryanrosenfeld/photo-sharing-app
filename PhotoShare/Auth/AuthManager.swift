@@ -137,6 +137,16 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    /// "Forgot?": Supabase emails a reset link. Returns nil on success, otherwise a plain-language error.
+    func sendPasswordReset(email: String) async -> String? {
+        do {
+            try await supabase.auth.resetPasswordForEmail(email)
+            return nil
+        } catch {
+            return Self.friendly(error)
+        }
+    }
+
     /// Plain-language versions of the errors people actually hit.
     private static func friendly(_ error: Error) -> String {
         let text = error.localizedDescription

@@ -10,6 +10,7 @@ cd "$(dirname "$0")/../.."
 BUNDLE=com.ryanrosenfeld.photoshare
 PASSWORD='Test1234!'
 EMAIL="erin$(date +%s)@test.local"
+EMAIL2="finn$(date +%s)@test.local"
 FIX=PhotoShareTests/Fixtures/faces
 STAMP=$(date +%Y%m%d-%H%M%S)
 OUT=$PWD/verification-output/onboarding-$STAMP
@@ -41,6 +42,15 @@ if ! supabase status >/dev/null 2>&1; then
 fi
 eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY)=')"
 psql_q() { docker exec supabase_db_photo-sharing-app psql -U postgres -At -c "$1"; }
+supabase migration up --local >"$OUT/logs/migrations.log" 2>&1 || log "migration up failed (see logs/migrations.log)"
+# Invites from the seeded personas (supabase db reset loads supabase/seed_personas.sql): Dan for the invited sign-up,
+# Carol for the paste-a-link test.
+[ -n "$(psql_q "select 1 from profiles where id='d4444444-4444-4444-4444-444444444444'")" ] || supabase db reset >"$OUT/logs/db-reset.log" 2>&1
+INVITE=$(psql_q "insert into invites (inviter_id) values ('d4444444-4444-4444-4444-444444444444') returning code" | head -1)
+INVITE2=$(psql_q "insert into invites (inviter_id) values ('c3333333-3333-3333-3333-333333333333') returning code" | head -1)
+[ ${#INVITE} = 32 ] && [ ${#INVITE2} = 32 ] && pass "invites created for Dan and Carol" || fail "could not create persona invites"
+ANON_PREVIEW=$(curl -s -X POST "$API_URL/rest/v1/rpc/preview_invite_public" -H "apikey: $ANON_KEY" -H 'Content-Type: application/json' -d "{\"p_code\":\"$INVITE\"}")
+echo "$ANON_PREVIEW" | grep -q '"inviter_name":"Dan","usable":true' && pass "signed-out preview names the inviter: $ANON_PREVIEW" || fail "public preview: $ANON_PREVIEW"
 
 # ---- fixtures: 3 portraits + 1 landscape with no face (rendered, no network) ----
 mkdir -p "$OUT/media"
@@ -72,7 +82,8 @@ run() { # test name; RECORD=0 skips the video (default: tight clip per test in v
   local res=$OUT/logs/$1.xcresult
   mkdir -p "$OUT/videos"
   ( export TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" \
-           TEST_RUNNER_VERIFY_NEW_EMAIL="$EMAIL" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD"
+           TEST_RUNNER_VERIFY_NEW_EMAIL="$EMAIL" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
+           TEST_RUNNER_VERIFY_NEW_EMAIL2="$EMAIL2" TEST_RUNNER_VERIFY_INVITE_CODE="$INVITE" TEST_RUNNER_VERIFY_INVITE_CODE2="$INVITE2"
     if [ "${RECORD:-1}" = 1 ]; then
       run_recorded "$S" "$OUT/videos/$1.mp4" "$OUT/logs/$1.log" \
         xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
@@ -87,16 +98,26 @@ run() { # test name; RECORD=0 skips the video (default: tight clip per test in v
   xcrun xcresulttool export attachments --path "$res" --output-path "$OUT/screens/$1" >/dev/null 2>&1
   return $rc
 }
-run testNewAccountOnboarding && pass "new account: sign up -> face profile -> photo access -> notifications -> home (UI)" \
+run testNewAccountOnboarding && pass "new account: sign up -> face profile -> photo access -> first friend (QR, skip) -> notifications -> home; Friends shows the waiting invite, Add Friend copy/new link/cancel (UI)" \
   || fail "new account onboarding (logs/testNewAccountOnboarding.log)"
 run testRelaunchSkipsOnboarding && pass "relaunch goes straight to the app; Profile shows permissions, no way to turn the face profile off (UI)" \
   || fail "relaunch (logs/testRelaunchSkipsOnboarding.log)"
+run testPasteInvite && pass "Friends -> paste a link: junk is explained, a pasted message opens Carol's accept screen (UI)" \
+  || fail "paste invite (logs/testPasteInvite.log)"
+run testInvitedNewAccount && pass "signed-out invitee: 'Dan invited you', survives a kill, sign-up, no first-friend step, accept right after onboarding (UI)" \
+  || fail "invited new account (logs/testInvitedNewAccount.log)"
 
 # ---- backend state ----
 [ "$(psql_q "select face_profile_enabled from profiles p join auth.users u on u.id=p.id where u.email='$EMAIL'")" = t ] \
   && pass "profiles.face_profile_enabled = true for the new account" || fail "face_profile_enabled not set"
 N=$(psql_q "select count(*) from storage.objects o join auth.users u on o.name like u.id::text||'/%' where o.bucket_id='face-profiles' and u.email='$EMAIL'")
 [ "$N" = 3 ] && pass "exactly 3 reference photos uploaded (the rejected landscape was not)" || fail "expected 3 uploaded photos, found $N"
+
+N=$(psql_q "select count(*) from invites i join auth.users u on u.id=i.inviter_id where u.email='$EMAIL' and i.accepted_at is null")
+[ "$N" = 2 ] && pass "Erin has 2 open invites after onboarding link + copied link + new link - 1 cancelled" || fail "expected 2 open invites for Erin, found $N"
+[ "$(psql_q "select count(*) from friendships f join auth.users u on u.id=f.user_id where u.email='$EMAIL2' and f.friend_id='d4444444-4444-4444-4444-444444444444'")" = 1 ] \
+  && pass "Finn and Dan are friends after the invited sign-up" || fail "Finn-Dan friendship missing"
+[ "$(psql_q "select accepted_at is null from invites where code='$INVITE2'")" = t ] && pass "declining Carol's pasted invite leaves it unused" || fail "Carol's invite was consumed"
 
 [ "${RECORD:-1}" = 1 ] && join_clips "$OUT/onboarding.mp4" "$OUT"/videos/*.mp4
 echo; cat "$SUMMARY"; echo "Evidence: $OUT"
