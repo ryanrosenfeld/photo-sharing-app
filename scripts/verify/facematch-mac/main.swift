@@ -27,6 +27,14 @@ if args.contains("--dump-embeddings") {
     var dump: [String: [[Float]]] = [:]
     for f in fixtures { dump[f.file] = try detector.allFaceEmbeddings(in: images[f.file]!).map(\.vector) }
     try JSONEncoder().encode(dump).write(to: out.appendingPathComponent("embeddings.json"))
+    // aligned flags (same order as embeddings.json) and the enrollment-style largest-face embedding, for decision-rule experiments
+    var flags: [String: [Bool]] = [:], largest: [String: [Float]] = [:]
+    for f in fixtures {
+        flags[f.file] = try detector.allFaceEmbeddings(in: images[f.file]!).map(\.aligned)
+        if let e = try detector.largestFaceEmbedding(in: images[f.file]!) { largest[f.file] = e.vector }
+    }
+    try JSONEncoder().encode(flags).write(to: out.appendingPathComponent("embeddings_aligned.json"))
+    try JSONEncoder().encode(largest).write(to: out.appendingPathComponent("embeddings_largest.json"))
 }
 
 let started = Date()
@@ -34,7 +42,7 @@ let eval = try FaceMatchEvaluation.run(
     fixtures: fixtures, threshold: FaceDetector.defaultMatchThreshold,
     embedLargest: { try detector.largestFaceEmbedding(in: images[$0.file]!) },
     embedAll: { try detector.allFaceEmbeddings(in: images[$0.file]!) },
-    distances: { detector.pairwiseDistances(photoFaces: $0, enrolled: $1) })
+    distances: { detector.matchDistance(photoFaces: $0, enrolled: $1).map { [$0] } ?? [] })
 
 // Alignment usage + annotated evidence images (boxes red, landmarks green/yellow; aligned crops strip).
 var alignedCount = 0, faceCount = 0, undetected: [String] = []

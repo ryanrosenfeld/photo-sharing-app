@@ -56,7 +56,7 @@ final class FaceMatchPipelineTests: XCTestCase {
             fixtures: fixtures.map(\.fixture), threshold: threshold,
             embedLargest: { try self.detector.largestFaceEmbedding(in: byFile[$0.file]!.image) },
             embedAll: { try self.detector.allFaceEmbeddings(in: byFile[$0.file]!.image) },
-            distances: { self.detector.pairwiseDistances(photoFaces: $0, enrolled: $1) })
+            distances: { self.detector.matchDistance(photoFaces: $0, enrolled: $1).map { [$0] } ?? [] })
         XCTAssertEqual(eval.enrolledIdentities, eval.identities.count, "every identity needs an enrollment embedding")
 
         let report = eval.report(notes: ["platform: iOS Simulator (Vision landmarks unusable -> box-crop fallback)"])
@@ -73,6 +73,24 @@ final class FaceMatchPipelineTests: XCTestCase {
         // Regression gates for this (fallback) path; the aligned path has its own gates in facematch-mac.sh.
         XCTAssertEqual(eval.falseMatches.count, 0, "false matches at threshold \(threshold): \(eval.falseMatches.map { "\($0.file)~\($0.id)" })")
         XCTAssertGreaterThanOrEqual(eval.genuine.count - eval.missed.count, Self.minGenuineMatches, "recall regressed")
+    }
+
+    /// Decision rule on synthetic unit vectors: strict single-reference bound, consensus bound, 1-reference fallback.
+    func testConsensusRuleUsesTwoReferencesOnlyAndStaysStrictOtherwise() {
+        func vec(distance d: Float) -> FaceEmbedding {   // cosine distance d from e0
+            let c = 1 - d
+            var v = [Float](repeating: 0, count: 512); v[0] = c; v[1] = (1 - c * c).squareRoot()
+            return FaceEmbedding(vector: v, aligned: true)
+        }
+        let probe = [vec(distance: 0)]
+        func match(_ ds: [Float]) -> Bool { detector.isMatch(photoFaces: probe, enrolled: ds.map { vec(distance: $0) }) }
+        XCTAssertTrue(match([0.50, 0.90, 0.90]), "one close reference is enough (strict path)")
+        XCTAssertFalse(match([0.58, 0.90, 0.90]), "one reference at 0.58 is not enough")
+        XCTAssertTrue(match([0.58, 0.60, 0.90]), "two references within 0.62 agree")
+        XCTAssertFalse(match([0.58, 0.64, 0.90]), "second reference beyond 0.62")
+        XCTAssertFalse(match([0.58]), "single reference falls back to the strict 0.55")
+        XCTAssertTrue(match([0.50]))
+        XCTAssertFalse(detector.isMatch(photoFaces: probe, enrolled: []))
     }
 
     /// Floor for genuine matches over the committed fixtures on the Simulator (box-crop fallback path).

@@ -44,7 +44,7 @@ struct FaceDetector: Sendable {
     // Cosine-distance threshold (1 - cos similarity, range 0...2) for MobileFaceNet embeddings (buffalo_sc / w600k_mbf).
     // The model outputs unnormalized 512-D vectors whose length varies with image quality, so raw Euclidean distance
     // mixes quality into identity; cosine ignores length. 0.55 sits between real-photo same-person distances
-    // (LFW: p95 0.545, max 0.616) and the closest different-person pair (0.687) -- see docs/face-matching/README.md.
+    // (LFW: p95 0.53, max 0.64) and the closest different-person pair (0.66) -- see docs/face-matching/README.md.
     #if FACEMATCH_ABLATE_EUCLID
     static let defaultMatchThreshold: Float = 15   // evaluation-only: the pre-change raw Euclidean threshold
     #else
@@ -54,6 +54,10 @@ struct FaceDetector: Sendable {
     /// Added to the distance when either embedding came from the box-crop fallback, i.e. unaligned faces must be
     /// 0.2 closer to match. On LFW, box-crop impostors reach 0.34 while aligned ones stay above 0.65.
     static let unalignedPenalty: Float = 0.2
+
+    /// Consensus rule: a face also matches when its two closest references are both within `defaultMatchThreshold + consensusSlack`
+    /// (0.62). Evidence: docs/face-matching/README.md (closest wrong person's second-best reference is 0.72 on LFW).
+    static let consensusSlack: Float = 0.07
 
     /// Longest image side kept for detection. Vision's detector misses faces below ~5% of the frame, so large
     /// photos are scanned as an image pyramid of 1024px tiles (see `detectFaces`) instead of being squeezed to 1024.
@@ -110,13 +114,31 @@ struct FaceDetector: Sendable {
         return distances.sorted()
     }
 
-    /// True if any face in `photoFaces` is within `threshold` of any embedding in `enrolled`.
+    /// Match score for one friend: lower is closer, and `score < threshold` means "match".
+    /// Per photo face, take its distances to the friend's reference embeddings, sorted. The face scores
+    /// `min(best, secondBest - consensusSlack)`: one reference within `threshold` is enough (strict path), or two
+    /// references both within `threshold + consensusSlack` (consensus path, a looser bound that needs agreement).
+    /// With a single reference there is no second-best, so the rule falls back to the strict `threshold`.
+    /// Using one photo face for both references (never best from one face, second from another) keeps a group shot
+    /// from combining two different people. The photo's score is its best face; nil if there is nothing to compare.
+    func matchDistance(photoFaces: [FaceEmbedding], enrolled: [FaceEmbedding]) -> Float? {
+        var best: Float?
+        for face in photoFaces {
+            let d = pairwiseDistances(photoFaces: [face], enrolled: enrolled)
+            guard let first = d.first else { continue }
+            let score = d.count >= 2 ? min(first, max(0, d[1] - Self.consensusSlack)) : first
+            best = min(best ?? score, score)
+        }
+        return best
+    }
+
+    /// True if the photo matches the friend: see `matchDistance`.
     func isMatch(
         photoFaces: [FaceEmbedding],
         enrolled: [FaceEmbedding],
         threshold: Float = defaultMatchThreshold
     ) -> Bool {
-        pairwiseDistances(photoFaces: photoFaces, enrolled: enrolled).first.map { $0 < threshold } ?? false
+        matchDistance(photoFaces: photoFaces, enrolled: enrolled).map { $0 < threshold } ?? false
     }
 
     // MARK: - Loading
