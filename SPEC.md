@@ -130,7 +130,7 @@ Every user is required to upload reference photos of themselves as part of accou
 ### Matching
 
 - MobileFaceNet (ArcFace-trained, `w600k_mbf`) bundled as CoreML model (~4MB, ~25ms on A-series)
-- Confidence threshold tunable server-side (pushed to devices without app update); cosine distance (0 = identical, ~1 = unrelated), default 0.55
+- Confidence threshold tunable server-side (pushed to devices without app update); cosine distance (0 = identical, ~1 = unrelated), default 0.55 (a looser 0.62 bound applies only when two of the friend's reference photos agree)
 - Conservative threshold: prefer missed shares over false positives
 - Users can report a missed share to improve future matching
 - If a friend updates their reference photos and embeddings are regenerated, matching accuracy improves automatically

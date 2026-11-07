@@ -233,7 +233,7 @@ Photo captured on device
          (box-crop fallback if landmarks are missing/implausible, e.g. the Simulator)
       5. MobileFaceNet CoreML inference → 512-D embedding per face
       6. Compare embeddings to enrolled friends with Send toggle ON
-         (cosine distance < 0.55 = match; unaligned faces get +0.2 penalty)
+         (cosine distance < 0.55 = match, or two references < 0.62 for the same face; unaligned faces get +0.2 penalty)
   → For each matching friend:
       ├─ If manual review ON for this friend:
       │    → Queue photo locally; no upload; badge review queue
