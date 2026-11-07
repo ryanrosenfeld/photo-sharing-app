@@ -55,20 +55,32 @@ struct MainTabView: View {
         .task {
             guard let userId = authManager.session?.user.id else { return }
             reviewStore.bind(userId: userId)
+            PendingShareStore.shared.bind(userId: userId)
             await processor.libraryManager.requestAccess()
             async let p: () = photosVM.load(userId: userId)
             async let f: () = friendsVM.load()
             _ = await (p, f)
+            await syncEncryption(userId: userId)
             await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             guard let userId = authManager.session?.user.id else { return }
             reviewStore.bind(userId: userId)
+            PendingShareStore.shared.bind(userId: userId)
             Task {
                 await friendsVM.load()   // pick up new friends and the other side's toggle changes
+                await syncEncryption(userId: userId)
                 await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
             }
         }
+    }
+}
+
+extension MainTabView {
+    /// Hands friends the key to your face profile, and delivers photos that were waiting on a friend's key.
+    fileprivate func syncEncryption(userId: UUID) async {
+        await FaceProfileManager.syncKeys(userId: userId, friendIds: friendsVM.friends.map(\.friendId))
+        await PendingShareStore.shared.retry(senderId: userId, friends: friendsVM.friends)
     }
 }
 
