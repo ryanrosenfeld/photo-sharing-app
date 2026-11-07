@@ -1,6 +1,7 @@
 import Foundation
 import _PhotosUI_SwiftUI
 import PhotosUI
+import Supabase
 import UIKit
 
 enum EnrollmentMode {
@@ -61,9 +62,10 @@ final class FaceEnrollmentViewModel: ObservableObject {
 
         let images: [UIImage]
         do {
-            images = try await profileManager.downloadPhotos(for: friendId)
+            let me = try await supabase.auth.session.user.id
+            images = try await profileManager.downloadPhotos(for: friendId, viewer: me)
         } catch {
-            self.error = "Could not download \(friendName)'s face profile: \(error.localizedDescription)"
+            self.error = "Could not load \(friendName)'s face profile: \(error.localizedDescription)"
             return
         }
 

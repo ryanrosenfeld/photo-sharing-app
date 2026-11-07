@@ -31,6 +31,11 @@ enum PhotoEncryption {
         return (box.combined!, key)   // combined is non-nil for the default 12-byte nonce
     }
 
+    /// Seals with a caller-supplied key (a face profile seals several photos under one key).
+    static func seal(_ plaintext: Data, using key: SymmetricKey) throws -> Data {
+        try AES.GCM.seal(plaintext, using: key).combined!
+    }
+
     static func open(blob: Data, key: SymmetricKey) throws -> Data {
         try AES.GCM.open(AES.GCM.SealedBox(combined: blob), using: key)
     }

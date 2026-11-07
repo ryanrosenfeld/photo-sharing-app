@@ -176,7 +176,7 @@ A share is triggered when:
 - Private key stored in device Keychain, synced via iCloud Keychain for device continuity
 - Public key uploaded to server (public by definition)
 - At send time: sender's device fetches recipients' public keys, seals the photo once with a random key, wraps that key to each recipient's public key, and uploads the encrypted blob
-- A friend who has not published a key yet cannot receive: the photo is never sent unencrypted
+- A friend who has not published a key yet cannot receive yet: the photo is never sent unencrypted. It is remembered on the sender's device (library identifier only) and delivered automatically, on the sender's next app open, once the friend's key exists. The retry drops anyone who is no longer a friend or whose Send/Receive was turned off
 - Server stores encrypted blob + unencrypted metadata (sender ID, recipient ID, timestamp, expiry)
 - Server cannot decrypt photo content
 - Recipient downloads encrypted blob, decrypts locally

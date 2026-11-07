@@ -63,4 +63,24 @@ final class PhotoEncryptionTests: XCTestCase {
         XCTAssertEqual(first.rawRepresentation, second.rawRepresentation)
         XCTAssertNil(KeyPairManager.privateKey(for: UUID()), "another account has its own key")
     }
+
+    func testFaceProfileSetSharesOneKeyAcrossPhotosAndFriends() throws {
+        let owner = P256.KeyAgreement.PrivateKey()
+        let friend = P256.KeyAgreement.PrivateKey()
+        let stranger = P256.KeyAgreement.PrivateKey()
+        let key = SymmetricKey(size: .bits256)
+        let faces = [Data("face-0".utf8), Data("face-1".utf8), Data("face-2".utf8)]
+        let blobs = try faces.map { try PhotoEncryption.seal($0, using: key) }
+        XCTAssertNotEqual(blobs[0], faces[0])
+
+        // The owner (second device) and a friend recover the same key; a stranger cannot.
+        for holder in [owner, friend] {
+            let recovered = try PhotoEncryption.unwrap(try PhotoEncryption.wrap(key, to: holder.publicKey), with: holder)
+            XCTAssertEqual(try blobs.map { try PhotoEncryption.open(blob: $0, key: recovered) }, faces)
+        }
+        let forFriend = try PhotoEncryption.wrap(key, to: friend.publicKey)
+        XCTAssertThrowsError(try PhotoEncryption.unwrap(forFriend, with: stranger))
+        // A rotated key (profile replaced) can't open the old files.
+        XCTAssertThrowsError(try PhotoEncryption.open(blob: blobs[0], key: SymmetricKey(size: .bits256)))
+    }
 }
