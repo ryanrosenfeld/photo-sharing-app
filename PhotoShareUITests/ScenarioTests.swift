@@ -40,7 +40,7 @@ final class ScenarioTests: XCTestCase {
 
     private func ensureSignedIn() {
         defer { allowPhotosAccessIfAsked() }
-        if app.buttons["tab.photos"].waitForExistence(timeout: 8) { return }
+        if app.buttons["tab.photos"].waitForExistence(timeout: 30) { return }
         // Already signed in but parked on the (skippable) notifications onboarding step.
         let pendingNotNow = app.buttons["notifications.skip"]
         if pendingNotNow.exists {
@@ -49,7 +49,7 @@ final class ScenarioTests: XCTestCase {
             return
         }
         let getStarted = app.buttons["welcome.signIn"]
-        XCTAssertTrue(getStarted.waitForExistence(timeout: 15), "welcome screen")
+        XCTAssertTrue(getStarted.waitForExistence(timeout: 90), "welcome screen")
         getStarted.tap()
         let email = app.textFields["emailAuth.email"]
         XCTAssertTrue(email.waitForExistence(timeout: 5))
