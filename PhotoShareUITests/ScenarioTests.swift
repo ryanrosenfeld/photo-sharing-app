@@ -38,6 +38,23 @@ final class ScenarioTests: XCTestCase {
         }
     }
 
+    /// iOS 27's "Save Password?" sheet can arrive well after sign-in and covers the app; decline it whenever seen.
+    private func declineSavePasswordIfShown() {
+        let notNow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Not Now"]
+        if notNow.exists { notNow.tap() }
+    }
+
+    /// Perform `action`, and until `done` is true (up to `timeout`) keep declining the Save Password sheet and re-trying.
+    private func retry(timeout: TimeInterval = 40, until done: () -> Bool, action: () -> Void) {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            declineSavePasswordIfShown()
+            action()
+            let settle = Date().addingTimeInterval(3)
+            while !done() && Date() < settle { usleep(300_000) }
+        } while !done() && Date() < deadline
+    }
+
     private func ensureSignedIn() {
         defer { allowPhotosAccessIfAsked() }
         if app.buttons["tab.photos"].waitForExistence(timeout: 8) { return }
@@ -66,12 +83,15 @@ final class ScenarioTests: XCTestCase {
             // iOS's "Save Password?" sheet (iOS 27) covers the app after sign-in; decline it.
             let notNow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Not Now"]
             if notNow.exists { notNow.tap() }
-            for id in ["notifications.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
+            for id in ["notifications.skip", "firstFriend.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
                 app.buttons[id].tap()
             }
             usleep(500_000)
         }
         XCTAssertTrue(app.buttons["tab.photos"].exists, "signed in -> main tabs")
+        // The "Save Password?" sheet can arrive after the tabs are up and swallows taps; decline it.
+        let lateNotNow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Not Now"]
+        if lateNotNow.waitForExistence(timeout: 12) { lateNotNow.tap() }
     }
 
     /// Sign in; grant Photos access if the system alert appears (also pre-granted via simctl privacy).
@@ -219,7 +239,7 @@ final class ScenarioTests: XCTestCase {
     // MARK: - Friends v3 (invite / accept / toggles / unfriend)
 
     private func openFriendsTab() {
-        app.buttons["tab.friends"].tap()
+        retry(until: { self.app.buttons["tab.friends"].isSelected }) { self.app.buttons["tab.friends"].tap() }
         app.tap()  // lets the interruption monitor handle the Photos permission alert
     }
 
@@ -234,8 +254,8 @@ final class ScenarioTests: XCTestCase {
         openFriendsTab()
         let add = app.buttons["friends.add"].firstMatch
         XCTAssertTrue(add.waitForExistence(timeout: 10), "add-friend button")
-        add.tap()
         let link = app.staticTexts["invite.link"]
+        retry(until: { link.exists }) { add.tap() }
         XCTAssertTrue(link.waitForExistence(timeout: 15), "invite link shown")
         if let path = env["VERIFY_OUT_FILE"] { try? link.label.write(toFile: path, atomically: true, encoding: .utf8) }
         shot("invite-sheet")
@@ -254,14 +274,16 @@ final class ScenarioTests: XCTestCase {
         while !title.exists && Date() < deadline {
             let open = springboard.alerts.buttons["Open"]
             if open.exists { open.tap() }
+            declineSavePasswordIfShown()
             usleep(500_000)
         }
         XCTAssertTrue(title.exists, "accept screen after deep link")
         shot("invite-accept-screen")
         let who = env["VERIFY_EXPECT_NAME"] ?? ""
         XCTAssertTrue(title.label.contains(who), "accept screen names the inviter (\(who)): \(title.label)")
-        app.buttons["invite.accept"].tap()
-        XCTAssertTrue(app.staticTexts["invite.accepted"].waitForExistence(timeout: 15), "acceptance confirmation")
+        let accepted = app.staticTexts["invite.accepted"]
+        retry(until: { accepted.exists }) { if app.buttons["invite.accept"].exists { app.buttons["invite.accept"].tap() } }
+        XCTAssertTrue(accepted.waitForExistence(timeout: 15), "acceptance confirmation")
         shot("invite-accepted")
         app.buttons["invite.done"].tap()
         openFriendsTab()
@@ -280,11 +302,14 @@ final class ScenarioTests: XCTestCase {
         while !problem.exists && Date() < deadline {
             let open = springboard.alerts.buttons["Open"]
             if open.exists { open.tap() }
+            declineSavePasswordIfShown()
             usleep(500_000)
         }
         XCTAssertTrue(problem.exists, "problem message")
         shot("invite-problem")
         XCTAssertTrue(problem.label.contains(env["VERIFY_EXPECT_TEXT"] ?? ""), "problem text: \(problem.label)")
+        // A pending invite now survives relaunch until it is dismissed, so close the sheet like a person would.
+        app.buttons["invite.done"].tap()
     }
 
     /// Friend detail: set a toggle. env: VERIFY_FRIEND (name), VERIFY_TOGGLE (send|receive), VERIFY_VALUE (on|off).

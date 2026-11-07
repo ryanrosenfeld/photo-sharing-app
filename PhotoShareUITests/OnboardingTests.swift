@@ -119,6 +119,7 @@ final class OnboardingTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["invite.accepted"].waitForExistence(timeout: 15), "accepted")
         shot("27-accepted")
         app.buttons["invite.done"].tap()
+        app.buttons["tab.friends"].tap()
         XCTAssertTrue(app.staticTexts["Dan"].waitForExistence(timeout: 10), "Dan is in Friends")
         shot("28-friends")
     }

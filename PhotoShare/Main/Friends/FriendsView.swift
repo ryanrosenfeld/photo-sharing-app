@@ -568,6 +568,7 @@ struct AddFriendSheet: View {
                 .kerning(1.2)
                 .textCase(.uppercase)
                 .foregroundStyle(OttoColor.barkSoft)
+                .accessibilityIdentifier("invite.waiting")
             OttoSectionCard {
                 VStack(spacing: 0) {
                     ForEach(others) { invite in
@@ -593,7 +594,6 @@ struct AddFriendSheet: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityIdentifier("invite.waiting")
     }
 
     private func load(fresh: Bool) async {
