@@ -317,3 +317,10 @@ A record of significant architectural and product decisions. Add an entry whenev
 
 **Trade-offs accepted:** a new friend cannot enroll from the face profile until the profile owner opens the app once (the friend sees an explanatory message, the retry covers it); a crash mid-replace can leave `.enc` files without a key, fixed by re-saving the profile; the bucket's read policy is still open to any signed-in user, now harmless for new profiles but still exposing un-migrated plaintext ones until their owner opens the app; pending retries drop a friend who toggled Send off and back on before the key appeared.
 
+### 2026-11-07 — Invite and onboarding UX: keep single-use links, carry invites through sign-up, add a first-friend step
+
+**Decision:** Invite links stay single-use (14 days). Add Friend reuses the newest open link until it has been shared or copied, then offers a new one; unused links can be cancelled. A pending invite is persisted on the device until its accept screen is dismissed. A signed-out invitee sees the inviter's name via `preview_invite_public` (callable by anon, returns only display name + usable). Onboarding gains a "Bring a friend" step (share link or QR, skip equally visible), skipped for invitees and existing accounts. Links that don't open the app can be pasted. The no-op Apple button is hidden; "Forgot?" sends a Supabase reset email.
+
+**Alternatives considered:** reusable links with inviter approval (a review proposed it; it adds a step to every invite and needs push to be usable, so deferred until push ships); universal links (need a domain, pending Ryan); short typeable codes (would mean changing `accept_invite`; pasting the link covers the same case additively).
+
+**Trade-offs accepted:** `preview_invite_public` lets anyone holding a code learn the inviter's display name (the code is 128 random bits and is meant to be shared); "shared" is tracked per device, so a link shared on one phone could be offered again on another; the progress bar shows 4 steps even when one is skipped.

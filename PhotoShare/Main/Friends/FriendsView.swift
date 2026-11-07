@@ -3,8 +3,11 @@ import SwiftUI
 struct FriendsView: View {
     @EnvironmentObject var vm: FriendsViewModel
     @EnvironmentObject var reviewStore: ReviewQueueStore
+    @EnvironmentObject var inviteRouter: InviteRouter
     @State private var showReview = false
     @State private var showInvite = false
+    @State private var showPasteInvite = false
+    @State private var pastedCode: String?
     @State private var detailFriend: Friend?
     @State private var enrollingFriend: Friend?
 
@@ -36,6 +39,8 @@ struct FriendsView: View {
                                 friendsList
                                     .padding(.horizontal, 16)
                             }
+                            footer
+                                .padding(.top, 18)
                         }
                         .padding(.top, 8)
                         .padding(.bottom, 110)
@@ -57,7 +62,11 @@ struct FriendsView: View {
             reviewStore.prune(keeping: Set(friends.map(\.friendId)))
         }
         .sheet(isPresented: $showReview) { ReviewQueueView() }
-        .sheet(isPresented: $showInvite) { AddFriendSheet() }
+        .sheet(isPresented: $showInvite, onDismiss: { Task { await vm.loadOpenInvites() } }) { AddFriendSheet() }
+        .sheet(isPresented: $showPasteInvite, onDismiss: {
+            if let pastedCode { inviteRouter.pendingCode = pastedCode; self.pastedCode = nil }
+        }) { PasteInviteSheet(code: $pastedCode) }
+        .task { await vm.loadOpenInvites() }
         .sheet(item: $detailFriend) { friend in FriendDetailSheet(friendId: friend.friendId) }
         .sheet(item: $enrollingFriend) { friend in
             FaceEnrollmentView(
@@ -122,10 +131,33 @@ struct FriendsView: View {
                     .clipShape(Capsule())
             }
             .accessibilityIdentifier("friends.empty.invite")
+            footer
             Spacer()
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("friends.empty")
+    }
+
+    // MARK: - Footer: invites waiting, paste a link
+
+    private var footer: some View {
+        VStack(spacing: 10) {
+            if !vm.openInvites.isEmpty {
+                Button { showInvite = true } label: {
+                    Text(vm.openInvites.count == 1
+                         ? "1 invite waiting to be accepted"
+                         : "\(vm.openInvites.count) invites waiting to be accepted")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(OttoColor.bark)
+                }
+                .accessibilityIdentifier("friends.invitesWaiting")
+            }
+            Button("Have an invite link? Paste it") { showPasteInvite = true }
+                .font(.system(size: 13))
+                .foregroundStyle(OttoColor.sage)
+                .accessibilityIdentifier("friends.pasteInvite")
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Review card
@@ -402,6 +434,10 @@ struct AddFriendSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var code: String?
     @State private var failed = false
+    @State private var copied = false
+    @State private var shared = false
+
+    private var others: [OpenInvite] { vm.openInvites.filter { $0.code != code } }
 
     var body: some View {
         ZStack {
@@ -425,77 +461,147 @@ struct AddFriendSheet: View {
                 .padding(.top, 16)
                 .padding(.bottom, 8)
 
-                Spacer()
-
-                VStack(spacing: 24) {
-                    OttoMascot(pose: .floating, width: 180)
-
-                    VStack(spacing: 12) {
-                        Text("Send them a link.")
-                            .font(OttoFont.serifBoldItalic(size: 26))
-                            .foregroundStyle(OttoColor.ink)
-                        Text("They open it, accept, and you start sharing photos of each other. The link works once and expires in 14 days.")
-                            .font(.system(size: 15))
-                            .foregroundStyle(OttoColor.bark)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(2)
-                            .padding(.horizontal, 20)
-                    }
-
-                    if let code {
-                        HStack(spacing: 10) {
-                            Image(systemName: "link")
-                                .font(.system(size: 14))
-                                .foregroundStyle(OttoColor.barkSoft)
-                            Text(InviteLink.url(code: code).absoluteString)
-                                .font(.system(size: 12, design: .monospaced))
+                ScrollView {
+                    VStack(spacing: 20) {
+                        VStack(spacing: 10) {
+                            Text("Send them a link.")
+                                .font(OttoFont.serifBoldItalic(size: 26))
+                                .foregroundStyle(OttoColor.ink)
+                            Text("They open it and accept, and you start sharing photos of each other. Together? Have them scan the code with their camera.")
+                                .font(.system(size: 15))
                                 .foregroundStyle(OttoColor.bark)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .textSelection(.enabled)
-                                .accessibilityIdentifier("invite.link")
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(2)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 14)
-                        .frame(maxWidth: .infinity)
-                        .background(OttoColor.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(OttoColor.lineSoft, lineWidth: 0.5))
-                        .padding(.horizontal, 28)
-                    } else if failed {
-                        Button("Couldn't create a link. Try again") { Task { await create() } }
-                            .foregroundStyle(OttoColor.wax)
-                    } else {
-                        ProgressView().tint(OttoColor.sage)
+                        .padding(.top, 12)
+
+                        if let code {
+                            InviteQRCode(url: InviteLink.url(code: code))
+                                .frame(width: 200, height: 200)
+
+                            HStack(spacing: 10) {
+                                Image(systemName: "link")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(OttoColor.barkSoft)
+                                Text(InviteLink.url(code: code).absoluteString)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(OttoColor.bark)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .textSelection(.enabled)
+                                    .accessibilityIdentifier("invite.link")
+                                Spacer(minLength: 0)
+                                Button(copied ? "Copied" : "Copy") {
+                                    UIPasteboard.general.string = InviteLink.url(code: code).absoluteString
+                                    FriendsViewModel.markShared(code)
+                                    copied = true
+                                    shared = true
+                                }
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(OttoColor.sage)
+                                .accessibilityIdentifier("invite.copy")
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(OttoColor.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(OttoColor.lineSoft, lineWidth: 0.5))
+
+                            Text("Works for one person and expires in 14 days.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(OttoColor.barkSoft)
+                        } else if failed {
+                            Button("Couldn't create a link. Try again") { Task { await load(fresh: false) } }
+                                .foregroundStyle(OttoColor.wax)
+                                .accessibilityIdentifier("invite.retry")
+                        } else {
+                            ProgressView().tint(OttoColor.sage).frame(height: 200)
+                        }
+
+                        if !others.isEmpty { waitingList }
                     }
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 16)
                 }
 
-                Spacer()
-
                 if let code {
-                    ShareLink(
-                        item: InviteLink.url(code: code),
-                        message: Text("\(auth.currentProfile?.displayName ?? "A friend") invited you to share photos on otto.")
-                    ) {
-                        Text("Share invite")
-                            .font(.system(size: 16, weight: .medium))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(OttoColor.sage)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
+                    VStack(spacing: 10) {
+                        ShareLink(
+                            item: InviteLink.url(code: code),
+                            message: Text(InviteMessage.text(from: auth.currentProfile?.displayName))
+                        ) {
+                            Text("Share invite")
+                                .font(.system(size: 16, weight: .medium))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(OttoColor.sage)
+                                .foregroundStyle(.white)
+                                .clipShape(Capsule())
+                        }
+                        .simultaneousGesture(TapGesture().onEnded {
+                            FriendsViewModel.markShared(code)
+                            shared = true
+                        })
+                        .accessibilityIdentifier("invite.share")
+
+                        if shared {
+                            Button("New link for someone else") { Task { await load(fresh: true) } }
+                                .font(.system(size: 14))
+                                .foregroundStyle(OttoColor.barkSoft)
+                                .accessibilityIdentifier("invite.another")
+                        }
                     }
-                    .accessibilityIdentifier("invite.share")
                     .padding(.horizontal, 28)
-                    .padding(.bottom, 36)
+                    .padding(.bottom, 28)
+                    .padding(.top, 8)
                 }
             }
         }
-        .task { await create() }
+        .task { await load(fresh: false) }
     }
 
-    private func create() async {
+    /// Other links I've sent that nobody has used yet.
+    private var waitingList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Links you've sent, not used yet")
+                .font(.system(size: 12, weight: .semibold))
+                .kerning(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(OttoColor.barkSoft)
+                .accessibilityIdentifier("invite.waiting")
+            OttoSectionCard {
+                VStack(spacing: 0) {
+                    ForEach(others) { invite in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Sent \(invite.createdAt.formatted(.relative(presentation: .named)))")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(OttoColor.ink)
+                                Text("Expires \(invite.expiresAt.formatted(.relative(presentation: .named)))")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(OttoColor.barkSoft)
+                            }
+                            Spacer()
+                            Button("Cancel link") { Task { await vm.cancelInvite(invite.code) } }
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(OttoColor.wax)
+                                .accessibilityIdentifier("invite.cancel")
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 12)
+                        if invite != others.last { Divider().background(OttoColor.line) }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func load(fresh: Bool) async {
         failed = false
-        code = await vm.createInvite()
+        copied = false
+        shared = false
+        if fresh { code = nil }
+        code = await vm.inviteToShare(fresh: fresh)
         failed = code == nil
     }
 }
@@ -514,6 +620,12 @@ struct InviteAcceptSheet: View {
 
     private var name: String { preview?.inviterName ?? "Someone" }
 
+    /// accept_invite turns my Send off when I'm already at the free plan's limit; say so instead of surprising them.
+    private var sendStartsPaused: Bool {
+        guard let id = preview?.inviterId, let friend = vm.friends.first(where: { $0.friendId == id }) else { return false }
+        return !friend.mySend
+    }
+
     var body: some View {
         ZStack {
             OttoColor.canvas.ignoresSafeArea()
@@ -527,8 +639,14 @@ struct InviteAcceptSheet: View {
                         .font(OttoFont.serifBold(size: 24)).foregroundStyle(OttoColor.ink)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("invite.accepted")
-                    Text("Change what you send and receive anytime from the Friends tab.")
-                        .font(.system(size: 14)).foregroundStyle(OttoColor.bark).multilineTextAlignment(.center)
+                    if sendStartsPaused {
+                        Text("Sending to \(name) starts off: free accounts auto-share with up to 3 friends. Turn Send off for someone else, then on for \(name), in Friends.")
+                            .font(.system(size: 14)).foregroundStyle(OttoColor.wax).multilineTextAlignment(.center)
+                            .accessibilityIdentifier("invite.sendPaused")
+                    } else {
+                        Text("Change what you send and receive anytime from the Friends tab.")
+                            .font(.system(size: 14)).foregroundStyle(OttoColor.bark).multilineTextAlignment(.center)
+                    }
                     OttoPillButton(title: "Done") { dismiss() }.accessibilityIdentifier("invite.done")
                 } else if preview?.state == "valid" {
                     OttoAvatarCircle(name: name, size: 72)

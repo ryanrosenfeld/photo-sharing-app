@@ -61,6 +61,67 @@ final class FriendsViewModel: ObservableObject {
         }
     }
 
+    /// My invites that nobody has used yet and that haven't expired, newest first ("Invites waiting").
+    @Published var openInvites: [OpenInvite] = []
+
+    func loadOpenInvites() async {
+        do {
+            openInvites = try await supabase.from("invites")
+                .select("code, created_at, expires_at")
+                .is("accepted_at", value: nil)
+                .gt("expires_at", value: ISO8601DateFormatter().string(from: Date()))
+                .order("created_at", ascending: false)
+                .execute().value
+        } catch {
+            print("[Friends] Couldn't load open invites: \(error)")
+        }
+    }
+
+    /// Links already handed to someone (shared or copied), remembered on this device. A link is single-use, so a
+    /// shared one must not be offered again for a second person.
+    private static let sharedKey = "invite.sharedCodes"
+    static func markShared(_ code: String, defaults: UserDefaults = .standard) {
+        var codes = defaults.stringArray(forKey: sharedKey) ?? []
+        if !codes.contains(code) { codes = Array((codes + [code]).suffix(50)) }
+        defaults.set(codes, forKey: sharedKey)
+    }
+    static func wasShared(_ code: String, defaults: UserDefaults = .standard) -> Bool {
+        (defaults.stringArray(forKey: sharedKey) ?? []).contains(code)
+    }
+
+    /// The link to show on Add Friend: reuse my newest open invite that hasn't been handed to anyone yet, so opening
+    /// Add Friend repeatedly doesn't pile up unused links. Pass `fresh` to force a new one.
+    func inviteToShare(fresh: Bool = false) async -> String? {
+        if !fresh {
+            await loadOpenInvites()
+            if let reusable = openInvites.first(where: {
+                $0.expiresAt.timeIntervalSinceNow > 3 * 86_400 && !Self.wasShared($0.code)
+            }) {
+                return reusable.code
+            }
+        }
+        let code = await createInvite()
+        await loadOpenInvites()
+        return code
+    }
+
+    func cancelInvite(_ code: String) async {
+        do {
+            try await supabase.from("invites").delete().eq("code", value: code).execute()
+            openInvites.removeAll { $0.code == code }
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    /// Who sent an invite, for a signed-out person (welcome screen). Nil when the code is unknown or offline.
+    nonisolated static func publicPreview(code: String) async -> PublicInvitePreview? {
+        guard let rows: [PublicInvitePreview] = try? await supabase
+            .rpc("preview_invite_public", params: ["p_code": code]).execute().value
+        else { return nil }   // offline: say nothing rather than "invalid"
+        return rows.first ?? PublicInvitePreview(inviterName: nil, usable: false)
+    }
+
     func preview(code: String) async -> InvitePreview? {
         do {
             let rows: [InvitePreview] = try await supabase.rpc("preview_invite", params: ["p_code": code]).execute().value

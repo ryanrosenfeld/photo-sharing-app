@@ -46,12 +46,13 @@ A **friendship** is a mutual, opt-in connection between two users. Both must acc
 
 ### Friend Request Flow
 
-1. User A taps "Add Friend" and generates an invite link
-2. A shares the link via iMessage, WhatsApp, or any channel they choose
-3. B taps the link, which opens the app with a pre-filled friend request
+1. User A taps "Add Friend" and gets an invite link, also shown as a QR code for someone standing next to them. Add Friend reuses A's newest open link until A has shared or copied it (each link works for one person), and lists A's other unused links with Cancel. The Friends tab shows "N invites waiting to be accepted"
+2. A shares the link via iMessage, WhatsApp, or any channel they choose (or B scans the QR code with their camera)
+3. B taps the link, which opens the app with a pre-filled friend request. If the link didn't open the app (some chat apps don't make it tappable, or B installed the app afterwards), B pastes the link, or the whole message, into "Have an invite link?" on the welcome screen or the Friends tab
+   - If B has no account yet, the welcome screen says "A invited you" before sign-up. The invite is saved on the device, so it survives the app being killed or B leaving to confirm their email, and the acceptance screen appears right after onboarding
 4. B sees an acceptance screen: "[Name] wants to be friends on PhotoShare. You'll automatically share photos of each other when you appear in them."
 5. B accepts or declines
-6. On acceptance, the friendship is established; both Send and Receive toggles default to ON for both users
+6. On acceptance, the friendship is established; both Send and Receive toggles default to ON for both users (a free user already at the 3-friend Send limit starts with Send OFF, and the acceptance screen says so)
 7. Both devices immediately begin syncing each other's encrypted reference photos and generating local embeddings (see Face Enrollment)
 8. A is notified: "[Name] accepted your friend request"
 
@@ -320,12 +321,15 @@ Implemented as of the onboarding workstream (email/password sign-up; Apple/Googl
 2. **Account** — name, email, password (8+ chars, show/hide toggle, keyboard moves field to field, plain-language errors). If the project requires email confirmation, the user is told to check their email.
 3. **Face profile (required)** — choose 3–5 photos of yourself. Each photo is checked **on the device the moment it is picked** (exactly one prominent face, face large enough); each tile shows a check or the reason it was rejected; only accepted photos are uploaded; Continue unlocks at 3 accepted photos. Privacy line shown. No "turn off" anywhere; Profile → Manage replaces the set through the same checked picker.
 4. **Photo Library** — in-app explanation, then the system prompt. If the user declines, they are not trapped: "Open Settings" or "Continue without it", and Profile → Permissions shows the live state with a one-tap route to Settings.
-5. **Notifications** — explanation, then the system prompt; "Not now" is equally visible and is remembered (never re-asked on relaunch).
-6. **Home.**
+5. **First friend** — "Bring a friend": share an invite link, or show a QR code to someone in the room; "Skip for now" is equally visible. Shown once per device, and skipped for people who arrived from an invite (their accept screen comes right after onboarding) and for accounts that already have friends or invites.
+6. **Notifications** — explanation, then the system prompt; "Not now" is equally visible and is remembered (never re-asked on relaunch).
+7. **Home.** If the user arrived from an invite, the acceptance screen opens here.
+
+Sign-in form: "Forgot?" emails a password reset link. The Apple button is hidden until Sign in with Apple is built (a button that does nothing is worse than none).
 
 Onboarding state is **derived, not stored**: face profile present on the server, and the system permission status. A force-quit or reinstall resumes at the first unfinished step and never re-asks a question already answered. The account exists as soon as step 2 completes (deviation from "account is not created until face profile is done": a half-finished sign-up is resumed, not lost).
 
-Not yet in the flow: keypair generation and the first-friend invite step (owned by the friends/crypto workstreams; add as further `OnboardingStep` cases).
+Keypair generation runs silently at sign-in (`KeyPairManager.ensurePublished`), not as a step.
 
 Original v3 plan, kept for reference:
 

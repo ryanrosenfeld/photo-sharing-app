@@ -6,9 +6,15 @@ import UserNotifications
 /// (face profile on the server, system permission status), so it resumes where the user left off after a
 /// force-quit or reinstall, and it never re-asks for something the user already answered.
 enum OnboardingStep: Int, CaseIterable {
-    case faceProfile, photoAccess, notifications
+    case faceProfile, photoAccess, firstFriend, notifications
 
     private static let notificationsOfferedKey = "onboarding.notificationsOffered"
+    private static let firstFriendOfferedKey = "onboarding.firstFriendOffered"
+
+    /// Shown once: sharing or skipping both count.
+    static func markFirstFriendOffered() {
+        UserDefaults.standard.set(true, forKey: firstFriendOfferedKey)
+    }
 
     /// "Not now" leaves the system status undetermined, so remember that we already offered.
     static func markNotificationsOffered() {
@@ -22,10 +28,28 @@ enum OnboardingStep: Int, CaseIterable {
             return !profile.faceProfileEnabled
         case .photoAccess:
             return PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined
+        case .firstFriend:
+            // Someone who arrived from an invite already has a friend waiting: the accept screen comes next instead.
+            if InviteRouter.hasStoredInvite() { return false }
+            if UserDefaults.standard.bool(forKey: Self.firstFriendOfferedKey) { return false }
+            // People who already have a friend, or have sent an invite (existing accounts, reinstalls), skip it.
+            return !(await Self.hasFriendsOrInvites())
         case .notifications:
             if UserDefaults.standard.bool(forKey: Self.notificationsOfferedKey) { return false }
             let settings = await UNUserNotificationCenter.current().notificationSettings()
             return settings.authorizationStatus == .notDetermined
+        }
+    }
+
+    private static func hasFriendsOrInvites() async -> Bool {
+        do {
+            let friends: [Friend] = try await supabase.rpc("list_friends").execute().value
+            if !friends.isEmpty { return true }
+            let invites: [OpenInvite] = try await supabase.from("invites")
+                .select("code, created_at, expires_at").limit(1).execute().value
+            return !invites.isEmpty
+        } catch {
+            return true   // offline or failing: don't block onboarding on a nice-to-have step
         }
     }
 
@@ -85,8 +109,10 @@ struct OnboardingFlow: View {
                     }
                 case .photoAccess:
                     PhotoAccessStep(step: 2, total: total) { Task { await advance() } }
+                case .firstFriend:
+                    FirstFriendStep(step: 3, total: total) { Task { await advance() } }
                 case .notifications:
-                    NotificationStep(step: 3, total: total) { Task { await advance() } }
+                    NotificationStep(step: 4, total: total) { Task { await advance() } }
                 }
             }
             .id(step)
