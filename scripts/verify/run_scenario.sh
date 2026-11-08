@@ -79,32 +79,40 @@ xcodebuild build-for-testing -project PhotoShare.xcodeproj -scheme PhotoShare \
 APP=$DD/Build/Products/Debug-iphonesimulator/PhotoShare.app
 setup_sim() { boot "$1"; xcrun simctl install "$1" "$APP"; xcrun simctl privacy "$1" grant photos "$BUNDLE"; }
 
+mkdir -p "$OUT/videos"; source "$(dirname "$0")/recording-lib.sh"
 shot() { xcrun simctl io "$1" screenshot "$OUT/screens/$2.png" >/dev/null 2>&1; }
 uistep() { # persona udid step [extra env...]
   local who=$1 udid=$2 step=$3; shift 3
   local res=$OUT/logs/$who-$step.xcresult
-  env TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
-      TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@" \
-    xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
-      -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD" \
-      -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$res" \
-      >"$OUT/logs/$who-$step.log" 2>&1
+  local cmd=(env TEST_RUNNER_VERIFY_EMAIL="$who@test.local" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD"
+      TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" "$@"
+    xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare
+      -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$DD"
+      -only-testing:PhotoShareUITests/ScenarioTests/$step -resultBundlePath "$res")
+  if [ -n "${RECORD_STEP:-}" ] && [ "$RECORD_STEP" = "$step" ]; then   # tight evidence clip of just this step
+    run_recorded "$udid" "$OUT/videos/$who-$step.mp4" "$OUT/logs/$who-$step.log" "${cmd[@]}"
+  else
+    "${cmd[@]}" >"$OUT/logs/$who-$step.log" 2>&1
+  fi
   local rc=$?
   shot "$udid" "$who-$step"
   return $rc
 }
 
-# ---- 1b. Bob signs in once so his phone publishes its encryption key (senders can't encrypt to a friend without one) --------
+# ---- 1b. Alice signs in first (publishes her key); then Bob (publishes his key and grants Alice his face-profile key) --------
+setup_sim "$A" && pass "alice sim: booted, app installed, Photos permission granted (simctl privacy)"
+uistep alice "$A" testSignIn && pass "alice: first sign-in (UI)" || fail "alice: first sign-in (UI)"
+sleep 3
+xcrun simctl shutdown "$A" 2>/dev/null
 setup_sim "$B" && pass "bob sim: booted, app installed"
 uistep bob "$B" testSignIn && pass "bob: first sign-in (UI)" || fail "bob: first sign-in (UI)"
-sleep 3
+sleep 20   # let MainTabView's syncKeys finish (slow under load)
 [ -n "$(psql_q "select public_key from profiles where id='$BOB_ID'")" ] \
   && pass "bob's phone published an encryption public key" || fail "bob has no profiles.public_key after sign-in"
 xcrun simctl shutdown "$B" 2>/dev/null
 
-setup_sim "$A" && pass "alice sim: booted, app installed, Photos permission granted (simctl privacy)"
-# ---- 2. Alice signs in and enrolls Bob from Bob's face profile ---------------------------------
-uistep alice "$A" testSignIn && pass "alice: sign in (UI)" || fail "alice: sign in (UI)"
+boot "$A"   # Alice is still signed in; she auto-enrolls Bob from his face profile when the app launches
+# ---- 2. Alice (already signed in) auto-enrolls Bob from Bob's face profile -----------------------
 uistep alice "$A" testEnrollFriendFromFaceProfile \
   && pass "alice: enrolled Bob from his face profile (UI; embeddings computed on-device)" \
   || fail "alice: enroll Bob (UI) — see logs/alice-testEnrollFriendFromFaceProfile.log"
