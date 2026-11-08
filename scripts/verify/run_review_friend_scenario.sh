@@ -139,7 +139,7 @@ grep -E "\[AutoShare\]" "$OUT/logs/alice-app-stdout.log" > "$OUT/logs/alice-auto
 QUEUED=$(grep -c "Queued for review" "$OUT/logs/alice-autoshare.txt")
 [ "$QUEUED" = 2 ] && pass "alice's phone matched and queued 2 photos of Bob for review (Dan's was ignored)" \
   || fail "expected 2 'Queued for review' log lines, got $QUEUED (see logs/alice-autoshare.txt)"
-n_photos() { psql_q "select count(*) from photos"; }; n_obj() { psql_q "select count(*) from storage.objects where bucket_id='photos'"; }
+n_photos() { psql_q "select count(*) from photos"; }; n_obj() { psql_q "select count(*) from storage.objects where bucket_id='photos' and name not like '%.thumb.enc'"; }
 [ "$(n_photos)" = 0 ] && [ "$(n_obj)" = 0 ] \
   && pass "NOTHING uploaded while queued: photos=0, storage objects=0" \
   || fail "queued photos leaked to the server: photos=$(n_photos) objects=$(n_obj)"

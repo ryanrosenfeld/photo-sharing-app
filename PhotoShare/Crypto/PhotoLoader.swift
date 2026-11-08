@@ -40,6 +40,7 @@ actor PhotoLoader {
     private let memory = ImageMemoryCache()
     private var imageTasks: [Key: Task<UIImage, Error>] = [:]
     private var blobTasks: [UUID: Task<Data, Error>] = [:]
+    private var thumbBlobTasks: [UUID: Task<Data, Error>] = [:]
     private var prunedDisk = false
     /// At most this many blobs download at once, first requested first: on a slow link the photo on top of the stack gets the
     /// bandwidth instead of sharing it with every photo behind it.
@@ -59,12 +60,21 @@ actor PhotoLoader {
         if let cached = memory.image(photoId: photo.photoId, thumbnail: thumb) { return cached }
         let key = Key(id: photo.photoId, thumbnail: thumb)
         if let running = imageTasks[key] { return try await running.value }
-        let blobTask = blobTask(for: photo)
+        // Thumbnails come from the small encrypted thumbnail when the sender uploaded one; otherwise (or if it fails)
+        // from the full photo.
+        let usesThumbBlob = thumb && photo.photos.thumbPath != nil
+        let blobTask = usesThumbBlob ? thumbBlobTask(for: photo) : blobTask(for: photo)
         let memory = memory
         let task = Task { () throws -> UIImage in
             let started = ContinuousClock.now
-            let data = try await blobTask.value
-            let image = try await Self.decode(data, maxPixelSize: size.maxPixelSize)
+            let image: UIImage
+            do {
+                let data = try await blobTask.value
+                image = try await Self.decode(data, maxPixelSize: size.maxPixelSize)
+            } catch where usesThumbBlob {
+                PerfLog.logger.error("[perf] thumbnail unavailable, using full photo: \(String(describing: error), privacy: .public)")
+                image = try await Self.decode(try await self.imageData(for: photo), maxPixelSize: size.maxPixelSize)
+            }
             memory.set(image, photoId: photo.photoId, thumbnail: thumb)
             PerfLog.logger.notice("[perf] \(photo.photoId.uuidString.prefix(4), privacy: .public) \(thumb ? "thumb" : "full", privacy: .public) ready after \(PerfLog.ms(since: started))ms \(Int(image.size.width * image.scale))x\(Int(image.size.height * image.scale))")
             return image
@@ -110,6 +120,22 @@ actor PhotoLoader {
         return task
     }
 
+    /// Same as `blobTask` for the small thumbnail blob (decrypts with the photo's own content key).
+    private func thumbBlobTask(for photo: ReceivedPhoto) -> Task<Data, Error> {
+        if let running = thumbBlobTasks[photo.photoId] { return running }
+        pruneDiskIfNeeded()
+        let task = Task { () throws -> Data in
+            await self.acquireDownloadSlot()
+            let blob: Data
+            do { blob = try await Self.encryptedBlob(for: photo, thumbnail: true) } catch { self.releaseDownloadSlot(); throw error }
+            self.releaseDownloadSlot()
+            return try await Self.decrypt(blob, for: photo)
+        }
+        thumbBlobTasks[photo.photoId] = task
+        Task { _ = try? await task.value; self.thumbBlobTasks[photo.photoId] = nil }
+        return task
+    }
+
     private func acquireDownloadSlot() async {
         if activeDownloads < Self.maxConcurrentDownloads { activeDownloads += 1; return }
         await withCheckedContinuation { downloadWaiters.append($0) }   // the slot is handed over, not re-counted
@@ -119,11 +145,12 @@ actor PhotoLoader {
         if downloadWaiters.isEmpty { activeDownloads -= 1 } else { downloadWaiters.removeFirst().resume() }
     }
 
-    nonisolated private static func encryptedBlob(for photo: ReceivedPhoto) async throws -> Data {
-        let file = EncryptedBlobCache.url(for: photo.photoId)
+    nonisolated private static func encryptedBlob(for photo: ReceivedPhoto, thumbnail: Bool = false) async throws -> Data {
+        guard let path = thumbnail ? photo.photos.thumbPath : photo.photos.storagePath else { throw LoadError.notAnImage }
+        let file = EncryptedBlobCache.url(for: photo.photoId, thumbnail: thumbnail)
         if let data = try? Data(contentsOf: file) { return data }
         let started = ContinuousClock.now
-        let blob = try await supabase.storage.from("photos").download(path: photo.photos.storagePath)
+        let blob = try await supabase.storage.from("photos").download(path: path)
         PerfLog.logger.notice("[perf] \(photo.photoId.uuidString.prefix(4), privacy: .public) download \(PerfLog.ms(since: started))ms \(blob.count) bytes")
         if photo.wrappedKey != nil { EncryptedBlobCache.store(blob, at: file) }   // only ciphertext is ever cached
         return blob
@@ -203,7 +230,9 @@ private enum EncryptedBlobCache {
         return dir
     }()
 
-    static func url(for photoId: UUID) -> URL { directory.appendingPathComponent(photoId.uuidString + ".blob") }
+    static func url(for photoId: UUID, thumbnail: Bool = false) -> URL {
+        directory.appendingPathComponent(photoId.uuidString + (thumbnail ? ".thumb.blob" : ".blob"))
+    }
 
     static func store(_ blob: Data, at url: URL) { try? blob.write(to: url, options: .atomic) }
 
