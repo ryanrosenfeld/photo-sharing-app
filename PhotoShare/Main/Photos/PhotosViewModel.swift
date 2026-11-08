@@ -22,6 +22,8 @@ final class PhotosViewModel: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            // Warm the first thumbnails now rather than when each polaroid is first drawn.
+            PhotoLoader.shared.prefetch(photos)
         } catch where Self.isCancellation(error) {
             // Pull to refresh cancelled by SwiftUI (view update mid-refresh): nothing failed, nothing to show.
         } catch {
