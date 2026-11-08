@@ -64,7 +64,6 @@ actor PhotoLoader {
         // from the full photo.
         let usesThumbBlob = thumb && photo.photos.thumbPath != nil
         let blobTask = usesThumbBlob ? thumbBlobTask(for: photo) : blobTask(for: photo)
-        let fallback: (@Sendable () async throws -> Data)? = usesThumbBlob ? { try await self.imageData(for: photo) } : nil
         let memory = memory
         let task = Task { () throws -> UIImage in
             let started = ContinuousClock.now
@@ -72,9 +71,9 @@ actor PhotoLoader {
             do {
                 let data = try await blobTask.value
                 image = try await Self.decode(data, maxPixelSize: size.maxPixelSize)
-            } catch where fallback != nil {
+            } catch where usesThumbBlob {
                 PerfLog.logger.error("[perf] thumbnail unavailable, using full photo: \(String(describing: error), privacy: .public)")
-                image = try await Self.decode(try await fallback!(), maxPixelSize: size.maxPixelSize)
+                image = try await Self.decode(try await self.imageData(for: photo), maxPixelSize: size.maxPixelSize)
             }
             memory.set(image, photoId: photo.photoId, thumbnail: thumb)
             PerfLog.logger.notice("[perf] \(photo.photoId.uuidString.prefix(4), privacy: .public) \(thumb ? "thumb" : "full", privacy: .public) ready after \(PerfLog.ms(since: started))ms \(Int(image.size.width * image.scale))x\(Int(image.size.height * image.scale))")
