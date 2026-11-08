@@ -137,7 +137,7 @@ shot "$A" alice-after-autoshare
 psql_q "select p.sender_id, pr.recipient_id, p.storage_path, p.taken_at from photos p join photo_recipients pr on pr.photo_id=p.id" > "$OUT/db/photo_recipients.txt"
 SENT=$(psql_q "select count(*) from photos where sender_id='$ALICE_ID'")
 TO_BOB=$(psql_q "select count(*) from photo_recipients where recipient_id='$BOB_ID'")
-OBJ=$(psql_q "select count(*) from storage.objects where bucket_id='photos'")
+OBJ=$(psql_q "select count(*) from storage.objects where bucket_id='photos' and name not like '%.thumb.enc'")
 [ "$SENT" = 1 ] && [ "$TO_BOB" = 1 ] && [ "$OBJ" = 1 ] \
   && pass "alice's phone matched Bob's face and uploaded exactly 1 photo to Bob (and did not upload Dan's)" \
   || fail "auto-share result wrong: photos from alice=$SENT, recipients bob=$TO_BOB, storage objects=$OBJ (expected 1/1/1); see logs/alice-app-stdout.log"

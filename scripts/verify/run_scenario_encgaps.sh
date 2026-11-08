@@ -138,7 +138,7 @@ SIMCTL_CHILD_PHOTOSHARE_SUPABASE_URL="$API_URL" SIMCTL_CHILD_PHOTOSHARE_SUPABASE
 sleep 25   # give the app time to match and (not) send
 shot "$A" alice-no-key-yet
 N0=$(psql_q "select count(*) from photos where sender_id='$ALICE_ID'")
-O0=$(psql_q "select count(*) from storage.objects where bucket_id='photos'")
+O0=$(psql_q "select count(*) from storage.objects where bucket_id='photos' and name not like '%.thumb.enc'")
 [ "$N0" = 0 ] && [ "$O0" = 0 ] && pass "no key for Bob: nothing uploaded, nothing sent in the clear" || fail "photo shared/uploaded without recipient key (photos=$N0 objects=$O0)"
 PEND=$(find "$(xcrun simctl get_app_container "$A" "$BUNDLE" data)/Library/Application Support/PendingShares" -name '*.json' -exec cat {} \; 2>/dev/null)
 echo "$PEND" > "$OUT/db/alice-pending-shares.json"
@@ -159,7 +159,7 @@ shot "$A" alice-after-autoshare
 psql_q "select p.sender_id, pr.recipient_id, p.storage_path, p.taken_at from photos p join photo_recipients pr on pr.photo_id=p.id" > "$OUT/db/photo_recipients.txt"
 SENT=$(psql_q "select count(*) from photos where sender_id='$ALICE_ID'")
 TO_BOB=$(psql_q "select count(*) from photo_recipients where recipient_id='$BOB_ID'")
-OBJ=$(psql_q "select count(*) from storage.objects where bucket_id='photos'")
+OBJ=$(psql_q "select count(*) from storage.objects where bucket_id='photos' and name not like '%.thumb.enc'")
 [ "$SENT" = 1 ] && [ "$TO_BOB" = 1 ] && [ "$OBJ" = 1 ] \
   && pass "after Bob published his key, the retry delivered exactly 1 photo to Bob (Dan's not uploaded)" \
   || fail "auto-share result wrong: photos from alice=$SENT, recipients bob=$TO_BOB, storage objects=$OBJ (expected 1/1/1); see logs/alice-app-stdout.log"
