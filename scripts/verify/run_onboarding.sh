@@ -24,9 +24,8 @@ pass() { log "PASS: $*"; echo "- PASS: $*" >> "$SUMMARY"; }
 fail() { log "FAIL: $*"; echo "- FAIL: $*" >> "$SUMMARY"; FAILS=$((FAILS+1)); }
 
 # ---- shared simulator lock (other workstreams share this Mac) ----
-LOCK=/tmp/photoshare-sim.lock
-until mkdir "$LOCK" 2>/dev/null; do log "waiting for simulator lock"; sleep 15; done
-echo $$ > "$LOCK/pid"
+source scripts/verify/simlock-lib.sh
+simlock_acquire   # stale-aware: a lock left by a dead run is taken over
 cleanup() {
   xcrun simctl shutdown "${S:-}" 2>/dev/null
   rm -rf "$LOCK"
@@ -67,7 +66,8 @@ PY
 # ---- simulator ----
 sim() { local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
         [ -n "$u" ] || u=$(xcrun simctl create "$1" com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro); echo "$u"; }
-S=$(sim verify-onboarding)
+# One device per checkout, so a run in another worktree can never erase or shut down this one mid-test.
+S=$(sim "verify-onboarding-$(printf %s "$PWD" | shasum | cut -c1-8)")
 xcrun simctl shutdown "${S:-}" 2>/dev/null
 xcrun simctl erase "$S"
 xcrun simctl boot "$S" && xcrun simctl bootstatus "$S" -b >/dev/null 2>&1
