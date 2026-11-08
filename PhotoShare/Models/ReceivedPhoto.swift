@@ -30,6 +30,8 @@ struct PhotoDetail: Codable {
     let id: UUID
     let senderId: UUID
     let storagePath: String
+    /// Encrypted ~800px thumbnail (same content key). nil for photos sent before thumbnails existed.
+    let thumbPath: String?
     let takenAt: Date
     let locationLat: Double?
     let locationLng: Double?
@@ -44,6 +46,7 @@ struct PhotoDetail: Codable {
         case id, sender
         case senderId = "sender_id"
         case storagePath = "storage_path"
+        case thumbPath = "thumb_path"
         case takenAt = "taken_at"
         case locationLat = "location_lat"
         case locationLng = "location_lng"

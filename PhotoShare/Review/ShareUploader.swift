@@ -1,4 +1,5 @@
 import CryptoKit
+import ImageIO
 import Photos
 import Supabase
 import UIKit
@@ -66,16 +67,33 @@ enum ShareUploader {
             wrappedKeys[id] = try PhotoEncryption.wrap(sealed.key, to: publicKeys[id]!).base64EncodedString()
         }
 
-        let storagePath = "photos/\(UUID().uuidString).enc"
+        let name = UUID().uuidString
+        let storagePath = "photos/\(name).enc"
         try await supabase.storage
             .from("photos")
             .upload(path: storagePath, file: sealed.blob, options: FileOptions(contentType: "application/octet-stream"))
+
+        // A small encrypted thumbnail (same content key) so receivers can paint the first image without downloading the
+        // full photo. Best effort: without it, receivers just load the full photo.
+        var thumbPath: String?
+        if let thumb = Self.thumbnailJPEG(from: data), let sealedThumb = try? PhotoEncryption.seal(thumb, with: sealed.key) {
+            let path = "photos/\(name).thumb.enc"
+            do {
+                try await supabase.storage
+                    .from("photos")
+                    .upload(path: path, file: sealedThumb, options: FileOptions(contentType: "application/octet-stream"))
+                thumbPath = path
+            } catch {
+                print("[Share] thumbnail upload failed, continuing without: \(error)")
+            }
+        }
 
         let inserted: InsertedPhoto = try await supabase
             .from("photos")
             .insert(NewPhoto(
                 senderId: senderId,
                 storagePath: storagePath,
+                thumbPath: thumbPath,
                 takenAt: asset.creationDate ?? Date(),
                 locationLat: asset.location?.coordinate.latitude,
                 locationLng: asset.location?.coordinate.longitude
@@ -91,11 +109,25 @@ enum ShareUploader {
         }
         try await supabase.from("photo_recipients").insert(recipients).execute()
     }
+
+    /// ~800px JPEG for the polaroid stack (matches the receiver's thumbnail size), orientation baked in.
+    nonisolated static func thumbnailJPEG(from jpeg: Data, maxPixelSize: Int = 800) -> Data? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        ]
+        guard let source = CGImageSourceCreateWithData(jpeg as CFData, nil),
+              let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+        else { return nil }
+        return UIImage(cgImage: cg).jpegData(compressionQuality: 0.8)
+    }
 }
 
 private struct NewPhoto: Encodable {
     let senderId: UUID
     let storagePath: String
+    let thumbPath: String?
     let takenAt: Date
     let locationLat: Double?
     let locationLng: Double?
@@ -103,6 +135,7 @@ private struct NewPhoto: Encodable {
     enum CodingKeys: String, CodingKey {
         case senderId = "sender_id"
         case storagePath = "storage_path"
+        case thumbPath = "thumb_path"
         case takenAt = "taken_at"
         case locationLat = "location_lat"
         case locationLng = "location_lng"

@@ -36,6 +36,12 @@ enum PhotoEncryption {
         try AES.GCM.seal(plaintext, using: key).combined!
     }
 
+    /// Seals with an existing content key (used for the thumbnail, which shares the photo's key). Each call draws a fresh
+    /// random 96-bit nonce, so reusing the key for two messages is safe.
+    static func seal(_ plaintext: Data, with key: SymmetricKey) throws -> Data {
+        try AES.GCM.seal(plaintext, using: key).combined!
+    }
+
     static func open(blob: Data, key: SymmetricKey) throws -> Data {
         try AES.GCM.open(AES.GCM.SealedBox(combined: blob), using: key)
     }
