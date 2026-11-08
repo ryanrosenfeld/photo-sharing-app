@@ -110,6 +110,16 @@ final class ScenarioTests: XCTestCase {
         let done = ready.waitForExistence(timeout: 90)
         shot(done ? "enrollment-complete" : "enrollment-timeout")
         XCTAssertTrue(done, "friend shows Ready without any tap")
+        // Friend detail explains the status and offers Refresh.
+        let row = friendRow(env["VERIFY_FRIEND"] ?? "Bob")
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Bob's row")
+        sleep(1)  // hold the Friends tab on screen for the recording
+        row.tap()
+        let refresh = app.buttons["friend.enrollment.refresh"]
+        if !refresh.waitForExistence(timeout: 5) { app.swipeUp() }   // the status block sits below the toggles
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10), "Friend detail offers Refresh")
+        shot("friend-detail-enrollment")
+        sleep(2)
     }
 
     // MARK: - Manual review mode

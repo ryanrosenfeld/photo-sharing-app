@@ -430,6 +430,7 @@ struct FriendDetailSheet: View {
                                 .font(.system(size: 13))
                                 .foregroundStyle(OttoColor.bark)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("friend.enrollment.explanation")
                             if status != .settingUp, status != .noFaceProfile, let me = auth.session?.user.id {
                                 Button("Refresh") { Task { await enrollment.refresh(friend, viewer: me, friends: vm.friends) } }
                                     .font(.system(size: 13, weight: .medium))
@@ -438,7 +439,6 @@ struct FriendDetailSheet: View {
                             }
                         }
                         .padding(.horizontal, 24).padding(.top, 14)
-                        .accessibilityIdentifier("friend.enrollment")
                     }
 
                     if friend.isPaused {
