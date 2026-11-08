@@ -34,7 +34,7 @@ struct PhotoDetailView: View {
     // MARK: - Subviews
 
     private var photoImage: some View {
-        PhotoImage(photo: photo) { phase in
+        PhotoImage(photo: photo, size: .full) { phase in
             switch phase {
             case .success(let image):
                 image
