@@ -9,6 +9,17 @@ import Foundation
 // friend show as not enrolled until re-enrolled, instead of silently matching against stale vectors.
 struct FaceEnrollmentStore: Sendable {
     private static let keyPrefix = "face_enrollment_v3_"
+    /// Which version of the friend's face profile the stored embeddings came from (see FaceProfileManager.availability).
+    private static let versionPrefix = "face_enrollment_version_v3_"
+
+    func save(_ embeddings: [FaceEmbedding], for friendId: UUID, version: String) throws {
+        try save(embeddings, for: friendId)
+        UserDefaults.standard.set(version, forKey: Self.versionPrefix + friendId.uuidString)
+    }
+
+    func version(for friendId: UUID) -> String? {
+        UserDefaults.standard.string(forKey: Self.versionPrefix + friendId.uuidString)
+    }
 
     func save(_ embeddings: [FaceEmbedding], for friendId: UUID) throws {
         let data = try JSONEncoder().encode(embeddings)
@@ -26,13 +37,16 @@ struct FaceEnrollmentStore: Sendable {
 
     func remove(for friendId: UUID) {
         UserDefaults.standard.removeObject(forKey: key(for: friendId))
+        UserDefaults.standard.removeObject(forKey: Self.versionPrefix + friendId.uuidString)
     }
 
     /// Remove embeddings for everyone not in `friendIds` (e.g. they unfriended me).
     func prune(keeping friendIds: Set<UUID>) {
-        for key in UserDefaults.standard.dictionaryRepresentation().keys where key.hasPrefix(Self.keyPrefix) {
-            let id = UUID(uuidString: String(key.dropFirst(Self.keyPrefix.count)))
-            if let id, !friendIds.contains(id) { UserDefaults.standard.removeObject(forKey: key) }
+        for key in UserDefaults.standard.dictionaryRepresentation().keys {
+            for prefix in [Self.keyPrefix, Self.versionPrefix] where key.hasPrefix(prefix) {
+                let id = UUID(uuidString: String(key.dropFirst(prefix.count)))
+                if let id, !friendIds.contains(id) { UserDefaults.standard.removeObject(forKey: key) }
+            }
         }
     }
 

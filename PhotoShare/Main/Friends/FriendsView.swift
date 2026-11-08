@@ -9,9 +9,7 @@ struct FriendsView: View {
     @State private var showPasteInvite = false
     @State private var pastedCode: String?
     @State private var detailFriend: Friend?
-    @State private var enrollingFriend: Friend?
-
-    private let enrollmentStore = FaceEnrollmentStore()
+    @EnvironmentObject var enrollment: FaceEnrollmentSync
 
     var body: some View {
         ZStack {
@@ -68,13 +66,6 @@ struct FriendsView: View {
         }) { PasteInviteSheet(code: $pastedCode) }
         .task { await vm.loadOpenInvites() }
         .sheet(item: $detailFriend) { friend in FriendDetailSheet(friendId: friend.friendId) }
-        .sheet(item: $enrollingFriend) { friend in
-            FaceEnrollmentView(
-                friendId: friend.friendId,
-                friendName: friend.displayName,
-                friendHasFaceProfile: friend.faceProfileEnabled
-            )
-        }
     }
 
     // MARK: - Header
@@ -212,10 +203,9 @@ struct FriendsView: View {
                     ForEach(Array(vm.friends.enumerated()), id: \.element.id) { idx, friend in
                         FriendRow(
                             friend: friend,
-                            isEnrolled: enrollmentStore.hasEnrollment(for: friend.friendId),
+                            enrollment: enrollment.status(for: friend),
                             reviewOn: reviewStore.settings.requiresReview(for: friend.friendId),
-                            onOpen: { detailFriend = friend },
-                            onEnroll: { enrollingFriend = friend }
+                            onOpen: { detailFriend = friend }
                         )
                         if idx < vm.friends.count - 1 {
                             Divider().background(OttoColor.line).padding(.leading, 70)
@@ -231,10 +221,9 @@ struct FriendsView: View {
 
 private struct FriendRow: View {
     let friend: Friend
-    let isEnrolled: Bool
+    let enrollment: EnrollmentStatus?
     let reviewOn: Bool
     let onOpen: () -> Void
-    let onEnroll: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -269,17 +258,7 @@ private struct FriendRow: View {
             .accessibilityLabel("\(friend.displayName), \(friend.statusLine)" + (reviewOn ? ", review before sending" : ""))
             .accessibilityIdentifier("friends.row")
 
-            Button(action: onEnroll) {
-                Label(isEnrolled ? "Enrolled" : "Enroll", systemImage: isEnrolled ? "checkmark.circle.fill" : "person.crop.circle.badge.plus")
-                    .font(.system(size: 12, weight: .medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(isEnrolled ? OttoColor.sage.opacity(0.15) : OttoColor.chip)
-                    .foregroundStyle(isEnrolled ? OttoColor.sageDark : OttoColor.bark)
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("friends.link.enroll")
+            if let enrollment { EnrollmentChip(status: enrollment, name: friend.displayName) }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -299,11 +278,80 @@ extension Friend {
     }
 }
 
+// MARK: - Face recognition status
+
+/// Replaces the old "Enroll" button: enrollment is automatic, so the row only says where it stands.
+struct EnrollmentChip: View {
+    let status: EnrollmentStatus
+    let name: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            switch status {
+            case .settingUp: ProgressView().controlSize(.mini)
+            default: Image(systemName: icon)
+            }
+            Text(label)
+        }
+        .font(.system(size: 12, weight: .medium))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(status == .ready ? OttoColor.sage.opacity(0.15) : OttoColor.chip)
+        .foregroundStyle(status == .ready ? OttoColor.sageDark : OttoColor.bark)
+        .clipShape(Capsule())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(EnrollmentChip.explanation(status, name: name))
+        .accessibilityIdentifier("friends.enrollment.\(EnrollmentChip.key(status))")
+    }
+
+    private var icon: String {
+        switch status {
+        case .ready: "checkmark.circle.fill"
+        case .waitingForThem: "hourglass"
+        case .noFaceProfile: "person.crop.circle.badge.questionmark"
+        case .failed: "exclamationmark.circle"
+        case .settingUp: ""
+        }
+    }
+
+    private var label: String {
+        switch status {
+        case .ready: "Ready"
+        case .settingUp: "Setting up"
+        case .waitingForThem: "Waiting"
+        case .noFaceProfile: "No photos"
+        case .failed: "Retrying"
+        }
+    }
+
+    static func key(_ status: EnrollmentStatus) -> String {
+        switch status {
+        case .ready: "ready"
+        case .settingUp: "settingUp"
+        case .waitingForThem: "waiting"
+        case .noFaceProfile: "noProfile"
+        case .failed: "failed"
+        }
+    }
+
+    static func explanation(_ status: EnrollmentStatus, name: String) -> String {
+        switch status {
+        case .ready: "Your phone can recognize \(name) in new photos."
+        case .settingUp: "Getting ready to recognize \(name)."
+        case .waitingForThem: "Waiting for \(name) to open otto, so their phone can share their face photos with yours."
+        case .noFaceProfile: "\(name) hasn't added face photos yet, so their photos can't be matched."
+        case .failed: "Couldn't load \(name)'s face photos. otto tries again next time you open it."
+        }
+    }
+}
+
 // MARK: - Friend detail (toggles, unfriend)
 
 struct FriendDetailSheet: View {
     @EnvironmentObject var vm: FriendsViewModel
     @EnvironmentObject var reviewStore: ReviewQueueStore
+    @EnvironmentObject var enrollment: FaceEnrollmentSync
+    @EnvironmentObject var auth: AuthManager
     @Environment(\.dismiss) private var dismiss
     let friendId: UUID
     @State private var confirmUnfriend = false
@@ -373,6 +421,24 @@ struct FriendDetailSheet: View {
                         .foregroundStyle(OttoColor.sage)
                         .padding(.top, 10)
                         .accessibilityIdentifier("friend.review.reset")
+                    }
+
+                    if let status = enrollment.status(for: friend) {
+                        HStack(alignment: .top, spacing: 10) {
+                            EnrollmentChip(status: status, name: friend.displayName)
+                            Text(EnrollmentChip.explanation(status, name: friend.displayName))
+                                .font(.system(size: 13))
+                                .foregroundStyle(OttoColor.bark)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("friend.enrollment.explanation")
+                            if status != .settingUp, status != .noFaceProfile, let me = auth.session?.user.id {
+                                Button("Refresh") { Task { await enrollment.refresh(friend, viewer: me, friends: vm.friends) } }
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(OttoColor.sage)
+                                    .accessibilityIdentifier("friend.enrollment.refresh")
+                            }
+                        }
+                        .padding(.horizontal, 24).padding(.top, 14)
                     }
 
                     if friend.isPaused {

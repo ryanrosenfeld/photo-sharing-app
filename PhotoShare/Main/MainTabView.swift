@@ -10,6 +10,7 @@ struct MainTabView: View {
     @StateObject private var friendsVM = FriendsViewModel()
     @StateObject private var processor = AutoShareProcessor()
     @StateObject private var reviewStore = ReviewQueueStore()
+    @StateObject private var enrollment = FaceEnrollmentSync()
     @State private var selectedTab: OttoTab = .photos
 
     var body: some View {
@@ -42,6 +43,7 @@ struct MainTabView: View {
         .ignoresSafeArea(.keyboard)
         .environmentObject(reviewStore)
         .environmentObject(friendsVM)
+        .environmentObject(enrollment)
         .sheet(item: Binding(
             get: { inviteRouter.pendingCode.map(PendingInvite.init) },
             set: { if $0 == nil { inviteRouter.pendingCode = nil } }
@@ -61,7 +63,17 @@ struct MainTabView: View {
             async let f: () = friendsVM.load()
             _ = await (p, f)
             await syncEncryption(userId: userId)
+            await enrollment.sync(viewer: userId, friends: friendsVM.friends)
             await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
+        }
+        // A new friend (invite accepted on either side): hand them our face-profile key now, and enroll them as soon
+        // as theirs is readable, instead of waiting for the next launch.
+        .onChange(of: friendsVM.friends.map(\.friendId)) { old, new in
+            guard let userId = authManager.session?.user.id, !Set(new).isSubset(of: Set(old)) else { return }
+            Task {
+                await FaceProfileManager.syncKeys(userId: userId, friendIds: new)
+                await enrollment.sync(viewer: userId, friends: friendsVM.friends)
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             guard let userId = authManager.session?.user.id else { return }
@@ -70,6 +82,7 @@ struct MainTabView: View {
             Task {
                 await friendsVM.load()   // pick up new friends and the other side's toggle changes
                 await syncEncryption(userId: userId)
+                await enrollment.sync(viewer: userId, friends: friendsVM.friends)
                 await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
             }
         }

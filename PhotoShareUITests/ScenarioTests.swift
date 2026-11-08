@@ -100,23 +100,26 @@ final class ScenarioTests: XCTestCase {
         shot("signed-in-photos-tab")
     }
 
-    /// Alice: open Friends, enroll the friend from their face profile (no photo picker needed).
+    /// Alice: open Friends; the friend is enrolled automatically from their face profile (no button, no picker).
+    /// The name is kept so the scenario scripts don't change.
     func testEnrollFriendFromFaceProfile() {
         ensureSignedIn()
-        app.buttons["tab.friends"].tap()
-        app.tap()  // lets the interruption monitor handle the Photos permission alert
-        let enroll = app.buttons["friends.link.enroll"].firstMatch
-        XCTAssertTrue(enroll.waitForExistence(timeout: 15), "outgoing friend row with enroll button")
-        shot("friends-before-enroll")
-        enroll.tap()
-        let submit = app.buttons["enroll.submit"]
-        XCTAssertTrue(submit.waitForExistence(timeout: 5))
-        submit.tap()
-        let success = app.descendants(matching: .any)["enroll.success"]
-        let done = success.waitForExistence(timeout: 60)
+        openFriendsTab()
+        let ready = app.descendants(matching: .any)["friends.enrollment.ready"].firstMatch
+        XCTAssertFalse(app.buttons["friends.link.enroll"].exists, "no manual Enroll button any more")
+        let done = ready.waitForExistence(timeout: 90)
         shot(done ? "enrollment-complete" : "enrollment-timeout")
-        XCTAssertTrue(done, "enrollment complete")
-        app.buttons["enroll.done"].tap()
+        XCTAssertTrue(done, "friend shows Ready without any tap")
+        // Friend detail explains the status and offers Refresh.
+        let row = friendRow(env["VERIFY_FRIEND"] ?? "Bob")
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "Bob's row")
+        sleep(1)  // hold the Friends tab on screen for the recording
+        row.tap()
+        let refresh = app.buttons["friend.enrollment.refresh"]
+        if !refresh.waitForExistence(timeout: 5) { app.swipeUp() }   // the status block sits below the toggles
+        XCTAssertTrue(refresh.waitForExistence(timeout: 10), "Friend detail offers Refresh")
+        shot("friend-detail-enrollment")
+        sleep(2)
     }
 
     // MARK: - Manual review mode

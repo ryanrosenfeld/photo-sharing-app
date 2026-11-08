@@ -134,6 +134,31 @@ struct FaceProfileManager: Sendable {
 
     // MARK: - Friend
 
+    /// Whether `viewerId` can read `friendId`'s face profile right now, and which version it is. The version changes
+    /// whenever the friend replaces their photos (a new key is granted), so enrollment knows when to redo itself.
+    enum Availability: Equatable, Sendable {
+        case none                       // no reference photos uploaded
+        case waitingForKey              // encrypted, but they haven't granted this viewer a key yet (they open the app next)
+        case available(version: String)
+    }
+
+    func availability(of friendId: UUID, viewer viewerId: UUID) async throws -> Availability {
+        let files = try await supabase.storage.from(bucket).list(path: folder(friendId))
+        guard !files.isEmpty else { return .none }
+        let encrypted = files.filter { $0.name.hasSuffix(".enc") }
+        if encrypted.isEmpty {
+            // Legacy plaintext profile: any re-upload changes the object ids.
+            let version = files.map { "\($0.name)#\(String(describing: $0.id))" }.sorted().joined(separator: ",")
+            return .available(version: "legacy:" + version)
+        }
+        let rows: [KeyRow] = try await supabase.from("face_profile_keys").select()
+            .eq("owner_id", value: friendId)
+            .eq("recipient_id", value: viewerId)
+            .execute().value
+        guard let row = rows.first else { return .waitingForKey }
+        return .available(version: "key:" + (row.createdAt ?? row.wrappedKey.suffix(16).description))
+    }
+
     /// Decrypts `friendId`'s reference photos with the key they granted to `viewerId`. Profiles uploaded before
     /// encryption are plain JPEGs and pass through.
     func downloadPhotos(for friendId: UUID, viewer viewerId: UUID) async throws -> [UIImage] {
@@ -176,10 +201,12 @@ private struct KeyRow: Codable {
     let ownerId: UUID
     let recipientId: UUID
     let wrappedKey: String
+    var createdAt: String? = nil   // read only; nil is omitted when granting
 
     enum CodingKeys: String, CodingKey {
         case ownerId = "owner_id"
         case recipientId = "recipient_id"
         case wrappedKey = "wrapped_key"
+        case createdAt = "created_at"
     }
 }
