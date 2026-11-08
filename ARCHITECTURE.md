@@ -47,7 +47,7 @@ photo-sharing-app/
     ├── Crypto/
     │   ├── KeyPairManager.swift    # Keypair generation, Keychain storage, iCloud Keychain sync, public key upload (ensurePublished at sign-in)
     │   ├── PhotoEncryption.swift   # AES-GCM seal of the photo + ECIES wrap of its key per recipient (pure, unit-tested)
-    │   ├── PhotoLoader.swift       # Download + decrypt received photos; `PhotoImage` view replaces AsyncImage
+    │   ├── PhotoLoader.swift       # actor: download + decrypt + ImageIO downsample received photos off the main thread, in-flight de-dup, prefetch, encrypted-blob-only disk cache (Caches); `PhotoImage` view replaces AsyncImage; also holds the `perf` os_log helper
     │   └── FaceProfileCrypto.swift # Symmetric key generation, per-friend key wrapping, encrypt/decrypt reference photos
     ├── Review/                          # Manual review mode
     │   ├── ReviewSettings.swift         # Global + per-friend override policy (pure, unit-tested)

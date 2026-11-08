@@ -342,9 +342,13 @@ struct PolaroidCard: View {
                 PhotoImage(photo: photo) { phase in
                     switch phase {
                     case .success(let img):
-                        img.resizable().scaledToFill()
-                    default:
+                        img.resizable().scaledToFill().accessibilityIdentifier("photos.image.loaded")
+                    case .failure:
                         Rectangle().fill(OttoColor.cream)
+                            .overlay(Image(systemName: "photo").font(.title2).foregroundStyle(OttoColor.barkSoft))
+                    case .empty:
+                        Rectangle().fill(OttoColor.cream)
+                            .overlay(ProgressView().tint(OttoColor.barkSoft))
                     }
                 }
             }

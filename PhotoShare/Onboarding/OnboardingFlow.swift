@@ -36,8 +36,18 @@ enum OnboardingStep: Int, CaseIterable {
             return !(await Self.hasFriendsOrInvites())
         case .notifications:
             if UserDefaults.standard.bool(forKey: Self.notificationsOfferedKey) { return false }
-            let settings = await UNUserNotificationCenter.current().notificationSettings()
-            return settings.authorizationStatus == .notDetermined
+            // The settings read can hang (seen on a freshly erased simulator): never let it hold the app on a spinner.
+            // If it doesn't answer in time, show the step; asking again is harmless.
+            return await Self.notificationStatus(timeout: .seconds(3)).map { $0 == .notDetermined } ?? true
+        }
+    }
+
+    /// Resumes from whichever comes first, the system answer or the timer. (A task group would still wait for the hung call.)
+    private static func notificationStatus(timeout: Duration) async -> UNAuthorizationStatus? {
+        await withCheckedContinuation { (continuation: CheckedContinuation<UNAuthorizationStatus?, Never>) in
+            let once = ResumeOnce(continuation)
+            UNUserNotificationCenter.current().getNotificationSettings { once.resume($0.authorizationStatus) }
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(Int(timeout.components.seconds * 1000))) { once.resume(nil) }
         }
     }
 
@@ -127,5 +137,15 @@ struct OnboardingFlow: View {
         } else {
             onFinished()
         }
+    }
+}
+
+private final class ResumeOnce: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<UNAuthorizationStatus?, Never>?
+    init(_ continuation: CheckedContinuation<UNAuthorizationStatus?, Never>) { self.continuation = continuation }
+    func resume(_ value: UNAuthorizationStatus?) {
+        lock.lock(); let c = continuation; continuation = nil; lock.unlock()
+        c?.resume(returning: value)
     }
 }
