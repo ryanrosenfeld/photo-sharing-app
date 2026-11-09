@@ -70,7 +70,7 @@ final class SelfieCaptureModel: ObservableObject {
     #endif
 
     /// The camera is usable here, or a UI test supplied stand-in frames.
-    static var canCapture: Bool { SelfieCamera.isAvailable || !fixtures.isEmpty }
+    nonisolated static var canCapture: Bool { SelfieCamera.isAvailable || !fixtures.isEmpty }
 
     func start() async {
         #if DEBUG
@@ -140,7 +140,7 @@ final class SelfieCaptureModel: ObservableObject {
 
     /// The simulator has no camera. UI tests pass SELFIE_FIXTURES (comma-separated image paths); frames are then
     /// read from those images, with the turn for each pose simulated, so the whole guided flow can run.
-    static var fixtures: [UIImage] {
+    nonisolated static var fixtures: [UIImage] {
         #if DEBUG
         let paths = ProcessInfo.processInfo.environment["SELFIE_FIXTURES"] ?? ""
         return paths.split(separator: ",").compactMap { UIImage(contentsOfFile: String($0)) }
