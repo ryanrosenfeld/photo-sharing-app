@@ -39,6 +39,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>NSCameraUsageDescription</key>
+	<string>take a few selfies so your friends' phones can recognize you in their photos. they stay encrypted and are used only for that.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Find which of your contacts are already on PhotoShare.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>

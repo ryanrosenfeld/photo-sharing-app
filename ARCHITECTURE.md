@@ -60,7 +60,9 @@ photo-sharing-app/
     │   ├── FaceProfileSetupView/VM.swift   # Required onboarding step: select + upload encrypted reference photos
     ├── Onboarding/
     │   ├── OnboardingFlow.swift            # OnboardingStep enum: next step derived from server + permission state (no stored flag)
-    │   ├── FaceProfileStep.swift           # Picker + per-photo on-device validation; reused by Profile → Manage
+    │   ├── FaceProfileStep.swift           # Selfies (main) or picker + per-photo on-device validation; reused by Profile → Manage
+    │   ├── SelfieCaptureView.swift         # Guided 3-pose selfie capture; SelfieGuidance (pure) decides each hint
+    │   ├── SelfieCamera.swift              # Front-camera AVCaptureSession on a private queue; Vision face position + yaw
     │   ├── FaceProfileValidator.swift      # Vision check: exactly one prominent face
     │   ├── PermissionSteps.swift           # Photo library + notifications explainers (denial never traps)
     │   └── OnboardingComponents.swift      # Progress bar, page layout, primary button

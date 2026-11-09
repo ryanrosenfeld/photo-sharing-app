@@ -11,6 +11,7 @@ BUNDLE=com.ryanrosenfeld.photoshare
 PASSWORD='Test1234!'
 EMAIL="erin$(date +%s)@test.local"
 EMAIL2="finn$(date +%s)@test.local"
+EMAIL3="gia$(date +%s)@test.local"
 FIX=PhotoShareTests/Fixtures/faces
 STAMP=$(date +%Y%m%d-%H%M%S)
 OUT=$PWD/verification-output/onboarding-$STAMP
@@ -83,7 +84,8 @@ run() { # test name; RECORD=0 skips the video (default: tight clip per test in v
   mkdir -p "$OUT/videos"
   ( export TEST_RUNNER_VERIFY_SUPABASE_URL="$API_URL" TEST_RUNNER_VERIFY_SUPABASE_ANON_KEY="$ANON_KEY" \
            TEST_RUNNER_VERIFY_NEW_EMAIL="$EMAIL" TEST_RUNNER_VERIFY_PASSWORD="$PASSWORD" \
-           TEST_RUNNER_VERIFY_NEW_EMAIL2="$EMAIL2" TEST_RUNNER_VERIFY_INVITE_CODE="$INVITE" TEST_RUNNER_VERIFY_INVITE_CODE2="$INVITE2"
+           TEST_RUNNER_VERIFY_NEW_EMAIL2="$EMAIL2" TEST_RUNNER_VERIFY_INVITE_CODE="$INVITE" TEST_RUNNER_VERIFY_INVITE_CODE2="$INVITE2" \
+           TEST_RUNNER_VERIFY_NEW_EMAIL3="$EMAIL3" TEST_RUNNER_VERIFY_SELFIE_FIXTURES="$PWD/$FIX/alice_1.jpg,$PWD/$FIX/alice_2.jpg,$PWD/$FIX/alice_3.jpg"
     if [ "${RECORD:-1}" = 1 ]; then
       run_recorded "$S" "$OUT/videos/$1.mp4" "$OUT/logs/$1.log" \
         xcodebuild test-without-building -collect-test-diagnostics never -project PhotoShare.xcodeproj -scheme PhotoShare \
@@ -106,6 +108,8 @@ run testPasteInvite && pass "Friends -> paste a link: junk is explained, a paste
   || fail "paste invite (logs/testPasteInvite.log)"
 run testInvitedNewAccount && pass "signed-out invitee: 'Dan invited you', survives a kill, sign-up, no first-friend step, accept right after onboarding (UI)" \
   || fail "invited new account (logs/testInvitedNewAccount.log)"
+run testGuidedSelfies && pass "guided selfies: straight, turn, turn the other way captured on their own, 3 accepted, onboarding continues (UI, stand-in camera frames)" \
+  || fail "guided selfies (logs/testGuidedSelfies.log)"
 
 # ---- backend state ----
 [ "$(psql_q "select face_profile_enabled from profiles p join auth.users u on u.id=p.id where u.email='$EMAIL'")" = t ] \
@@ -117,6 +121,8 @@ N=$(psql_q "select count(*) from invites i join auth.users u on u.id=i.inviter_i
 [ "$N" = 2 ] && pass "Erin has 2 open invites after onboarding link + copied link + new link - 1 cancelled" || fail "expected 2 open invites for Erin, found $N"
 [ "$(psql_q "select count(*) from friendships f join auth.users u on u.id=f.user_id where u.email='$EMAIL2' and f.friend_id='d4444444-4444-4444-4444-444444444444'")" = 1 ] \
   && pass "Finn and Dan are friends after the invited sign-up" || fail "Finn-Dan friendship missing"
+N=$(psql_q "select count(*) from storage.objects o join auth.users u on o.name like u.id::text||'/%' where o.bucket_id='face-profiles' and u.email='$EMAIL3'")
+[ "$N" = 3 ] && pass "3 selfies uploaded as the selfie account's face profile" || fail "expected 3 selfie uploads, found $N"
 [ "$(psql_q "select accepted_at is null from invites where code='$INVITE2'")" = t ] && pass "declining Carol's pasted invite leaves it unused" || fail "Carol's invite was consumed"
 
 [ "${RECORD:-1}" = 1 ] && join_clips "$OUT/onboarding.mp4" "$OUT"/videos/*.mp4

@@ -124,6 +124,50 @@ final class OnboardingTests: XCTestCase {
         shot("28-friends")
     }
 
+    /// Guided selfies: three poses captured automatically, then onboarding continues. The simulator has no camera,
+    /// so the debug build reads stand-in frames from SELFIE_FIXTURES (VERIFY_SELFIE_FIXTURES, comma-separated paths).
+    /// Env: VERIFY_NEW_EMAIL3.
+    func testGuidedSelfies() {
+        app.terminate()
+        app.launchEnvironment["SELFIE_FIXTURES"] = env["VERIFY_SELFIE_FIXTURES"] ?? ""
+        app.launch()
+        signOutIfNeeded()
+        app.buttons["welcome.getStarted"].tap()
+        signUp(name: "Gia Selfie", email: env["VERIFY_NEW_EMAIL3"] ?? "", prefix: "4")
+
+        let selfie = app.buttons["faceProfile.selfie"]
+        XCTAssertTrue(selfie.waitForExistence(timeout: 20), "selfies are the main path when a camera is available")
+        XCTAssertTrue(app.buttons["faceProfile.choose"].exists, "library stays as the fallback")
+        XCTAssertFalse(app.buttons["faceProfile.continue"].isEnabled)
+        shot("40-face-profile-selfie")
+        selfie.tap()
+
+        let instruction = app.staticTexts["selfie.instruction"]
+        XCTAssertTrue(instruction.waitForExistence(timeout: 10), "guided capture opens")
+        shot("41-selfie-straight")
+        let progress = app.staticTexts["selfie.progress"]
+        XCTAssertTrue(progress.label.hasPrefix("1 of 3"), progress.label)
+        var sawTurn = false
+        let deadline = Date().addingTimeInterval(45)
+        while Date() < deadline, instruction.exists {
+            if !sawTurn, instruction.label.contains("turn") { sawTurn = true; shot("42-selfie-turn") }
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+        XCTAssertTrue(sawTurn, "asked to turn after the straight-on photo")
+        XCTAssertFalse(instruction.exists, "capture closes after three photos")
+
+        let ok = app.descendants(matching: .any).matching(identifier: "faceProfile.tile.ok")
+        XCTAssertEqual(ok.count, 3, "three selfies accepted")
+        XCTAssertTrue(app.buttons["faceProfile.choose"].label.contains("another day"), "optional variety from the library")
+        shot("43-face-profile-selfies-taken")
+        let cont = app.buttons["faceProfile.continue"]
+        XCTAssertTrue(cont.isEnabled)
+        cont.tap()
+        // Permissions were answered and first-friend offered earlier on this device: straight to the app.
+        XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 40), "onboarding finishes")
+        shot("44-home")
+    }
+
     /// The "Have an invite link?" path for a link that didn't open the app. Env: VERIFY_INVITE_CODE2 (from Carol).
     func testPasteInvite() {
         XCTAssertTrue(app.buttons["tab.friends"].waitForExistence(timeout: 20))
@@ -157,6 +201,11 @@ final class OnboardingTests: XCTestCase {
     }
 
     private func signUpAndChooseFaces(name nameText: String, email emailText: String, prefix: String) {
+        signUp(name: nameText, email: emailText, prefix: prefix)
+        chooseFacesFromLibrary(prefix: prefix)
+    }
+
+    private func signUp(name nameText: String, email emailText: String, prefix: String) {
         shot("\(prefix)2-signup-empty")
         let name = app.textFields["emailAuth.name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5), "Get Started opens in sign-up mode")
@@ -169,7 +218,9 @@ final class OnboardingTests: XCTestCase {
         pw.tap(); pw.typeText(env["VERIFY_PASSWORD"] ?? "")
         shot("\(prefix)3-signup-filled")
         app.buttons["emailAuth.submit"].tap()
+    }
 
+    private func chooseFacesFromLibrary(prefix: String) {
         // --- Face profile is required: cannot continue without photos ---
         let choose = app.buttons["faceProfile.choose"]
         XCTAssertTrue(choose.waitForExistence(timeout: 20), "signup lands on face profile step")

@@ -68,6 +68,9 @@
 		473C3F7F47E9D51BA368B7E0 /* EnrollmentPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 135F8DA389071979519CE926 /* EnrollmentPlanTests.swift */; };
 		D2987EB6789AEF8E33E30F6A /* PendingShareStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C7D01EE1A76F2788F10EFDA /* PendingShareStore.swift */; };
 		EC78D115183B9541C761143B /* PendingShareTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08DB9C335D409CFDC3C7196 /* PendingShareTests.swift */; };
+		7E9517FF7D722FDB0506FAE8 /* SelfieCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01B0DACF11663ABE293E0DBD /* SelfieCamera.swift */; };
+		968874BDC807FE670DD8760B /* SelfieCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD71B13C4E666529CFB37D58 /* SelfieCaptureView.swift */; };
+		3197A5185D2DC7B697F4617B /* SelfieGuidanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3E27E0597D3E362B5DC7C5 /* SelfieGuidanceTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -151,6 +154,9 @@
 		135F8DA389071979519CE926 /* EnrollmentPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnrollmentPlanTests.swift; sourceTree = "<group>"; };
 		0C7D01EE1A76F2788F10EFDA /* PendingShareStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareStore.swift; sourceTree = "<group>"; };
 		E08DB9C335D409CFDC3C7196 /* PendingShareTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingShareTests.swift; sourceTree = "<group>"; };
+		01B0DACF11663ABE293E0DBD /* SelfieCamera.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfieCamera.swift; sourceTree = "<group>"; };
+		AD71B13C4E666529CFB37D58 /* SelfieCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfieCaptureView.swift; sourceTree = "<group>"; };
+		BB3E27E0597D3E362B5DC7C5 /* SelfieGuidanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfieGuidanceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -222,6 +228,7 @@
 				AD2E97A97749AAF8DB29BD15 /* FaceMatchPipelineTests.swift */,
 				4C5EDE49E1EE9852ACAC7244 /* FaceProfileValidatorTests.swift */,
 				F06233315A1D79D1DC8ACA91 /* InviteTests.swift */,
+				BB3E27E0597D3E362B5DC7C5 /* SelfieGuidanceTests.swift */,
 				E08DB9C335D409CFDC3C7196 /* PendingShareTests.swift */,
 				006DD825971E5D7BE4312871 /* PhotoEncryptionTests.swift */,
 				EA32BDC281758DF6BD799706 /* ReviewQueueTests.swift */,
@@ -286,6 +293,8 @@
 			children = (
 				BFB7E1E254D7462E1E10EFFB /* FaceProfileStep.swift */,
 				F58056334321E269C79A7A99 /* FaceProfileValidator.swift */,
+				AD71B13C4E666529CFB37D58 /* SelfieCaptureView.swift */,
+				01B0DACF11663ABE293E0DBD /* SelfieCamera.swift */,
 				EEA4F9CF9F205A09018B63EC /* FirstFriendStep.swift */,
 				15B1BF2116911C3188F1A98C /* OnboardingComponents.swift */,
 				A59469A71EA1E0B5CFBE1BA6 /* OnboardingFlow.swift */,
@@ -497,6 +506,7 @@
 				38DDA2E1FAEEE891E0A1A0C4 /* FaceMatchPipelineTests.swift in Sources */,
 				21BD531D0903EE074AB19A41 /* FaceProfileValidatorTests.swift in Sources */,
 				4CE67F54B5DEBFCD87DEA045 /* InviteTests.swift in Sources */,
+				3197A5185D2DC7B697F4617B /* SelfieGuidanceTests.swift in Sources */,
 				EC78D115183B9541C761143B /* PendingShareTests.swift in Sources */,
 				CA133FEFDD6A5D52E4D311D1 /* PhotoEncryptionTests.swift in Sources */,
 				7773E8F65E144C140AE704DE /* ReviewQueueTests.swift in Sources */,
@@ -522,6 +532,8 @@
 				9104AF698354AA9955DA3EAF /* FaceProfileManager.swift in Sources */,
 				52B48C02302E705343A1D208 /* FaceProfileStep.swift in Sources */,
 				DF7FBE0D15B98E6AAA8B80C4 /* FaceProfileValidator.swift in Sources */,
+				968874BDC807FE670DD8760B /* SelfieCaptureView.swift in Sources */,
+				7E9517FF7D722FDB0506FAE8 /* SelfieCamera.swift in Sources */,
 				96535F1698AEA247211ADD4C /* FirstFriendStep.swift in Sources */,
 				77A8F17EB83715BB19E08251 /* Friend.swift in Sources */,
 				9FCC4A9C71B47B18E4CDEE1D /* FriendsView.swift in Sources */,
