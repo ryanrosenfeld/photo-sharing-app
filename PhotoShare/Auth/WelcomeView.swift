@@ -20,13 +20,13 @@ struct WelcomeView: View {
                         OttoMascot(pose: .hero, width: 220)
 
                         VStack(spacing: 14) {
-                            Text("Shared photos,\nottomatically.")
+                            Text("shared photos,\nottomatically.")
                                 .font(OttoFont.serifBoldItalic(size: 38))
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(2)
                                 .foregroundStyle(OttoColor.ink)
 
-                            Text("When you're in the photo,\nyou get the photo.")
+                            Text("when you're in the photo,\nyou get the photo.")
                                 .font(.system(size: 17))
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(OttoColor.bark)
@@ -41,7 +41,7 @@ struct WelcomeView: View {
                             .padding(.horizontal, 28)
                             .padding(.bottom, 20)
                     } else if invite?.usable == false {
-                        Text("That invite link has expired or was already used. You can still join, and ask for a new link.")
+                        Text("that invite link has expired or was already used. you can still join, and ask for a new link.")
                             .font(.system(size: 13))
                             .foregroundStyle(OttoColor.wax)
                             .multilineTextAlignment(.center)
@@ -51,7 +51,7 @@ struct WelcomeView: View {
                     }
 
                     VStack(spacing: 12) {
-                        OttoPillButton(title: invite?.usable == true ? "Join \(invite?.inviterName ?? "them") on otto" : "Get started") {
+                        OttoPillButton(title: invite?.usable == true ? "join \(invite?.inviterName ?? "them") on otto" : "get started") {
                             showGetStarted = true
                         }
                         .accessibilityIdentifier("welcome.getStarted")
@@ -59,9 +59,9 @@ struct WelcomeView: View {
                         Button {
                             showSignIn = true
                         } label: {
-                            Text("Already have an account? ")
+                            Text("already have an account? ")
                                 .foregroundStyle(OttoColor.barkSoft) +
-                            Text("Sign in")
+                            Text("sign in")
                                 .foregroundStyle(OttoColor.sage)
                                 .fontWeight(.medium)
                         }
@@ -69,7 +69,7 @@ struct WelcomeView: View {
                         .accessibilityIdentifier("welcome.signIn")
 
                         if inviteRouter.pendingCode == nil {
-                            Button("Have an invite link?") { showPasteInvite = true }
+                            Button("have an invite link?") { showPasteInvite = true }
                                 .font(.system(size: 14))
                                 .foregroundStyle(OttoColor.barkSoft)
                                 .accessibilityIdentifier("welcome.haveInvite")
@@ -107,7 +107,7 @@ private struct InvitedBanner: View {
                 Text("\(name) invited you")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(OttoColor.ink)
-                Text("Create your account to start sharing photos with \(name).")
+                Text("create your account to start sharing photos with \(name).")
                     .font(.system(size: 13))
                     .foregroundStyle(OttoColor.bark)
             }

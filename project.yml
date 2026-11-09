@@ -46,10 +46,10 @@ targets:
           UIColorName: ""
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        NSPhotoLibraryUsageDescription: "PhotoShare reads your photo library to detect friends' faces and auto-share photos with them."
-        NSPhotoLibraryAddUsageDescription: "Save photos shared with you to your camera roll."
-        NSContactsUsageDescription: "Find which of your contacts are already on PhotoShare."
-        NSLocationWhenInUseUsageDescription: "Attach your location to photos you share."
+        NSPhotoLibraryUsageDescription: "photoshare reads your photo library to detect friends' faces and auto-share photos with them."
+        NSPhotoLibraryAddUsageDescription: "save photos shared with you to your camera roll."
+        NSContactsUsageDescription: "find which of your contacts are already on photoshare."
+        NSLocationWhenInUseUsageDescription: "attach your location to photos you share."
         CFBundleURLTypes:
           - CFBundleURLName: "Google Sign-In"
             CFBundleURLSchemes:

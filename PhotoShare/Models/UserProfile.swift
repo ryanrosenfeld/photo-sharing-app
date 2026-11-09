@@ -15,8 +15,8 @@ struct UserProfile: Codable, Identifiable, Equatable {
 
         var displayName: String {
             switch self {
-            case .free: "Free"
-            case .pro:  "Pro"
+            case .free: "free"
+            case .pro:  "pro"
             }
         }
 

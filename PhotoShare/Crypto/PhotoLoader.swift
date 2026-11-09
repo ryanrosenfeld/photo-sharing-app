@@ -20,8 +20,8 @@ actor PhotoLoader {
 
         var errorDescription: String? {
             switch self {
-            case .noPrivateKey: "This photo was encrypted for a different device. Sign in on the device you used when it was sent."
-            case .notAnImage: "Could not load photo."
+            case .noPrivateKey: "this photo was encrypted for a different device. sign in on the device you used when it was sent."
+            case .notAnImage: "could not load photo."
             }
         }
     }

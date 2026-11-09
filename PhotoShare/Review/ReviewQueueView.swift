@@ -21,7 +21,7 @@ struct ReviewQueueView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            Label("Nothing leaves your phone until you send it.", systemImage: "lock.fill")
+                            Label("nothing leaves your phone until you send it.", systemImage: "lock.fill")
                                 .font(.system(size: 13))
                                 .foregroundStyle(OttoColor.barkSoft)
                             ForEach(store.items) { item in
@@ -33,26 +33,26 @@ struct ReviewQueueView: View {
                 }
             }
         }
-        .confirmationDialog("Send all \(store.items.count) photos to the friends shown on them?",
+        .confirmationDialog("send all \(store.items.count) photos to the friends shown on them?",
                             isPresented: $confirmSendAll, titleVisibility: .visible) {
-            Button("Send All") {
+            Button("send all") {
                 guard let senderId else { return }
                 Task { await store.approveAll(senderId: senderId) }
             }
             .accessibilityIdentifier("review.sendAll.confirm")
         }
-        .confirmationDialog("Discard all \(store.items.count) photos?",
+        .confirmationDialog("discard all \(store.items.count) photos?",
                             isPresented: $confirmDiscardAll, titleVisibility: .visible) {
-            Button("Discard All", role: .destructive) { store.rejectAll() }
+            Button("discard all", role: .destructive) { store.rejectAll() }
                 .accessibilityIdentifier("review.discardAll.confirm")
         } message: {
-            Text("They stay in your library. They just won't be shared.")
+            Text("they stay in your library. they just won't be shared.")
         }
-        .alert("Couldn't finish", isPresented: Binding(
+        .alert("couldn't finish", isPresented: Binding(
             get: { store.error != nil },
             set: { if !$0 { store.error = nil } }
         )) {
-            Button("OK") { store.error = nil }
+            Button("ok") { store.error = nil }
         } message: {
             Text(store.error ?? "")
         }
@@ -61,17 +61,17 @@ struct ReviewQueueView: View {
     private var header: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
-                OttoEyebrow(text: "Review")
-                Text("Ready to send?")
+                OttoEyebrow(text: "review")
+                Text("ready to send?")
                     .font(OttoFont.serifBold(size: 28))
                     .foregroundStyle(OttoColor.ink)
             }
             Spacer()
             if store.items.count > 1 {
                 Menu {
-                    Button("Send All (\(store.items.count))", systemImage: "paperplane") { confirmSendAll = true }
+                    Button("send all (\(store.items.count))", systemImage: "paperplane") { confirmSendAll = true }
                         .accessibilityIdentifier("review.sendAll")
-                    Button("Discard All", systemImage: "trash", role: .destructive) { confirmDiscardAll = true }
+                    Button("discard all", systemImage: "trash", role: .destructive) { confirmDiscardAll = true }
                         .accessibilityIdentifier("review.discardAll")
                 } label: {
                     Image(systemName: "ellipsis")
@@ -83,7 +83,7 @@ struct ReviewQueueView: View {
                 }
                 .accessibilityIdentifier("review.bulkMenu")
             }
-            Button("Done") { dismiss() }
+            Button("done") { dismiss() }
                 .font(.system(size: 16, weight: .medium))
                 .foregroundStyle(OttoColor.sage)
                 .padding(.leading, 8)
@@ -98,10 +98,10 @@ struct ReviewQueueView: View {
         VStack(spacing: 16) {
             Spacer()
             OttoMascot(pose: .sleeping, width: 200)
-            Text("All caught up.")
+            Text("all caught up.")
                 .font(OttoFont.serifBoldItalic(size: 22))
                 .foregroundStyle(OttoColor.ink)
-            Text("Photos you want to check before sharing will wait here.")
+            Text("photos you want to check before sharing will wait here.")
                 .font(.system(size: 14))
                 .foregroundStyle(OttoColor.bark)
                 .multilineTextAlignment(.center)
@@ -136,7 +136,7 @@ private struct ReviewCard: View {
                     .foregroundStyle(OttoColor.barkSoft)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    OttoEyebrow(text: "Send to")
+                    OttoEyebrow(text: "send to")
                     RecipientChips(recipients: item.recipients, excluded: $excluded)
                 }
 
@@ -144,7 +144,7 @@ private struct ReviewCard: View {
                     Button {
                         store.reject(item)
                     } label: {
-                        Text("Discard")
+                        Text("discard")
                             .font(.system(size: 15, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -161,7 +161,7 @@ private struct ReviewCard: View {
                         Task { await store.approve(item, to: ids, senderId: senderId) }
                     } label: {
                         Group {
-                            if isSending { ProgressView().tint(.white) } else { Text("Send").font(.system(size: 15, weight: .semibold)) }
+                            if isSending { ProgressView().tint(.white) } else { Text("send").font(.system(size: 15, weight: .semibold)) }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)

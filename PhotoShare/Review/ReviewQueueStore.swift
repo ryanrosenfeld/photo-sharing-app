@@ -102,10 +102,10 @@ final class ReviewQueueStore: ObservableObject {
             return true
         } catch ShareUploader.ShareError.assetUnavailable {
             remove(item)
-            error = "A photo was deleted from your library, so it was removed from the queue."
+            error = "a photo was deleted from your library, so it was removed from the queue."
             return false
         } catch {
-            self.error = "Couldn't send. The photo is still in your queue — try again."
+            self.error = "couldn't send. the photo is still in your queue — try again."
             return false
         }
     }

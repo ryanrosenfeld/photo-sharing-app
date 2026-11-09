@@ -37,11 +37,11 @@ struct AuthView: View {
 
                     // heading
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(isSignUp ? "Join otto." : "Sign in to otto.")
+                        Text(isSignUp ? "join otto." : "sign in to otto.")
                             .font(OttoFont.serifBold(size: 30))
                             .foregroundStyle(OttoColor.ink)
 
-                        Text(isSignUp ? "Just your name, an email, and a password. Then a quick photo setup." : "Welcome back.")
+                        Text(isSignUp ? "just your name, an email, and a password. then a quick photo setup." : "welcome back.")
                             .font(.system(size: 15))
                             .foregroundStyle(OttoColor.bark)
                             .lineSpacing(2)
@@ -57,7 +57,7 @@ struct AuthView: View {
                         passwordField
 
                         if isSignUp {
-                            Text("At least 8 characters")
+                            Text("at least 8 characters")
                                 .font(.system(size: 12))
                                 .foregroundStyle(password.isEmpty || password.count >= 8 ? OttoColor.barkSoft : OttoColor.wax)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -70,7 +70,7 @@ struct AuthView: View {
                                 if isSigningIn {
                                     ProgressView().tint(.white)
                                 } else {
-                                    Text(isSignUp ? "Create account" : "Sign in")
+                                    Text(isSignUp ? "create account" : "sign in")
                                         .font(.system(size: 16, weight: .semibold))
                                 }
                             }
@@ -86,9 +86,9 @@ struct AuthView: View {
                         Button {
                             isSignUp.toggle()
                         } label: {
-                            Text(isSignUp ? "Already have an account? " : "New to otto? ")
+                            Text(isSignUp ? "already have an account? " : "new to otto? ")
                                 .foregroundStyle(OttoColor.barkSoft) +
-                            Text(isSignUp ? "Sign in" : "Create an account")
+                            Text(isSignUp ? "sign in" : "create an account")
                                 .foregroundStyle(OttoColor.sage).fontWeight(.medium)
                         }
                         .font(.system(size: 14))
@@ -114,7 +114,7 @@ struct AuthView: View {
                     // Sign in with Apple is not built yet (pending Ryan's call on third-party sign-in in v1), so no button:
                     // a button that does nothing is worse than none.
                     VStack(spacing: 10) {
-                        ssoButton(label: "Google") {
+                        ssoButton(label: "google") {
                             Task { await authManager.signInWithGoogle() }
                         } icon: {
                             // simple multi-color G
@@ -136,45 +136,45 @@ struct AuthView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
-        .alert("Check your email", isPresented: Binding(
+        .alert("check your email", isPresented: Binding(
             get: { authManager.awaitingEmailConfirmation != nil },
             set: { if !$0 { authManager.awaitingEmailConfirmation = nil } }
         )) {
-            Button("OK") { authManager.awaitingEmailConfirmation = nil; isSignUp = false }
+            Button("ok") { authManager.awaitingEmailConfirmation = nil; isSignUp = false }
         } message: {
-            Text("We sent a confirmation link to \(authManager.awaitingEmailConfirmation ?? ""). Tap it, then come back and sign in.")
+            Text("we sent a confirmation link to \(authManager.awaitingEmailConfirmation ?? ""). tap it, then come back and sign in.")
         }
-        .alert("Reset your password", isPresented: $showReset) {
-            TextField("Email", text: $resetEmail)
+        .alert("reset your password", isPresented: $showReset) {
+            TextField("email", text: $resetEmail)
                 .textContentType(.emailAddress)
                 .keyboardType(.emailAddress)
                 .textInputAutocapitalization(.never)
                 .accessibilityIdentifier("reset.email")
-            Button("Send link") {
+            Button("send link") {
                 Task {
                     let address = resetEmail.trimmingCharacters(in: .whitespaces)
                     let failure = await authManager.sendPasswordReset(email: address)
-                    resetResult = failure ?? "If there's an account for \(address), a reset link is on its way."
+                    resetResult = failure ?? "if there's an account for \(address), a reset link is on its way."
                 }
             }
             .accessibilityIdentifier("reset.send")
-            Button("Cancel", role: .cancel) {}
+            Button("cancel", role: .cancel) {}
         } message: {
-            Text("We'll email you a link to choose a new one.")
+            Text("we'll email you a link to choose a new one.")
         }
-        .alert("Password reset", isPresented: Binding(
+        .alert("password reset", isPresented: Binding(
             get: { resetResult != nil },
             set: { if !$0 { resetResult = nil } }
         )) {
-            Button("OK") { resetResult = nil }
+            Button("ok") { resetResult = nil }
         } message: {
             Text(resetResult ?? "")
         }
-        .alert(isSignUp ? "Couldn't create account" : "Couldn't sign in", isPresented: Binding(
+        .alert(isSignUp ? "couldn't create account" : "couldn't sign in", isPresented: Binding(
             get: { authManager.error != nil },
             set: { if !$0 { authManager.clearError() } }
         )) {
-            Button("OK") { authManager.clearError() }
+            Button("ok") { authManager.clearError() }
         } message: {
             Text(authManager.error?.localizedDescription ?? "")
         }
@@ -184,7 +184,7 @@ struct AuthView: View {
 
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("NAME")
+            Text("name")
                 .font(.system(size: 11, weight: .semibold))
                 .kerning(1.2)
                 .foregroundStyle(OttoColor.barkSoft)
@@ -192,7 +192,7 @@ struct AuthView: View {
                 Image(systemName: "person")
                     .font(.system(size: 14))
                     .foregroundStyle(OttoColor.barkSoft)
-                TextField("What friends call you", text: $displayName)
+                TextField("what friends call you", text: $displayName)
                     .accessibilityIdentifier("emailAuth.name")
                     .textContentType(.name)
                     .autocorrectionDisabled()
@@ -215,7 +215,7 @@ struct AuthView: View {
 
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("EMAIL")
+            Text("email")
                 .font(.system(size: 11, weight: .semibold))
                 .kerning(1.2)
                 .foregroundStyle(OttoColor.barkSoft)
@@ -250,13 +250,13 @@ struct AuthView: View {
     private var passwordField: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("PASSWORD")
+                Text("password")
                     .font(.system(size: 11, weight: .semibold))
                     .kerning(1.2)
                     .foregroundStyle(OttoColor.barkSoft)
                 Spacer()
                 if !isSignUp {
-                    Button("Forgot?") {
+                    Button("forgot?") {
                         resetEmail = trimmedEmail
                         showReset = true
                     }
@@ -326,11 +326,11 @@ struct AuthView: View {
     }
 
     private var termsLabel: some View {
-        (Text("By continuing, you agree to otto's ")
+        (Text("by continuing, you agree to otto's ")
             .foregroundStyle(OttoColor.barkSoft) +
-        Text("Terms").foregroundStyle(OttoColor.bark) +
+        Text("terms").foregroundStyle(OttoColor.bark) +
         Text(" and ").foregroundStyle(OttoColor.barkSoft) +
-        Text("Privacy Policy").foregroundStyle(OttoColor.bark))
+        Text("privacy policy").foregroundStyle(OttoColor.bark))
             .font(.system(size: 13))
             .multilineTextAlignment(.center)
             .padding(.horizontal, 32)

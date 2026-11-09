@@ -13,8 +13,8 @@ enum PhotoEncryption {
 
         var errorDescription: String? {
             switch self {
-            case .malformedWrappedKey: "The photo's key is damaged."
-            case .malformedPublicKey: "A friend's encryption key is invalid."
+            case .malformedWrappedKey: "the photo's key is damaged."
+            case .malformedPublicKey: "a friend's encryption key is invalid."
             }
         }
     }

@@ -70,7 +70,7 @@ struct PhotoDetailView: View {
             }
             Spacer()
             if photo.isSaved {
-                Label("Saved", systemImage: "checkmark.circle.fill")
+                Label("saved", systemImage: "checkmark.circle.fill")
                     .font(.subheadline)
                     .foregroundStyle(.green)
             }
@@ -80,7 +80,7 @@ struct PhotoDetailView: View {
     private var expiryBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock.badge.exclamationmark")
-            Text("Expires \(detail.expiresAt.formatted(.relative(presentation: .named)))")
+            Text("expires \(detail.expiresAt.formatted(.relative(presentation: .named)))")
                 .font(.subheadline)
         }
         .foregroundStyle(.orange)

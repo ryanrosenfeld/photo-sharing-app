@@ -151,7 +151,7 @@ final class OnboardingTests: XCTestCase {
         let signOut = app.buttons["profile.signOut"]
         for _ in 0..<6 where !signOut.isHittable { app.swipeUp() }
         signOut.tap()
-        let confirm = app.sheets.buttons["Sign out"].firstMatch
+        let confirm = app.sheets.buttons["sign out"].firstMatch
         if confirm.waitForExistence(timeout: 3) { confirm.tap() }
         XCTAssertTrue(app.buttons["welcome.getStarted"].waitForExistence(timeout: 15), "signed out")
     }
@@ -194,7 +194,7 @@ final class OnboardingTests: XCTestCase {
         }
         XCTAssertEqual(tapped, 4, "tapped 4 distinct photos")
         shot("\(prefix)5-picker-selected")
-        let done = app.buttons["Done"].firstMatch
+        let done = app.buttons["done"].firstMatch
         XCTAssertTrue(done.waitForExistence(timeout: 5) && done.isEnabled, "picker Done enabled")
         done.tap()
 
@@ -215,7 +215,7 @@ final class OnboardingTests: XCTestCase {
         shot("15-relaunch-home")
         app.buttons["tab.profile"].tap()
         XCTAssertTrue(app.buttons["profile.photoStatus"].waitForExistence(timeout: 5), "live permissions rows on Profile")
-        XCTAssertFalse(app.buttons["Turn off reference photos"].exists, "face profile cannot be turned off")
+        XCTAssertFalse(app.buttons["turn off reference photos"].exists, "face profile cannot be turned off")
         shot("16-profile-permissions")
     }
 }

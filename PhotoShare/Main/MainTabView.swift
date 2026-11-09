@@ -117,9 +117,9 @@ struct OttoTabBarView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            tabItem(tab: .photos, label: "Photos", icon: "photo.stack")
-            tabItem(tab: .friends, label: "Friends", icon: "person.2", badge: friendsBadge)
-            tabItem(tab: .profile, label: "Profile", icon: "person.circle")
+            tabItem(tab: .photos, label: "photos", icon: "photo.stack")
+            tabItem(tab: .friends, label: "friends", icon: "person.2", badge: friendsBadge)
+            tabItem(tab: .profile, label: "profile", icon: "person.circle")
         }
         .padding(.top, 8)
         .padding(.bottom, 28)
@@ -181,13 +181,13 @@ struct OttoProfileView: View {
     private var photosOK: Bool { photoStatus == .authorized || photoStatus == .limited }
     private var photoSub: String {
         switch photoStatus {
-        case .authorized: "All photos · allowed"
-        case .limited: "Only selected photos · tap to allow all"
-        default: "Off · new photos aren't being shared. Tap to fix"
+        case .authorized: "all photos · allowed"
+        case .limited: "only selected photos · tap to allow all"
+        default: "off · new photos aren't being shared. tap to fix"
         }
     }
     private var notifSub: String {
-        notifStatus == .authorized ? "Allowed" : "Off · tap to turn on in Settings"
+        notifStatus == .authorized ? "allowed" : "off · tap to turn on in settings"
     }
     private func refreshPermissions() async {
         photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -215,8 +215,8 @@ struct OttoProfileView: View {
                     // header
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 4) {
-                            OttoEyebrow(text: "Profile")
-                            Text("Settings")
+                            OttoEyebrow(text: "profile")
+                            Text("settings")
                                 .font(OttoFont.serifBold(size: 32))
                                 .foregroundStyle(OttoColor.ink)
                         }
@@ -231,7 +231,7 @@ struct OttoProfileView: View {
                         OttoAvatarCircle(name: profile?.displayName ?? "?", size: 56, hue: OttoColor.sage)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(profile?.displayName ?? "Loading…")
+                            Text(profile?.displayName ?? "loading…")
                                 .font(OttoFont.serifBold(size: 20))
                                 .foregroundStyle(OttoColor.ink)
                             Text(profile?.plan.displayName ?? "")
@@ -241,7 +241,7 @@ struct OttoProfileView: View {
 
                         Spacer()
 
-                        Button("Edit") {
+                        Button("edit") {
                             editedName = profile?.displayName ?? ""
                             showEditName = true
                         }
@@ -268,20 +268,20 @@ struct OttoProfileView: View {
                     }
 
                     // My reference photos
-                    profileSection(title: "My reference photos") {
+                    profileSection(title: "my reference photos") {
                         OttoSectionCard {
                             VStack(spacing: 0) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(profile?.faceProfileEnabled == true ? "Set up" : "Not set up")
+                                        Text(profile?.faceProfileEnabled == true ? "set up" : "not set up")
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundStyle(OttoColor.ink)
-                                        Text("Fresh, clear photos help friends' phones recognize you")
+                                        Text("fresh, clear photos help friends' phones recognize you")
                                             .font(.system(size: 13))
                                             .foregroundStyle(OttoColor.barkSoft)
                                     }
                                     Spacer()
-                                    Button(profile?.faceProfileEnabled == true ? "Manage" : "Set up") {
+                                    Button(profile?.faceProfileEnabled == true ? "manage" : "set up") {
                                         showFaceProfileSetup = true
                                     }
                                     .font(.system(size: 13, weight: .medium))
@@ -299,7 +299,7 @@ struct OttoProfileView: View {
                                         .fill(OttoColor.sage)
                                         .frame(width: 6, height: 6)
                                         .padding(.top, 5)
-                                    Text("Encrypted before they leave your phone. Only your friends' devices can use them — and only to recognize you.")
+                                    Text("encrypted before they leave your phone. only your friends' devices can use them — and only to recognize you.")
                                         .font(.system(size: 12))
                                         .foregroundStyle(OttoColor.bark)
                                         .lineSpacing(2)
@@ -314,13 +314,13 @@ struct OttoProfileView: View {
                     .padding(.bottom, 16)
 
                     // Sending
-                    profileSection(title: "Sending") {
+                    profileSection(title: "sending") {
                         OttoSectionCard {
                             settingsRow(
-                                label: "Review all photos before sending",
+                                label: "review all photos before sending",
                                 sub: reviewStore.settings.globalEnabled
-                                    ? "Matches wait in Friends until you send them"
-                                    : "Approve every match before it goes",
+                                    ? "matches wait in friends until you send them"
+                                    : "approve every match before it goes",
                                 hasToggle: true,
                                 isOn: Binding(
                                     get: { reviewStore.settings.globalEnabled },
@@ -330,8 +330,8 @@ struct OttoProfileView: View {
                                 isLast: false
                             )
                             settingsRow(
-                                label: "Pause all sending",
-                                sub: "Photos hold until you turn it back on",
+                                label: "pause all sending",
+                                sub: "photos hold until you turn it back on",
                                 hasToggle: true,
                                 isOn: .constant(false),
                                 isLast: true
@@ -342,10 +342,10 @@ struct OttoProfileView: View {
                     .padding(.bottom, 16)
 
                     // Permissions
-                    profileSection(title: "Permissions") {
+                    profileSection(title: "permissions") {
                         OttoSectionCard {
                             Button { if !photosOK || photoStatus == .limited { openSettings() } } label: {
-                                settingsRowLabel(label: "Photos", sub: photoSub, dot: photosOK && photoStatus != .limited, hasChev: !photosOK || photoStatus == .limited)
+                                settingsRowLabel(label: "photos", sub: photoSub, dot: photosOK && photoStatus != .limited, hasChev: !photosOK || photoStatus == .limited)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(16)
                             }
@@ -353,25 +353,25 @@ struct OttoProfileView: View {
                             .accessibilityIdentifier("profile.photoStatus")
                             Divider().padding(.leading, 16)
                             Button { if notifStatus != .authorized { openSettings() } } label: {
-                                settingsRowLabel(label: "Notifications", sub: notifSub, dot: notifStatus == .authorized, hasChev: notifStatus != .authorized)
+                                settingsRowLabel(label: "notifications", sub: notifSub, dot: notifStatus == .authorized, hasChev: notifStatus != .authorized)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(16)
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("profile.notificationStatus")
                             Divider().padding(.leading, 16)
-                            settingsRow(label: "Location", sub: "When in use", dot: true, isLast: true)
+                            settingsRow(label: "location", sub: "when in use", dot: true, isLast: true)
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 16)
 
                     // Privacy
-                    profileSection(title: "Privacy") {
+                    profileSection(title: "privacy") {
                         OttoSectionCard {
-                            settingsRow(label: "What otto stores", sub: "Your photos and face data are both encrypted", hasChev: true, isLast: false)
-                            settingsRow(label: "Privacy policy", hasChev: true, isLast: false)
-                            settingsRow(label: "Terms", hasChev: true, isLast: true)
+                            settingsRow(label: "what otto stores", sub: "your photos and face data are both encrypted", hasChev: true, isLast: false)
+                            settingsRow(label: "privacy policy", hasChev: true, isLast: false)
+                            settingsRow(label: "terms", hasChev: true, isLast: true)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -379,12 +379,12 @@ struct OttoProfileView: View {
 
                     // Debug
                     #if DEBUG
-                    profileSection(title: "Debug") {
+                    profileSection(title: "debug") {
                         OttoSectionCard {
                             NavigationLink {
                                 FaceMatchSandboxView()
                             } label: {
-                                settingsRowLabel(label: "Face Match Sandbox", hasChev: true)
+                                settingsRowLabel(label: "face match sandbox", hasChev: true)
                                     .padding(16)
                             }
                         }
@@ -395,7 +395,7 @@ struct OttoProfileView: View {
 
                     // Danger
                     VStack(spacing: 8) {
-                        Button("Sign Out") {
+                        Button("sign out") {
                             Task { await authManager.signOut() }
                         }
                         .accessibilityIdentifier("profile.signOut")
@@ -406,7 +406,7 @@ struct OttoProfileView: View {
                         .overlay(RoundedRectangle(cornerRadius: 18).stroke(OttoColor.line, lineWidth: 1))
                         .padding(.horizontal, 16)
 
-                        Button("Delete account", role: .destructive) {}
+                        Button("delete account", role: .destructive) {}
                             .font(.system(size: 14))
                             .foregroundStyle(OttoColor.barkSoft)
                     }
@@ -434,7 +434,7 @@ struct OttoProfileView: View {
             get: { authManager.error != nil },
             set: { if !$0 { authManager.clearError() } }
         )) {
-            Button("OK") { authManager.clearError() }
+            Button("ok") { authManager.clearError() }
         } message: {
             Text(authManager.error?.localizedDescription ?? "")
         }
@@ -448,19 +448,19 @@ struct OttoProfileView: View {
                     .offset(x: 20, y: -20)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    OttoEyebrow(text: "Free plan", color: OttoColor.wax)
+                    OttoEyebrow(text: "free plan", color: OttoColor.wax)
                         .padding(.bottom, 8)
-                    Text("More friends?\nOtto can deliver.")
+                    Text("more friends?\notto can deliver.")
                         .font(OttoFont.serifBoldItalic(size: 22))
                         .foregroundStyle(OttoColor.ink)
                         .lineSpacing(2)
                         .padding(.bottom, 4)
-                    Text("Send to 3 friends free. Pro removes the limit.")
+                    Text("send to 3 friends free. pro removes the limit.")
                         .font(.system(size: 14))
                         .foregroundStyle(OttoColor.bark)
                         .lineSpacing(2)
                         .padding(.bottom, 14)
-                    OttoPillButton(title: "Try Pro free for 7 days", isFullWidth: false) {}
+                    OttoPillButton(title: "try pro free for 7 days", isFullWidth: false) {}
                 }
                 .padding(18)
             }
@@ -478,10 +478,10 @@ struct OttoProfileView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Otto Pro")
+                    Text("otto pro")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(OttoColor.ink)
-                    Text("Renews soon · $4.99/mo")
+                    Text("renews soon · $4.99/mo")
                         .font(.system(size: 13))
                         .foregroundStyle(OttoColor.barkSoft)
                 }
@@ -492,7 +492,7 @@ struct OttoProfileView: View {
 
     private func profileSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(title.uppercased())
+            Text(title)
                 .font(.system(size: 12, weight: .semibold))
                 .kerning(1.4)
                 .foregroundStyle(OttoColor.barkSoft)
@@ -599,7 +599,7 @@ struct FaceProfileSetupSheet: View {
 
     var body: some View {
         NavigationStack {
-            FaceProfileStep(userId: userId, step: nil, total: 0, title: "Your reference photos", showsUploadedNote: isEnabled) {
+            FaceProfileStep(userId: userId, step: nil, total: 0, title: "your reference photos", showsUploadedNote: isEnabled) {
                 onComplete()
                 dismiss()
             }
@@ -607,7 +607,7 @@ struct FaceProfileSetupSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }.foregroundStyle(OttoColor.sage)
+                    Button("done") { dismiss() }.foregroundStyle(OttoColor.sage)
                 }
             }
         }
@@ -626,20 +626,20 @@ struct EditNameSheet: View {
             OttoColor.canvas.ignoresSafeArea()
             NavigationStack {
                 Form {
-                    TextField("Display Name", text: $name)
+                    TextField("display name", text: $name)
                         .autocorrectionDisabled()
                 }
                 .scrollContentBackground(.hidden)
                 .background(OttoColor.canvas)
-                .navigationTitle("Edit Name")
+                .navigationTitle("edit name")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") { dismiss() }
+                        Button("cancel") { dismiss() }
                             .foregroundStyle(OttoColor.sage)
                     }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
+                        Button("save") {
                             onSave()
                             dismiss()
                         }

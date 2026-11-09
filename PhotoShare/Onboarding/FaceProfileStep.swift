@@ -7,7 +7,7 @@ struct FaceProfileStep: View {
     let userId: UUID
     let step: Int?          // nil when reused from the Profile tab (no progress bar)
     let total: Int
-    var title = "Show your face"
+    var title = "show your face"
     var showsUploadedNote = false
     let onUploaded: () -> Void
 
@@ -49,15 +49,15 @@ struct FaceProfileStep: View {
                         .foregroundStyle(OttoColor.ink)
                         .padding(.top, 24)
                     Text(showsUploadedNote
-                         ? "Pick 3 to 5 new photos to replace your current set. Your current photos stay until you finish."
-                         : "Choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos.")
+                         ? "pick 3 to 5 new photos to replace your current set. your current photos stay until you finish."
+                         : "choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos.")
                         .font(.system(size: 16))
                         .foregroundStyle(OttoColor.bark)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        tip("Just you, facing the camera")
-                        tip("Good light, nothing covering your face")
-                        tip("Mix it up: different days, angles, or glasses on and off")
+                        tip("just you, facing the camera")
+                        tip("good light, nothing covering your face")
+                        tip("mix it up: different days, angles, or glasses on and off")
                     }
                     .font(.system(size: 14))
 
@@ -67,7 +67,7 @@ struct FaceProfileStep: View {
                         selectionBehavior: .ordered,
                         matching: .images
                     ) {
-                        Label(candidates.isEmpty ? "Choose photos" : "Change photos",
+                        Label(candidates.isEmpty ? "choose photos" : "change photos",
                               systemImage: "photo.badge.plus")
                             .font(.headline)
                             .frame(maxWidth: .infinity)
@@ -85,7 +85,7 @@ struct FaceProfileStep: View {
 
                     if !candidates.isEmpty { grid }
 
-                    Label("These stay private: they're stored encrypted and only your friends' phones use them, only to recognize you.",
+                    Label("these stay private: they're stored encrypted and only your friends' phones use them, only to recognize you.",
                           systemImage: "lock.fill")
                         .font(.footnote)
                         .foregroundStyle(OttoColor.barkSoft)
@@ -121,11 +121,11 @@ struct FaceProfileStep: View {
     }
 
     private var buttonTitle: String {
-        if uploadError != nil { return "Try again" }
-        if isChecking { return "Checking photos…" }
+        if uploadError != nil { return "try again" }
+        if isChecking { return "checking photos…" }
         let n = validImages.count
         if n >= Self.minPhotos { return "Continue" }
-        return "Choose \(Self.minPhotos - n) more good photo\(Self.minPhotos - n == 1 ? "" : "s")"
+        return "choose \(Self.minPhotos - n) more good photo\(Self.minPhotos - n == 1 ? "" : "s")"
     }
 
     private func tip(_ text: String) -> some View {
@@ -216,7 +216,7 @@ struct FaceProfileStep: View {
             try await manager.enable(photos: validImages, for: userId)
             onUploaded()
         } catch {
-            uploadError = "Couldn't upload your photos. Check your connection and try again."
+            uploadError = "couldn't upload your photos. check your connection and try again."
         }
     }
 }
