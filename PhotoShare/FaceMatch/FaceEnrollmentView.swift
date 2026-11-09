@@ -39,18 +39,18 @@ struct FaceEnrollmentView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Enroll \(vm.friendName)")
+            .navigationTitle("enroll \(vm.friendName)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("cancel") { dismiss() }
                 }
             }
             .alert("Error", isPresented: Binding(
                 get: { vm.error != nil },
                 set: { if !$0 { vm.error = nil } }
             )) {
-                Button("OK") { vm.error = nil }
+                Button("ok") { vm.error = nil }
             } message: {
                 Text(vm.error ?? "")
             }
@@ -62,7 +62,7 @@ struct FaceEnrollmentView: View {
     private var alreadyEnrolledBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-            Text("\(vm.friendName) is already enrolled. Select new photos to update.")
+            Text("\(vm.friendName) is already enrolled. select new photos to update.")
                 .font(.subheadline)
         }
         .padding()
@@ -73,12 +73,12 @@ struct FaceEnrollmentView: View {
 
     private var modePicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Enrollment method")
+            Text("enrollment method")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Picker("Enrollment method", selection: $vm.mode) {
-                Text("Use \(vm.friendName)'s photos").tag(EnrollmentMode.fromProfile)
-                Text("Choose my own").tag(EnrollmentMode.manual)
+            Picker("enrollment method", selection: $vm.mode) {
+                Text("use \(vm.friendName)'s photos").tag(EnrollmentMode.fromProfile)
+                Text("choose my own").tag(EnrollmentMode.manual)
             }
             .pickerStyle(.segmented)
         }
@@ -86,9 +86,9 @@ struct FaceEnrollmentView: View {
 
     private var profileModeContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Auto-enroll from \(vm.friendName)'s face profile")
+            Text("auto-enroll from \(vm.friendName)'s face profile")
                 .font(.headline)
-            Text("\(vm.friendName) has shared their face profile. Tap Enroll below to download their reference photos and generate a face embedding on your device — no photo selection needed.")
+            Text("\(vm.friendName) has shared their face profile. tap enroll below to download their reference photos and generate a face embedding on your device — no photo selection needed.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -105,7 +105,7 @@ struct FaceEnrollmentView: View {
                 matching: .images
             ) {
                 Label(
-                    "Select Photos (\(vm.selectedItems.count) of 5)",
+                    "select photos (\(vm.selectedItems.count) of 5)",
                     systemImage: "photo.badge.plus"
                 )
                 .frame(maxWidth: .infinity)
@@ -125,9 +125,9 @@ struct FaceEnrollmentView: View {
 
     private var instructions: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Select 3–5 photos of \(vm.friendName)")
+            Text("select 3–5 photos of \(vm.friendName)")
                 .font(.headline)
-            Text("Choose photos where their face is clearly visible. Variety helps — different lighting, angles, and distances improve matching accuracy.")
+            Text("choose photos where their face is clearly visible. variety helps — different lighting, angles, and distances improve matching accuracy.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -155,7 +155,7 @@ struct FaceEnrollmentView: View {
                 if vm.isEnrolling {
                     ProgressView().tint(.white)
                 } else {
-                    Text(vm.isAlreadyEnrolled ? "Update Enrollment" : "Enroll Face")
+                    Text(vm.isAlreadyEnrolled ? "update enrollment" : "enroll face")
                         .font(.headline)
                 }
             }
@@ -174,13 +174,13 @@ struct FaceEnrollmentView: View {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 56))
                 .foregroundStyle(.green)
-            Text("Enrollment complete!")
+            Text("enrollment complete!")
                 .font(.title3.bold())
-            Text("PhotoShare will now automatically detect \(vm.friendName) in your photos and share them.")
+            Text("photoshare will now automatically detect \(vm.friendName) in your photos and share them.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Button("Done") { dismiss() }
+            Button("done") { dismiss() }
                 .accessibilityIdentifier("enroll.done")
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 4)

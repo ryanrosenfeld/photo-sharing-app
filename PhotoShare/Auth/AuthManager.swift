@@ -62,7 +62,7 @@ final class AuthManager: ObservableObject {
         } catch {
             // First load failing leaves the app without a profile: surface a retry screen, not an alert.
             if currentProfile == nil { profileLoadFailed = true }
-            else { self.error = .message("Could not load profile: \(error.localizedDescription)") }
+            else { self.error = .message("could not load profile: \(error.localizedDescription)") }
         }
     }
 
@@ -78,7 +78,7 @@ final class AuthManager: ObservableObject {
                 .value
             currentProfile = updated
         } catch {
-            self.error = .message("Could not update name: \(error.localizedDescription)")
+            self.error = .message("could not update name: \(error.localizedDescription)")
         }
     }
 
@@ -90,7 +90,7 @@ final class AuthManager: ObservableObject {
                 .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
             let rootVC = windowScene.windows.first(where: \.isKeyWindow)?.rootViewController
         else {
-            error = .message("Could not find root view controller")
+            error = .message("could not find root view controller")
             return
         }
 
@@ -99,7 +99,7 @@ final class AuthManager: ObservableObject {
         do {
             let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: rootVC)
             guard let idToken = result.user.idToken?.tokenString else {
-                error = .message("Google Sign In failed: missing ID token")
+                error = .message("google sign in failed: missing id token")
                 return
             }
             let accessToken = result.user.accessToken.tokenString
@@ -151,13 +151,13 @@ final class AuthManager: ObservableObject {
     private static func friendly(_ error: Error) -> String {
         let text = error.localizedDescription
         let lower = text.lowercased()
-        if lower.contains("invalid login credentials") { return "That email and password don't match. Check them and try again." }
+        if lower.contains("invalid login credentials") { return "that email and password don't match. check them and try again." }
         if lower.contains("already registered") || lower.contains("already been registered") {
-            return "There's already an account with that email. Try signing in instead."
+            return "there's already an account with that email. try signing in instead."
         }
-        if lower.contains("password") && lower.contains("least") { return "Choose a password with at least 8 characters." }
+        if lower.contains("password") && lower.contains("least") { return "choose a password with at least 8 characters." }
         if lower.contains("offline") || lower.contains("network") || lower.contains("internet") {
-            return "No connection. Check your internet and try again."
+            return "no connection. check your internet and try again."
         }
         return text
     }

@@ -124,7 +124,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
                 if let c = crop { crops[imageIndex] = c }
             } catch {
                 counts.append(0)
-                errorMessage = "Detection error: \(error.localizedDescription)"
+                errorMessage = "detection error: \(error.localizedDescription)"
             }
         }
         enrolledEmbeddings = embeddings
@@ -150,7 +150,7 @@ final class FaceMatchSandboxViewModel: ObservableObject {
             testEmbeddings = []
             testFaceCrops = []
             testFaceCount = 0
-            errorMessage = "Detection error: \(error.localizedDescription)"
+            errorMessage = "detection error: \(error.localizedDescription)"
         }
     }
 

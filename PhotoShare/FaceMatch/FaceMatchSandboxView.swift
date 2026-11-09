@@ -14,7 +14,7 @@ struct FaceMatchSandboxView: View {
                 resultsSection
             }
         }
-        .navigationTitle("Face Match Sandbox")
+        .navigationTitle("face match sandbox")
         .navigationBarTitleDisplayMode(.inline)
         .overlay {
             if vm.isProcessing {
@@ -34,7 +34,7 @@ struct FaceMatchSandboxView: View {
                 maxSelectionCount: 5,
                 matching: .images
             ) {
-                Label("Select Enrollment Photos (1–5)", systemImage: "person.crop.square.fill")
+                Label("select enrollment photos (1–5)", systemImage: "person.crop.square.fill")
             }
             .onChange(of: vm.enrollmentPickerItems) {
                 Task { await vm.loadEnrollmentImages() }
@@ -55,7 +55,7 @@ struct FaceMatchSandboxView: View {
 
             if !vm.enrollmentFaceCrops.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Detected face crops")
+                    Text("detected face crops")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -75,7 +75,7 @@ struct FaceMatchSandboxView: View {
                 }
             }
         } header: {
-            Text("Enrollment Photos")
+            Text("enrollment photos")
         } footer: {
             if !vm.enrollmentImages.isEmpty {
                 let detected = vm.enrollmentFaceCounts.filter { $0 > 0 }.count
@@ -91,7 +91,7 @@ struct FaceMatchSandboxView: View {
                 maxSelectionCount: 1,
                 matching: .images
             ) {
-                Label("Select Test Photo", systemImage: "photo")
+                Label("select test photo", systemImage: "photo")
             }
             .onChange(of: vm.testPickerItem) {
                 Task { await vm.loadTestImage() }
@@ -106,7 +106,7 @@ struct FaceMatchSandboxView: View {
                         Text("\(vm.testFaceCount) face(s) detected")
                             .font(.subheadline)
                         if vm.testFaceCount == 0 {
-                            Text("No faces found — matching won't run.")
+                            Text("no faces found — matching won't run.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -115,7 +115,7 @@ struct FaceMatchSandboxView: View {
 
                 if !vm.testFaceCrops.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Detected face crops")
+                        Text("detected face crops")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
@@ -129,7 +129,7 @@ struct FaceMatchSandboxView: View {
                                             .clipped()
                                             .cornerRadius(6)
                                         if vm.testFaceCount > 1 {
-                                            Text("Face \(idx + 1)")
+                                            Text("face \(idx + 1)")
                                                 .font(.caption2)
                                                 .foregroundStyle(.secondary)
                                         }
@@ -141,7 +141,7 @@ struct FaceMatchSandboxView: View {
                 }
             }
         } header: {
-            Text("Test Photo")
+            Text("test photo")
         }
     }
 
@@ -153,7 +153,7 @@ struct FaceMatchSandboxView: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Threshold")
+                    Text("threshold")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     HStack {
@@ -165,7 +165,7 @@ struct FaceMatchSandboxView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Text(String(format: "Current: %.2f  (default: %.2f)", vm.threshold, FaceDetector.defaultMatchThreshold))
+                    Text(String(format: "current: %.2f  (default: %.2f)", vm.threshold, FaceDetector.defaultMatchThreshold))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -173,7 +173,7 @@ struct FaceMatchSandboxView: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Pairwise Distances (sorted)")
+                    Text("pairwise distances (sorted)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
 
@@ -198,7 +198,7 @@ struct FaceMatchSandboxView: View {
                             VStack(alignment: .leading, spacing: 1) {
                                 // Only show face index label when there are multiple test faces
                                 if vm.testFaceCount > 1 {
-                                    Text("Face \(result.testFaceIndex + 1)")
+                                    Text("face \(result.testFaceIndex + 1)")
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
@@ -221,14 +221,14 @@ struct FaceMatchSandboxView: View {
                     }
                 }
 
-                Text("Lower distance = closer match. Values < threshold trigger a share.")
+                Text("lower distance = closer match. values < threshold trigger a share.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.vertical, 4)
         } header: {
-            Text("Results")
+            Text("results")
         }
     }
 
@@ -240,7 +240,7 @@ struct FaceMatchSandboxView: View {
             Image(systemName: matched ? "checkmark.seal.fill" : "xmark.seal")
                 .font(.title)
                 .foregroundStyle(matched ? .green : .red)
-            Text(matched ? "MATCH" : "NO MATCH")
+            Text(matched ? "match" : "no match")
                 .font(.title2.bold())
                 .foregroundStyle(matched ? .green : .red)
             if let min = vm.minDistance {

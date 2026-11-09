@@ -412,3 +412,7 @@ Note: face enrollment of friends is now fully automatic on friendship acceptance
 - On new friendship: owner's device encrypts symmetric key to new friend's public key; server stores new copy
 - On unfriend: server deletes friend's copy of encrypted symmetric key
 - Friend's device discards reference photos after embedding generation; only embeddings persist locally
+
+## Copy style
+
+All user-facing text is lowercase: titles, buttons, labels, alerts, errors, onboarding, empty states, tab names, and the Info.plist permission strings. Exceptions: user-provided data (names, emails), invite codes, and text supplied by iOS (system permission buttons, share sheet). New copy must follow this.

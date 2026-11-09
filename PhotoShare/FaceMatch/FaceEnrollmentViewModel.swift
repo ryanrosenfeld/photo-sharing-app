@@ -65,12 +65,12 @@ final class FaceEnrollmentViewModel: ObservableObject {
             let me = try await supabase.auth.session.user.id
             images = try await profileManager.downloadPhotos(for: friendId, viewer: me)
         } catch {
-            self.error = "Could not load \(friendName)'s face profile: \(error.localizedDescription)"
+            self.error = "could not load \(friendName)'s face profile: \(error.localizedDescription)"
             return
         }
 
         guard !images.isEmpty else {
-            self.error = "\(friendName)'s face profile has no photos. Ask them to update it, or choose your own photos instead."
+            self.error = "\(friendName)'s face profile has no photos. ask them to update it, or choose your own photos instead."
             return
         }
 
@@ -93,13 +93,13 @@ final class FaceEnrollmentViewModel: ObservableObject {
                 }.value
                 if let embedding { embeddings.append(embedding) }
             } catch {
-                self.error = "Face detection failed: \(error.localizedDescription)"
+                self.error = "face detection failed: \(error.localizedDescription)"
                 return
             }
         }
 
         guard embeddings.count >= 2 else {
-            error = "Couldn't detect a face in enough photos. Make sure \(friendName)'s face is clearly visible and unobstructed in at least 3 photos."
+            error = "couldn't detect a face in enough photos. make sure \(friendName)'s face is clearly visible and unobstructed in at least 3 photos."
             return
         }
 
@@ -107,7 +107,7 @@ final class FaceEnrollmentViewModel: ObservableObject {
             try store.save(embeddings, for: friendId)
             enrollmentComplete = true
         } catch {
-            self.error = "Failed to save enrollment: \(error.localizedDescription)"
+            self.error = "failed to save enrollment: \(error.localizedDescription)"
         }
     }
 

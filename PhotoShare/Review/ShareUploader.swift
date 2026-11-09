@@ -33,8 +33,8 @@ enum ShareUploader {
 
         var errorDescription: String? {
             switch self {
-            case .assetUnavailable: "That photo is no longer in your library."
-            case .encodingFailed: "Couldn't prepare the photo for sending."
+            case .assetUnavailable: "that photo is no longer in your library."
+            case .encodingFailed: "couldn't prepare the photo for sending."
             }
         }
     }

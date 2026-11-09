@@ -17,9 +17,9 @@ struct FaceProfileManager: Sendable {
 
         var errorDescription: String? {
             switch self {
-            case .noKeypair: "This phone couldn't read your encryption key."
-            case .keyNotShared: "They haven't shared their face profile with you yet. It arrives the next time they open PhotoShare."
-            case .undecryptable: "Their face profile changed while loading. Try again in a moment."
+            case .noKeypair: "this phone couldn't read your encryption key."
+            case .keyNotShared: "they haven't shared their face profile with you yet. it arrives the next time they open photoshare."
+            case .undecryptable: "their face profile changed while loading. try again in a moment."
             }
         }
     }

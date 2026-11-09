@@ -20,15 +20,15 @@ struct PasteInviteSheet: View {
             OttoColor.canvas.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
-                    Button("Cancel") { dismiss() }
+                    Button("cancel") { dismiss() }
                         .foregroundStyle(OttoColor.sage)
                         .accessibilityIdentifier("pasteInvite.cancel")
                     Spacer()
                 }
-                Text("Open an invite")
+                Text("open an invite")
                     .font(OttoFont.serifBold(size: 26))
                     .foregroundStyle(OttoColor.ink)
-                Text("Paste the link a friend sent you. The whole message works too.")
+                Text("paste the link a friend sent you. the whole message works too.")
                     .font(.system(size: 15))
                     .foregroundStyle(OttoColor.bark)
 
@@ -56,7 +56,7 @@ struct PasteInviteSheet: View {
                 .accessibilityIdentifier("pasteInvite.paste")
 
                 if invalid {
-                    Text("That doesn't look like an otto invite. Ask your friend to send the link again.")
+                    Text("that doesn't look like an otto invite. ask your friend to send the link again.")
                         .font(.system(size: 13))
                         .foregroundStyle(OttoColor.wax)
                         .accessibilityIdentifier("pasteInvite.invalid")
@@ -64,7 +64,7 @@ struct PasteInviteSheet: View {
 
                 Spacer()
 
-                Button("Open invite") { submit() }
+                Button("open invite") { submit() }
                     .buttonStyle(PrimaryButtonStyle())
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     .accessibilityIdentifier("pasteInvite.open")
@@ -99,7 +99,7 @@ struct InviteQRCode: View {
                 .padding(12)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .accessibilityLabel("Invite QR code")
+                .accessibilityLabel("invite qr code")
                 .accessibilityIdentifier("invite.qr")
         }
     }
@@ -120,6 +120,6 @@ struct InviteQRCode: View {
 enum InviteMessage {
     /// The text that goes with the link in Messages / WhatsApp. Spells out what happens so the link isn't a mystery.
     static func text(from name: String?) -> String {
-        "\(name ?? "A friend") invited you to otto: when you're in each other's photos, you get them automatically. Tap the link to accept, or paste it into otto."
+        "\(name ?? "A friend") invited you to otto: when you're in each other's photos, you get them automatically. tap the link to accept, or paste it into otto."
     }
 }

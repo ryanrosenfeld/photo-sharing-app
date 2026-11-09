@@ -145,12 +145,12 @@ final class FriendsViewModel: ObservableObject {
 
     static func message(for error: Error) -> String {
         let text = error.localizedDescription
-        if text.contains("send_limit") { return "Free accounts can auto-share with up to 3 friends. Turn Send off for another friend first." }
-        if text.contains("invite_used") { return "This invite link has already been used." }
-        if text.contains("invite_expired") { return "This invite link has expired." }
-        if text.contains("invite_self") { return "That's your own invite link." }
-        if text.contains("already_friends") { return "You're already friends." }
-        if text.contains("invite_unknown") { return "This invite link isn't valid." }
+        if text.contains("send_limit") { return "free accounts can auto-share with up to 3 friends. turn send off for another friend first." }
+        if text.contains("invite_used") { return "this invite link has already been used." }
+        if text.contains("invite_expired") { return "this invite link has expired." }
+        if text.contains("invite_self") { return "that's your own invite link." }
+        if text.contains("already_friends") { return "you're already friends." }
+        if text.contains("invite_unknown") { return "this invite link isn't valid." }
         return text
     }
 }

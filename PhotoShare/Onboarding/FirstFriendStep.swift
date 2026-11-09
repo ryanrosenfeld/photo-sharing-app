@@ -17,11 +17,11 @@ struct FirstFriendStep: View {
     var body: some View {
         OnboardingPage(
             step: step, total: total, mascot: .friends, icon: "person.2",
-            title: "Bring a friend",
-            message: "otto works between friends. Send one person a link. Once they join, photos of each other start arriving on their own.",
+            title: "bring a friend",
+            message: "otto works between friends. send one person a link. once they join, photos of each other start arriving on their own.",
             bullets: [
-                "They see your name and choose to accept.",
-                "Only photos they're in are ever sent to them.",
+                "they see your name and choose to accept.",
+                "only photos they're in are ever sent to them.",
             ]
         ) {
             if let code {
@@ -31,12 +31,12 @@ struct FirstFriendStep: View {
                 }
                 if shared {
                     // Each link works once; more friends are one tap away on the Friends tab.
-                    Text("Invite sent. You'll see them in Friends once they accept.")
+                    Text("invite sent. you'll see them in friends once they accept.")
                         .font(.system(size: 14))
                         .foregroundStyle(OttoColor.bark)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("firstFriend.sent")
-                    Button("Continue") { finish() }
+                    Button("continue") { finish() }
                         .buttonStyle(PrimaryButtonStyle())
                         .accessibilityIdentifier("firstFriend.continue")
                 } else {
@@ -44,7 +44,7 @@ struct FirstFriendStep: View {
                         item: InviteLink.url(code: code),
                         message: Text(InviteMessage.text(from: authManager.currentProfile?.displayName))
                     ) {
-                        Text("Send an invite")
+                        Text("send an invite")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -60,9 +60,9 @@ struct FirstFriendStep: View {
                     .accessibilityIdentifier("firstFriend.share")
 
                     HStack(spacing: 24) {
-                        Button(showQR ? "Hide code" : "They're with me") { withAnimation { showQR.toggle() } }
+                        Button(showQR ? "hide code" : "they're with me") { withAnimation { showQR.toggle() } }
                             .accessibilityIdentifier("firstFriend.qr")
-                        Button(showQR ? "They scanned it" : "Skip for now") {
+                        Button(showQR ? "they scanned it" : "skip for now") {
                             if showQR { FriendsViewModel.markShared(code) }
                             finish()
                         }
@@ -73,15 +73,15 @@ struct FirstFriendStep: View {
                     .frame(height: 44)
                 }
             } else if failed {
-                Button("Couldn't create a link. Try again") { Task { await load() } }
+                Button("couldn't create a link. try again") { Task { await load() } }
                     .foregroundStyle(OttoColor.wax)
-                Button("Skip for now") { finish() }
+                Button("skip for now") { finish() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(OttoColor.bark)
                     .accessibilityIdentifier("firstFriend.skip")
             } else {
                 ProgressView().tint(OttoColor.sage).frame(height: 52)
-                Button("Skip for now") { finish() }
+                Button("skip for now") { finish() }
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(OttoColor.bark)
                     .accessibilityIdentifier("firstFriend.skip")

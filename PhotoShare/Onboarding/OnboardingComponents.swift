@@ -14,7 +14,7 @@ struct OnboardingProgress: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Step \(step) of \(total)")
+        .accessibilityLabel("step \(step) of \(total)")
         .accessibilityIdentifier("onboarding.progress")
     }
 }

@@ -8,7 +8,7 @@ struct FaceProfileStep: View {
     let userId: UUID
     let step: Int?          // nil when reused from the Profile tab (no progress bar)
     let total: Int
-    var title = "Show your face"
+    var title = "show your face"
     var showsUploadedNote = false
     let onUploaded: () -> Void
 
@@ -65,9 +65,9 @@ struct FaceProfileStep: View {
                             tip("good light, nothing covering your face")
                             tip("glasses on if you usually wear them")
                         } else {
-                            tip("Just you, facing the camera")
+                            tip("just you, facing the camera")
                             tip("good light, nothing covering your face")
-                            tip("Mix it up: different days, angles, or glasses on and off")
+                            tip("mix it up: different days, angles, or glasses on and off")
                         }
                     }
                     .font(.system(size: 14))
@@ -95,7 +95,7 @@ struct FaceProfileStep: View {
                             .accessibilityIdentifier("faceProfile.choose")
                     } else {
                         Button { showPicker = true } label: {
-                            Label(candidates.isEmpty ? "Choose photos" : "Change photos",
+                            Label(candidates.isEmpty ? "choose photos" : "change photos",
                                   systemImage: "photo.badge.plus")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
@@ -111,7 +111,7 @@ struct FaceProfileStep: View {
 
                     if !candidates.isEmpty { grid }
 
-                    Label("These stay private: they're stored encrypted and only your friends' phones use them, only to recognize you.",
+                    Label("these stay private: they're stored encrypted and only your friends' phones use them, only to recognize you.",
                           systemImage: "lock.fill")
                         .font(.footnote)
                         .foregroundStyle(OttoColor.barkSoft)
@@ -166,11 +166,11 @@ struct FaceProfileStep: View {
         case (true, true):
             "take new selfies to replace your current set. your current photos stay until you finish."
         case (true, false):
-            "Pick 3 to 5 new photos to replace your current set. Your current photos stay until you finish."
+            "pick 3 to 5 new photos to replace your current set. your current photos stay until you finish."
         case (false, true):
             "take three quick selfies so friends' phones can recognize you in their photos."
         case (false, false):
-            "Choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos."
+            "choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos."
         }
     }
 
@@ -187,8 +187,8 @@ struct FaceProfileStep: View {
     }
 
     private var buttonTitle: String {
-        if uploadError != nil { return "Try again" }
-        if isChecking { return "Checking photos…" }
+        if uploadError != nil { return "try again" }
+        if isChecking { return "checking photos…" }
         let n = validImages.count
         if n >= Self.minPhotos { return "Continue" }
         if canUseCamera && candidates.isEmpty { return "take selfies to continue" }
@@ -286,7 +286,7 @@ struct FaceProfileStep: View {
             try await manager.enable(photos: validImages, for: userId)
             onUploaded()
         } catch {
-            uploadError = "Couldn't upload your photos. Check your connection and try again."
+            uploadError = "couldn't upload your photos. check your connection and try again."
         }
     }
 }

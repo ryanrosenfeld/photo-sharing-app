@@ -12,8 +12,8 @@ struct PhotosView: View {
                 // header
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading, spacing: 4) {
-                        OttoEyebrow(text: "Photos")
-                        Text("For you")
+                        OttoEyebrow(text: "photos")
+                        Text("for you")
                             .font(OttoFont.serifBold(size: 32))
                             .foregroundStyle(OttoColor.ink)
                     }
@@ -59,7 +59,7 @@ struct PhotosView: View {
             get: { vm.error != nil },
             set: { if !$0 { vm.error = nil } }
         )) {
-            Button("OK") { vm.error = nil }
+            Button("ok") { vm.error = nil }
         } message: {
             Text(vm.error ?? "")
         }
@@ -75,14 +75,14 @@ struct PhotosView: View {
             Spacer()
             OttoMascot(pose: .sleeping, width: 160)
             VStack(spacing: 8) {
-                Text("Couldn't load your photos.")
+                Text("couldn't load your photos.")
                     .font(OttoFont.serifBoldItalic(size: 22))
                     .foregroundStyle(OttoColor.ink)
-                Text("Check your connection and try again.")
+                Text("check your connection and try again.")
                     .font(.system(size: 15))
                     .foregroundStyle(OttoColor.bark)
             }
-            OttoPillButton(title: "Try again", isFullWidth: false) {
+            OttoPillButton(title: "try again", isFullWidth: false) {
                 Task { await reload() }
             }
             .accessibilityIdentifier("photos.retry")
@@ -98,10 +98,10 @@ struct PhotosView: View {
             OttoMascot(pose: .sleeping, width: 200)
                 .accessibilityIdentifier("photos.empty")
             VStack(spacing: 8) {
-                Text("Otto's keeping watch.")
+                Text("otto's keeping watch.")
                     .font(OttoFont.serifBoldItalic(size: 24))
                     .foregroundStyle(OttoColor.ink)
-                Text("When friends share photos with you, they'll arrive here.")
+                Text("when friends share photos with you, they'll arrive here.")
                     .font(.system(size: 15))
                     .foregroundStyle(OttoColor.bark)
                     .multilineTextAlignment(.center)
@@ -181,12 +181,12 @@ struct PolaroidStackGroupView: View {
                 Spacer()
 
                 if group.photos.contains(where: { !$0.isSaved }) {
-                    Button("Save all", action: onSaveAll)
+                    Button("save all", action: onSaveAll)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(OttoColor.sage)
                         .accessibilityIdentifier("photos.saveAll.\(group.senderName)")
                 } else {
-                    Label("Saved", systemImage: "checkmark")
+                    Label("saved", systemImage: "checkmark")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(OttoColor.barkSoft)
                 }
@@ -378,7 +378,7 @@ struct PolaroidCard: View {
 
             // expiry warning
             if photo.photos.isExpiringSoon && showCaption {
-                Text("Expires soon — save it")
+                Text("expires soon — save it")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)

@@ -12,7 +12,7 @@ enum FaceDetectorError: Error, LocalizedError {
     case modelNotFound
 
     var errorDescription: String? {
-        "MobileFaceNet.mlpackage is not in the app bundle. Run scripts/convert_mobilefacenet.py then add the output to the Xcode target."
+        "MobileFaceNet.mlpackage is not in the app bundle. run scripts/convert_mobilefacenet.py then add the output to the xcode target."
     }
 }
 

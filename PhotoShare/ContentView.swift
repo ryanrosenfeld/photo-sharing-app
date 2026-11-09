@@ -59,12 +59,12 @@ private struct ProfileLoadingView: View {
         VStack(spacing: 16) {
             if authManager.profileLoadFailed {
                 OttoMascot(pose: .sleeping, width: 160)
-                Text("Couldn't load your account")
+                Text("couldn't load your account")
                     .font(OttoFont.serifBold(size: 22))
                     .foregroundStyle(OttoColor.ink)
-                OttoPillButton(title: "Try again", isFullWidth: false) { Task { await authManager.reloadProfile() } }
+                OttoPillButton(title: "try again", isFullWidth: false) { Task { await authManager.reloadProfile() } }
                     .accessibilityIdentifier("profileLoading.retry")
-                Button("Sign out") { Task { await authManager.signOut() } }
+                Button("sign out") { Task { await authManager.signOut() } }
                     .font(.system(size: 14))
                     .foregroundStyle(OttoColor.wax)
             } else {

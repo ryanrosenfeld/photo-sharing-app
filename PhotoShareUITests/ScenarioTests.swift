@@ -188,7 +188,7 @@ final class ScenarioTests: XCTestCase {
         let saveAll = app.buttons["photos.saveAll.Alice"]
         XCTAssertTrue(saveAll.waitForExistence(timeout: 10), "Save all")
         saveAll.tap()
-        XCTAssertTrue(app.staticTexts["Saved"].waitForExistence(timeout: 30), "decrypted + saved to the library")
+        XCTAssertTrue(app.staticTexts["saved"].waitForExistence(timeout: 30), "decrypted + saved to the library")
         shot("photos-decrypted-saved")
     }
 
@@ -228,7 +228,7 @@ final class ScenarioTests: XCTestCase {
         if !two.waitForExistence(timeout: 10) { NSLog("[walkthrough] pull to refresh did not pick up the second photo; continuing to Save all") }
         sleep(2); shot("photos-refreshed")
         app.buttons["photos.saveAll.Alice"].tap()
-        XCTAssertTrue(app.staticTexts["Saved"].waitForExistence(timeout: 30), "Save all -> Saved")
+        XCTAssertTrue(app.staticTexts["saved"].waitForExistence(timeout: 30), "Save all -> Saved")
         sleep(2); shot("photos-saved")
     }
 
@@ -381,7 +381,7 @@ final class ScenarioTests: XCTestCase {
         XCTAssertTrue(row.waitForExistence(timeout: 15), "friend row")
         row.tap()
         app.buttons["friend.unfriend"].tap()
-        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Unfriend' AND identifier != 'friend.unfriend'")).firstMatch
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'unfriend' AND identifier != 'friend.unfriend'")).firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), "confirmation")
         shot("unfriend-confirm")
         confirm.tap()

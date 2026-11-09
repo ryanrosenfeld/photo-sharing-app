@@ -59,13 +59,13 @@ struct PhotoAccessStep: View {
         if denied {
             OnboardingPage(
                 step: step, total: total, mascot: .sleeping, icon: "photo",
-                title: "Photo access is off",
-                message: "Without it, otto can't spot your friends in new photos, so nothing gets shared automatically. You can turn it on in Settings any time."
+                title: "photo access is off",
+                message: "without it, otto can't spot your friends in new photos, so nothing gets shared automatically. you can turn it on in settings any time."
             ) {
-                Button("Open Settings") { openSettings() }
+                Button("open settings") { openSettings() }
                     .buttonStyle(PrimaryButtonStyle())
                     .accessibilityIdentifier("photoAccess.settings")
-                Button("Continue without it") {
+                Button("continue without it") {
                     guard !finished else { return }
                     finished = true
                     onFinished()
@@ -77,15 +77,15 @@ struct PhotoAccessStep: View {
         } else {
             OnboardingPage(
                 step: step, total: total, mascot: .floating, icon: "photo",
-                title: "Let otto see your photos",
-                message: "When you take a photo with a friend in it, otto sends it to them automatically.",
+                title: "let otto see your photos",
+                message: "when you take a photo with a friend in it, otto sends it to them automatically.",
                 bullets: [
-                    "Faces are matched on your phone. Nothing is analyzed on a server.",
-                    "A photo is only sent when a friend you've connected with is in it.",
-                    "Choose “Allow Full Access” so new photos are picked up.",
+                    "faces are matched on your phone. nothing is analyzed on a server.",
+                    "a photo is only sent when a friend you've connected with is in it.",
+                    "choose “allow full access” so new photos are picked up.",
                 ]
             ) {
-                Button("Continue") { requestAccess() }
+                Button("continue") { requestAccess() }
                 .buttonStyle(PrimaryButtonStyle())
                 .accessibilityIdentifier("photoAccess.continue")
             }
@@ -102,10 +102,10 @@ struct NotificationStep: View {
     var body: some View {
         OnboardingPage(
             step: step, total: total, mascot: .friends, icon: "bell",
-            title: "Know when photos arrive",
-            message: "Get a nudge when a friend shares a photo of you, or when a friend request comes in."
+            title: "know when photos arrive",
+            message: "get a nudge when a friend shares a photo of you, or when a friend request comes in."
         ) {
-            Button("Turn on notifications") {
+            Button("turn on notifications") {
                 Task {
                     OnboardingStep.markNotificationsOffered()
                     _ = try? await UNUserNotificationCenter.current()
@@ -115,7 +115,7 @@ struct NotificationStep: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .accessibilityIdentifier("notifications.allow")
-            Button("Not now") {
+            Button("not now") {
                 OnboardingStep.markNotificationsOffered()
                 onFinished()
             }
