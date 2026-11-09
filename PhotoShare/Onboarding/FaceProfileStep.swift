@@ -28,7 +28,6 @@ struct FaceProfileStep: View {
     @State private var isUploading = false
     @State private var uploadError: String?
     @State private var showCamera = false
-    @State private var showPicker = false
 
     private let canUseCamera = SelfieCaptureModel.canCapture
 
@@ -86,15 +85,19 @@ struct FaceProfileStep: View {
                         .disabled(isUploading)
                         .accessibilityIdentifier("faceProfile.selfie")
 
-                        Button(libraryTitle) { showPicker = true }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(OttoColor.bark)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .disabled(isUploading)
-                            .accessibilityIdentifier("faceProfile.choose")
+                        PhotosPicker(selection: $selection, maxSelectionCount: max(1, Self.maxPhotos - selfieCount),
+                                     selectionBehavior: .ordered, matching: .images) {
+                            Text(libraryTitle)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(OttoColor.bark)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                        }
+                        .disabled(isUploading)
+                        .accessibilityIdentifier("faceProfile.choose")
                     } else {
-                        Button { showPicker = true } label: {
+                        PhotosPicker(selection: $selection, maxSelectionCount: Self.maxPhotos,
+                                     selectionBehavior: .ordered, matching: .images) {
                             Label(candidates.isEmpty ? "choose photos" : "change photos",
                                   systemImage: "photo.badge.plus")
                                 .font(.headline)
@@ -144,9 +147,6 @@ struct FaceProfileStep: View {
             .padding(.bottom, 24)
             .padding(.top, 8)
         }
-        .photosPicker(isPresented: $showPicker, selection: $selection,
-                      maxSelectionCount: max(1, Self.maxPhotos - selfieCount),
-                      selectionBehavior: .ordered, matching: .images)
         .onChange(of: selection) { _, items in
             Task { await load(items) }
         }
@@ -155,8 +155,7 @@ struct FaceProfileStep: View {
                 showCamera = false
                 if !photos.isEmpty { useSelfies(photos) }
             }, onUseLibrary: {
-                showCamera = false
-                Task { try? await Task.sleep(for: .milliseconds(600)); showPicker = true }
+                showCamera = false   // the library button is right under "take selfies"
             })
         }
     }
@@ -190,7 +189,7 @@ struct FaceProfileStep: View {
         if uploadError != nil { return "try again" }
         if isChecking { return "checking photos…" }
         let n = validImages.count
-        if n >= Self.minPhotos { return "Continue" }
+        if n >= Self.minPhotos { return "continue" }
         if canUseCamera && candidates.isEmpty { return "take selfies to continue" }
         return "add \(Self.minPhotos - n) more good photo\(Self.minPhotos - n == 1 ? "" : "s")"
     }
