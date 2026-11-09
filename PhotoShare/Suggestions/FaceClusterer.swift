@@ -26,9 +26,9 @@ struct PersonCluster: Identifiable, Sendable {
 struct FaceClusterer: Sendable {
     /// A face joins a cluster if its cosine distance to the centroid is below this. Stricter than the friend-match
     /// threshold (0.55) because a wrongly merged cluster is worse than a split one here.
-    var joinThreshold: Float = 0.45
+    var joinThreshold: Float = 0.50
     /// Two clusters merge when their centroids are this close.
-    var mergeThreshold: Float = 0.35
+    var mergeThreshold: Float = 0.40
     /// A person must appear in at least this many photos to be suggested.
     var minPhotos = 3
 
