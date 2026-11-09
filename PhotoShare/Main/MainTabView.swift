@@ -1,6 +1,7 @@
 import Photos
 import PhotosUI
 import SwiftUI
+import Supabase
 import UserNotifications
 
 struct MainTabView: View {
@@ -93,7 +94,39 @@ extension MainTabView {
     /// Hands friends the key to your face profile, and delivers photos that were waiting on a friend's key.
     fileprivate func syncEncryption(userId: UUID) async {
         await FaceProfileManager.syncKeys(userId: userId, friendIds: friendsVM.friends.map(\.friendId))
+        await queuePhotosForAcceptedInvites()
         await PendingShareStore.shared.retry(senderId: userId, friends: friendsVM.friends)
+    }
+}
+
+extension MainTabView {
+    /// Onboarding suggestions can promise someone "our photos together" once they join. When that invite has been
+    /// accepted, hand those photos to the normal send path (review mode applies; photos deleted since are skipped later).
+    fileprivate func queuePhotosForAcceptedInvites() async {
+        InvitedPhotosStore.prune()
+        let waiting = InvitedPhotosStore.all()
+        guard !waiting.isEmpty else { return }
+        struct Row: Decodable {
+            let code: String
+            let acceptedBy: UUID?
+            enum CodingKeys: String, CodingKey { case code; case acceptedBy = "accepted_by" }
+        }
+        guard let rows: [Row] = try? await supabase.from("invites")
+            .select("code, accepted_by").in("code", values: waiting.map(\.code)).execute().value else { return }
+        for row in rows {
+            guard let friendId = row.acceptedBy, let entry = waiting.first(where: { $0.code == row.code }),
+                  let friend = friendsVM.friends.first(where: { $0.friendId == friendId }) else { continue }
+            if friend.mySend && friend.theirReceive {
+                let (sendNow, toReview) = reviewStore.settings.partition([friendId])
+                for assetId in entry.assetIds {
+                    if !sendNow.isEmpty { PendingShareStore.shared.add(assetId: assetId, recipientIds: sendNow) }
+                    if !toReview.isEmpty {
+                        reviewStore.enqueue(assetId: assetId, takenAt: Date(), recipients: [.init(id: friendId, name: friend.displayName)])
+                    }
+                }
+            }
+            InvitedPhotosStore.remove(code: row.code)
+        }
     }
 }
 
