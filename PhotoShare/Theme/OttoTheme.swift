@@ -147,7 +147,7 @@ struct OttoEyebrow: View {
     var color: Color = OttoColor.barkSoft
 
     var body: some View {
-        Text(text.uppercased())
+        Text(text)
             .font(.system(size: 11, weight: .semibold))
             .kerning(2)
             .foregroundStyle(color)

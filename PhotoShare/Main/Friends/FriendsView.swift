@@ -51,7 +51,7 @@ struct FriendsView: View {
             get: { vm.error != nil },
             set: { if !$0 { vm.error = nil } }
         )) {
-            Button("OK") { vm.error = nil }
+            Button("ok") { vm.error = nil }
         } message: {
             Text(vm.error ?? "")
         }
@@ -73,8 +73,8 @@ struct FriendsView: View {
     private var header: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 4) {
-                OttoEyebrow(text: "Friends")
-                Text("Your circle")
+                OttoEyebrow(text: "friends")
+                Text("your circle")
                     .font(OttoFont.serifBold(size: 32))
                     .foregroundStyle(OttoColor.ink)
             }
@@ -87,7 +87,7 @@ struct FriendsView: View {
                     .background(OttoColor.sage)
                     .clipShape(Circle())
             }
-            .accessibilityLabel("Add Friend")
+            .accessibilityLabel("add friend")
             .accessibilityIdentifier("friends.add")
         }
         .padding(.horizontal, 20)
@@ -102,10 +102,10 @@ struct FriendsView: View {
             Spacer()
             OttoMascot(pose: .friends, width: 240)
             VStack(spacing: 8) {
-                Text("Better with friends.")
+                Text("better with friends.")
                     .font(OttoFont.serifBoldItalic(size: 24))
                     .foregroundStyle(OttoColor.ink)
-                Text("Send an invite. Once they accept, photos start flowing both ways.")
+                Text("send an invite. once they accept, photos start flowing both ways.")
                     .font(.system(size: 14))
                     .foregroundStyle(OttoColor.bark)
                     .multilineTextAlignment(.center)
@@ -113,7 +113,7 @@ struct FriendsView: View {
                     .padding(.horizontal, 40)
             }
             Button { showInvite = true } label: {
-                Label("Add your first friend", systemImage: "plus")
+                Label("add your first friend", systemImage: "plus")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 22)
@@ -143,7 +143,7 @@ struct FriendsView: View {
                 }
                 .accessibilityIdentifier("friends.invitesWaiting")
             }
-            Button("Have an invite link? Paste it") { showPasteInvite = true }
+            Button("have an invite link? paste it") { showPasteInvite = true }
                 .font(.system(size: 13))
                 .foregroundStyle(OttoColor.sage)
                 .accessibilityIdentifier("friends.pasteInvite")
@@ -170,7 +170,7 @@ struct FriendsView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(OttoColor.ink)
                             .accessibilityIdentifier("friends.reviewQueue.count")
-                        Text("Held on your phone until you send them")
+                        Text("held on your phone until you send them")
                             .font(.system(size: 13))
                             .foregroundStyle(OttoColor.barkSoft)
                     }
@@ -193,7 +193,6 @@ struct FriendsView: View {
             Text("\(vm.friends.count) friend\(vm.friends.count != 1 ? "s" : "")")
                 .font(.system(size: 12, weight: .semibold))
                 .kerning(1.4)
-                .textCase(.uppercase)
                 .foregroundStyle(OttoColor.barkSoft)
                 .padding(.horizontal, 4)
                 .padding(.bottom, 8)
@@ -236,7 +235,7 @@ private struct FriendRow: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundStyle(OttoColor.ink)
                             if reviewOn {
-                                Text("Review")
+                                Text("review")
                                     .font(.system(size: 11, weight: .semibold))
                                     .padding(.horizontal, 7).padding(.vertical, 2)
                                     .background(OttoColor.sage.opacity(0.15))
@@ -268,12 +267,12 @@ private struct FriendRow: View {
 extension Friend {
     /// One line summarising both toggles; "Paused" when my photos can't reach them.
     var statusLine: String {
-        if isPaused { return "Paused: \(displayName) isn't receiving" }
+        if isPaused { return "paused: \(displayName) isn't receiving" }
         switch (mySend, myReceive) {
-        case (true, true): return "Sharing both ways"
-        case (true, false): return "Only sending"
-        case (false, true): return "Only receiving"
-        case (false, false): return "Not sharing"
+        case (true, true): return "sharing both ways"
+        case (true, false): return "only sending"
+        case (false, true): return "only receiving"
+        case (false, false): return "not sharing"
         }
     }
 }
@@ -316,11 +315,11 @@ struct EnrollmentChip: View {
 
     private var label: String {
         switch status {
-        case .ready: "Ready"
-        case .settingUp: "Setting up"
-        case .waitingForThem: "Waiting"
-        case .noFaceProfile: "No photos"
-        case .failed: "Retrying"
+        case .ready: "ready"
+        case .settingUp: "setting up"
+        case .waitingForThem: "waiting"
+        case .noFaceProfile: "no photos"
+        case .failed: "retrying"
         }
     }
 
@@ -336,11 +335,11 @@ struct EnrollmentChip: View {
 
     static func explanation(_ status: EnrollmentStatus, name: String) -> String {
         switch status {
-        case .ready: "Your phone can recognize \(name) in new photos."
-        case .settingUp: "Getting ready to recognize \(name)."
-        case .waitingForThem: "Waiting for \(name) to open otto, so their phone can share their face photos with yours."
+        case .ready: "your phone can recognize \(name) in new photos."
+        case .settingUp: "getting ready to recognize \(name)."
+        case .waitingForThem: "waiting for \(name) to open otto, so their phone can share their face photos with yours."
         case .noFaceProfile: "\(name) hasn't added face photos yet, so their photos can't be matched."
-        case .failed: "Couldn't load \(name)'s face photos. otto tries again next time you open it."
+        case .failed: "couldn't load \(name)'s face photos. otto tries again next time you open it."
         }
     }
 }
@@ -366,7 +365,7 @@ struct FriendDetailSheet: View {
                 VStack(spacing: 0) {
                     HStack {
                         Spacer()
-                        Button("Done") { dismiss() }
+                        Button("done") { dismiss() }
                             .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(OttoColor.sage)
                             .accessibilityIdentifier("friend.done")
@@ -387,21 +386,21 @@ struct FriendDetailSheet: View {
                     OttoSectionCard {
                         VStack(spacing: 0) {
                             toggleRow(
-                                title: "Send",
-                                detail: "Share photos of \(friend.displayName) with them, automatically.",
+                                title: "send",
+                                detail: "share photos of \(friend.displayName) with them, automatically.",
                                 id: "friend.send",
                                 isOn: Binding(get: { friend.mySend }, set: { on in Task { await vm.setSend(on, for: friend) } })
                             )
                             Divider().background(OttoColor.line).padding(.leading, 16)
                             toggleRow(
-                                title: "Receive",
-                                detail: "Get photos \(friend.displayName) shares of you.",
+                                title: "receive",
+                                detail: "get photos \(friend.displayName) shares of you.",
                                 id: "friend.receive",
                                 isOn: Binding(get: { friend.myReceive }, set: { on in Task { await vm.setReceive(on, for: friend) } })
                             )
                             Divider().background(OttoColor.line).padding(.leading, 16)
                             toggleRow(
-                                title: "Review before sending",
+                                title: "review before sending",
                                 detail: reviewDetail(for: friend),
                                 id: "friend.review",
                                 isOn: Binding(
@@ -414,7 +413,7 @@ struct FriendDetailSheet: View {
                     .padding(.horizontal, 16)
 
                     if reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil {
-                        Button("Use my default (\(reviewStore.settings.globalEnabled ? "review" : "send automatically"))") {
+                        Button("use my default (\(reviewStore.settings.globalEnabled ? "review" : "send automatically"))") {
                             reviewStore.setOverride(nil, for: friend.friendId)
                         }
                         .font(.system(size: 13, weight: .medium))
@@ -432,7 +431,7 @@ struct FriendDetailSheet: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .accessibilityIdentifier("friend.enrollment.explanation")
                             if status != .settingUp, status != .noFaceProfile, let me = auth.session?.user.id {
-                                Button("Refresh") { Task { await enrollment.refresh(friend, viewer: me, friends: vm.friends) } }
+                                Button("refresh") { Task { await enrollment.refresh(friend, viewer: me, friends: vm.friends) } }
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(OttoColor.sage)
                                     .accessibilityIdentifier("friend.enrollment.refresh")
@@ -450,12 +449,12 @@ struct FriendDetailSheet: View {
 
                     Spacer()
 
-                    OttoPillButton(title: "Unfriend", isDestructive: true) { confirmUnfriend = true }
+                    OttoPillButton(title: "unfriend", isDestructive: true) { confirmUnfriend = true }
                         .accessibilityIdentifier("friend.unfriend")
                         .padding(.horizontal, 28).padding(.bottom, 30)
                 }
-                .confirmationDialog("Unfriend \(friend.displayName)?", isPresented: $confirmUnfriend, titleVisibility: .visible) {
-                    Button("Unfriend", role: .destructive) {
+                .confirmationDialog("unfriend \(friend.displayName)?", isPresented: $confirmUnfriend, titleVisibility: .visible) {
+                    Button("unfriend", role: .destructive) {
                         Task {
                             await vm.unfriend(friend)
                             dismiss()
@@ -463,7 +462,7 @@ struct FriendDetailSheet: View {
                     }
                     .accessibilityIdentifier("friend.unfriend.confirm")
                 } message: {
-                    Text("You'll stop sharing photos with each other. Photos already shared stay where they are.")
+                    Text("you'll stop sharing photos with each other. photos already shared stay where they are.")
                 }
             }
         }
@@ -474,9 +473,9 @@ struct FriendDetailSheet: View {
         let overridden = reviewStore.settings.friendOverrides[friend.friendId.uuidString] != nil
         let on = reviewStore.settings.requiresReview(for: friend.friendId)
         let base = on
-            ? "Photos of \(friend.displayName) wait in Friends until you approve them."
-            : "Photos of \(friend.displayName) are sent as soon as they're matched."
-        return overridden ? base : base + " (Following your default.)"
+            ? "photos of \(friend.displayName) wait in friends until you approve them."
+            : "photos of \(friend.displayName) are sent as soon as they're matched."
+        return overridden ? base : base + " (following your default.)"
     }
 
     private func toggleRow(title: String, detail: String, id: String, isOn: Binding<Bool>) -> some View {
@@ -512,13 +511,13 @@ struct AddFriendSheet: View {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    Text("Add a friend")
+                    Text("add a friend")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(OttoColor.ink)
                     Spacer()
                 }
                 .overlay(alignment: .leading) {
-                    Button("Done") { dismiss() }
+                    Button("done") { dismiss() }
                         .font(.system(size: 17))
                         .foregroundStyle(OttoColor.sage)
                         .accessibilityIdentifier("invite.done")
@@ -530,10 +529,10 @@ struct AddFriendSheet: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         VStack(spacing: 10) {
-                            Text("Send them a link.")
+                            Text("send them a link.")
                                 .font(OttoFont.serifBoldItalic(size: 26))
                                 .foregroundStyle(OttoColor.ink)
-                            Text("They open it and accept, and you start sharing photos of each other. Together? Have them scan the code with their camera.")
+                            Text("they open it and accept, and you start sharing photos of each other. together? have them scan the code with their camera.")
                                 .font(.system(size: 15))
                                 .foregroundStyle(OttoColor.bark)
                                 .multilineTextAlignment(.center)
@@ -557,7 +556,7 @@ struct AddFriendSheet: View {
                                     .textSelection(.enabled)
                                     .accessibilityIdentifier("invite.link")
                                 Spacer(minLength: 0)
-                                Button(copied ? "Copied" : "Copy") {
+                                Button(copied ? "copied" : "copy") {
                                     UIPasteboard.general.string = InviteLink.url(code: code).absoluteString
                                     FriendsViewModel.markShared(code)
                                     copied = true
@@ -573,11 +572,11 @@ struct AddFriendSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .overlay(RoundedRectangle(cornerRadius: 16).stroke(OttoColor.lineSoft, lineWidth: 0.5))
 
-                            Text("Works for one person and expires in 14 days.")
+                            Text("works for one person and expires in 14 days.")
                                 .font(.system(size: 12))
                                 .foregroundStyle(OttoColor.barkSoft)
                         } else if failed {
-                            Button("Couldn't create a link. Try again") { Task { await load(fresh: false) } }
+                            Button("couldn't create a link. try again") { Task { await load(fresh: false) } }
                                 .foregroundStyle(OttoColor.wax)
                                 .accessibilityIdentifier("invite.retry")
                         } else {
@@ -596,7 +595,7 @@ struct AddFriendSheet: View {
                             item: InviteLink.url(code: code),
                             message: Text(InviteMessage.text(from: auth.currentProfile?.displayName))
                         ) {
-                            Text("Share invite")
+                            Text("share invite")
                                 .font(.system(size: 16, weight: .medium))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -611,7 +610,7 @@ struct AddFriendSheet: View {
                         .accessibilityIdentifier("invite.share")
 
                         if shared {
-                            Button("New link for someone else") { Task { await load(fresh: true) } }
+                            Button("new link for someone else") { Task { await load(fresh: true) } }
                                 .font(.system(size: 14))
                                 .foregroundStyle(OttoColor.barkSoft)
                                 .accessibilityIdentifier("invite.another")
@@ -629,10 +628,9 @@ struct AddFriendSheet: View {
     /// Other links I've sent that nobody has used yet.
     private var waitingList: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Links you've sent, not used yet")
+            Text("links you've sent, not used yet")
                 .font(.system(size: 12, weight: .semibold))
                 .kerning(1.2)
-                .textCase(.uppercase)
                 .foregroundStyle(OttoColor.barkSoft)
                 .accessibilityIdentifier("invite.waiting")
             OttoSectionCard {
@@ -640,15 +638,15 @@ struct AddFriendSheet: View {
                     ForEach(others) { invite in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Sent \(invite.createdAt.formatted(.relative(presentation: .named)))")
+                                Text("sent \(invite.createdAt.formatted(.relative(presentation: .named)))")
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundStyle(OttoColor.ink)
-                                Text("Expires \(invite.expiresAt.formatted(.relative(presentation: .named)))")
+                                Text("expires \(invite.expiresAt.formatted(.relative(presentation: .named)))")
                                     .font(.system(size: 12))
                                     .foregroundStyle(OttoColor.barkSoft)
                             }
                             Spacer()
-                            Button("Cancel link") { Task { await vm.cancelInvite(invite.code) } }
+                            Button("cancel link") { Task { await vm.cancelInvite(invite.code) } }
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(OttoColor.wax)
                                 .accessibilityIdentifier("invite.cancel")
@@ -684,7 +682,7 @@ struct InviteAcceptSheet: View {
     @State private var message: String?
     @State private var accepted = false
 
-    private var name: String { preview?.inviterName ?? "Someone" }
+    private var name: String { preview?.inviterName ?? "someone" }
 
     /// accept_invite turns my Send off when I'm already at the free plan's limit; say so instead of surprising them.
     private var sendStartsPaused: Bool {
@@ -701,33 +699,33 @@ struct InviteAcceptSheet: View {
                     ProgressView().tint(OttoColor.sage)
                 } else if accepted {
                     OttoMascot(pose: .friends, width: 200)
-                    Text("You and \(name) are friends")
+                    Text("you and \(name) are friends")
                         .font(OttoFont.serifBold(size: 24)).foregroundStyle(OttoColor.ink)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("invite.accepted")
                     if sendStartsPaused {
-                        Text("Sending to \(name) starts off: free accounts auto-share with up to 3 friends. Turn Send off for someone else, then on for \(name), in Friends.")
+                        Text("sending to \(name) starts off: free accounts auto-share with up to 3 friends. turn send off for someone else, then on for \(name), in friends.")
                             .font(.system(size: 14)).foregroundStyle(OttoColor.wax).multilineTextAlignment(.center)
                             .accessibilityIdentifier("invite.sendPaused")
                     } else {
-                        Text("Change what you send and receive anytime from the Friends tab.")
+                        Text("change what you send and receive anytime from the friends tab.")
                             .font(.system(size: 14)).foregroundStyle(OttoColor.bark).multilineTextAlignment(.center)
                     }
-                    OttoPillButton(title: "Done") { dismiss() }.accessibilityIdentifier("invite.done")
+                    OttoPillButton(title: "done") { dismiss() }.accessibilityIdentifier("invite.done")
                 } else if preview?.state == "valid" {
                     OttoAvatarCircle(name: name, size: 72)
                     Text("\(name) wants to be friends")
                         .font(OttoFont.serifBold(size: 26)).foregroundStyle(OttoColor.ink)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("invite.title")
-                    Text("You'll automatically share photos of each other when you appear in them. You choose per friend whether to send and receive.")
+                    Text("you'll automatically share photos of each other when you appear in them. you choose per friend whether to send and receive.")
                         .font(.system(size: 14)).foregroundStyle(OttoColor.bark)
                         .multilineTextAlignment(.center).lineSpacing(2)
                     if let message { Text(message).font(.system(size: 13)).foregroundStyle(OttoColor.wax) }
-                    OttoPillButton(title: isWorking ? "Accepting…" : "Accept") { Task { await accept() } }
+                    OttoPillButton(title: isWorking ? "accepting…" : "accept") { Task { await accept() } }
                         .disabled(isWorking)
                         .accessibilityIdentifier("invite.accept")
-                    Button("Not now") { dismiss() }
+                    Button("not now") { dismiss() }
                         .foregroundStyle(OttoColor.barkSoft)
                         .accessibilityIdentifier("invite.decline")
                 } else {
@@ -736,7 +734,7 @@ struct InviteAcceptSheet: View {
                         .font(.system(size: 16, weight: .medium)).foregroundStyle(OttoColor.ink)
                         .multilineTextAlignment(.center)
                         .accessibilityIdentifier("invite.problem")
-                    OttoPillButton(title: "OK") { dismiss() }.accessibilityIdentifier("invite.done")
+                    OttoPillButton(title: "ok") { dismiss() }.accessibilityIdentifier("invite.done")
                 }
                 Spacer()
             }
@@ -756,11 +754,11 @@ struct InviteAcceptSheet: View {
 
     static func problem(for state: String, name: String) -> String {
         switch state {
-        case "used": return "This invite link has already been used."
-        case "expired": return "This invite link has expired. Ask \(name) for a new one."
-        case "self": return "This is your own invite link. Send it to a friend instead."
-        case "already_friends": return "You and \(name) are already friends."
-        default: return "This invite link isn't valid."
+        case "used": return "this invite link has already been used."
+        case "expired": return "this invite link has expired. ask \(name) for a new one."
+        case "self": return "this is your own invite link. send it to a friend instead."
+        case "already_friends": return "you and \(name) are already friends."
+        default: return "this invite link isn't valid."
         }
     }
 }

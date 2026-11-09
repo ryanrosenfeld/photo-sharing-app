@@ -60,13 +60,13 @@ final class PhotosViewModel: ObservableObject {
         do {
             let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
             guard status == .authorized || status == .limited else {
-                self.error = "Photo library access denied. Enable it in Settings."
+                self.error = "photo library access denied. enable it in settings."
                 return
             }
 
             let data = try await PhotoLoader.shared.imageData(for: photo)
             guard UIImage(data: data) != nil else {
-                self.error = "Could not load photo."
+                self.error = "could not load photo."
                 return
             }
 

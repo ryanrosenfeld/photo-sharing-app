@@ -15,11 +15,11 @@ struct FaceProfileValidator: Sendable {
 
         var message: String {
             switch self {
-            case .ok: "Looks good"
-            case .noFace: "No face found. Use a clear photo of your face."
-            case .multipleFaces: "More than one face. Use a photo of just you."
-            case .faceTooSmall: "Your face is too small. Use a closer photo."
-            case .unreadable: "Couldn't read this photo."
+            case .ok: "looks good"
+            case .noFace: "no face found. use a clear photo of your face."
+            case .multipleFaces: "more than one face. use a photo of just you."
+            case .faceTooSmall: "your face is too small. use a closer photo."
+            case .unreadable: "couldn't read this photo."
             }
         }
     }
