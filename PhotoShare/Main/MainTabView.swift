@@ -12,6 +12,8 @@ struct MainTabView: View {
     @StateObject private var processor = AutoShareProcessor()
     @StateObject private var reviewStore = ReviewQueueStore()
     @StateObject private var enrollment = FaceEnrollmentSync()
+    @StateObject private var pastPhotos = PastPhotosOffers()
+    @ObservedObject private var indexer = FaceIndexer.shared
     @State private var selectedTab: OttoTab = .photos
 
     var body: some View {
@@ -47,6 +49,7 @@ struct MainTabView: View {
         .environmentObject(reviewStore)
         .environmentObject(friendsVM)
         .environmentObject(enrollment)
+        .environmentObject(pastPhotos)
         .sheet(item: Binding(
             get: { inviteRouter.pendingCode.map(PendingInvite.init) },
             set: { if $0 == nil { inviteRouter.pendingCode = nil } }
@@ -67,7 +70,12 @@ struct MainTabView: View {
             _ = await (p, f)
             await syncEncryption(userId: userId)
             await enrollment.sync(viewer: userId, friends: friendsVM.friends)
+            startIndexing(userId: userId)
             await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
+        }
+        // The index grew (or finished): look again for new friends' past photos.
+        .onChange(of: indexer.revision) { _, _ in
+            Task { await pastPhotos.refresh(friends: friendsVM.friends, review: reviewStore, indexer: indexer) }
         }
         // A new friend (invite accepted on either side): hand them our face-profile key now, and enroll them as soon
         // as theirs is readable, instead of waiting for the next launch.
@@ -76,6 +84,7 @@ struct MainTabView: View {
             Task {
                 await FaceProfileManager.syncKeys(userId: userId, friendIds: new)
                 await enrollment.sync(viewer: userId, friends: friendsVM.friends)
+                await pastPhotos.refresh(friends: friendsVM.friends, review: reviewStore, indexer: indexer)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
@@ -86,9 +95,20 @@ struct MainTabView: View {
                 await friendsVM.load()   // pick up new friends and the other side's toggle changes
                 await syncEncryption(userId: userId)
                 await enrollment.sync(viewer: userId, friends: friendsVM.friends)
+                startIndexing(userId: userId)
                 await processor.processNewPhotos(userId: userId, friends: friendsVM.friends, review: reviewStore)
             }
         }
+    }
+}
+
+extension MainTabView {
+    /// Starts the incremental face-index scan (new photos first, then the backlog) and books a background window.
+    fileprivate func startIndexing(userId: UUID) {
+        pastPhotos.bind(userId: userId)
+        indexer.start()
+        FaceIndexer.scheduleBackgroundTask()
+        Task { await pastPhotos.refresh(friends: friendsVM.friends, review: reviewStore, indexer: indexer) }
     }
 }
 

@@ -44,6 +44,10 @@ targets:
         CFBundleVersion: "1"
         UILaunchScreen:
           UIColorName: ""
+        UIBackgroundModes:
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - "com.ryanrosenfeld.photoshare.faceindex"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSPhotoLibraryUsageDescription: "photoshare reads your photo library to detect friends' faces and auto-share photos with them."
