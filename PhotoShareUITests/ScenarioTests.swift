@@ -232,6 +232,27 @@ final class ScenarioTests: XCTestCase {
         sleep(2); shot("photos-saved")
     }
 
+    /// Evidence tour for UI restyles: Bob walks Photos (swipe a shelf, open a photo), Friends and Profile, with screenshots.
+    func testTourScreens() {
+        ensureSignedIn()
+        app.buttons["tab.photos"].tap()
+        _ = app.descendants(matching: .any)["photos.stack.Alice"].waitForExistence(timeout: 30)
+        sleep(4)
+        shot("tour-1-photos")
+        let shelf = app.descendants(matching: .any)["photos.stack.Alice"]
+        if shelf.exists {
+            app.swipeLeft(velocity: .slow)
+            sleep(1); shot("tour-2-photos-swiped")
+        }
+        let img = app.images["photos.image.loaded"].firstMatch
+        if img.exists { img.tap(); sleep(3); shot("tour-3-photo-detail"); app.navigationBars.buttons.firstMatch.tap(); sleep(1) }
+        app.buttons["tab.friends"].tap(); sleep(3); shot("tour-4-friends")
+        app.buttons["tab.profile"].tap(); sleep(2); shot("tour-5-profile")
+        app.swipeUp(); sleep(1); shot("tour-6-profile-bottom")
+        app.swipeDown()
+        app.buttons["tab.photos"].tap(); sleep(2)
+    }
+
     /// Signed-in app sits in the foreground long enough for the auto-share pass to finish.
     func testSettleInForeground() {
         ensureSignedIn()

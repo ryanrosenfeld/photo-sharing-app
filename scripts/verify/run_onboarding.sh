@@ -118,7 +118,7 @@ N=$(psql_q "select count(*) from storage.objects o join auth.users u on o.name l
 [ "$N" = 3 ] && pass "exactly 3 reference photos uploaded (the rejected landscape was not)" || fail "expected 3 uploaded photos, found $N"
 
 N=$(psql_q "select count(*) from invites i join auth.users u on u.id=i.inviter_id where u.email='$EMAIL' and i.accepted_at is null")
-[ "$N" = 2 ] && pass "Erin has 2 open invites after onboarding link + copied link + new link - 1 cancelled" || fail "expected 2 open invites for Erin, found $N"
+[ "$N" = 3 ] && pass "Erin has 3 open invites after onboarding link + copied link + new link (no longer listed or cancellable in the UI)" || fail "expected 3 open invites for Erin, found $N"
 [ "$(psql_q "select count(*) from friendships f join auth.users u on u.id=f.user_id where u.email='$EMAIL2' and f.friend_id='d4444444-4444-4444-4444-444444444444'")" = 1 ] \
   && pass "Finn and Dan are friends after the invited sign-up" || fail "Finn-Dan friendship missing"
 N=$(psql_q "select count(*) from storage.objects o join auth.users u on o.name like u.id::text||'/%' where o.bucket_id='face-profiles' and u.email='$EMAIL3'")

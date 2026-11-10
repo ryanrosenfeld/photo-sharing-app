@@ -68,6 +68,41 @@ extension Color {
     }
 }
 
+// MARK: - Liquid Glass (iOS 26) with a material fallback for iOS 17-25
+
+extension View {
+    /// Liquid Glass on iOS 26+, a thin material elsewhere. Use for controls and floating chrome only, never for content.
+    @ViewBuilder
+    func ottoGlass<S: Shape>(_ shape: S, tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffect(Self.glass(tint: tint, interactive: interactive), in: shape)
+        } else {
+            self.background(.regularMaterial, in: shape)
+                .overlay(shape.stroke(OttoColor.lineSoft, lineWidth: 0.5))
+        }
+    }
+
+    @available(iOS 26, *)
+    private static func glass(tint: Color?, interactive: Bool) -> Glass {
+        var g = Glass.regular
+        if let tint { g = g.tint(tint) }
+        return interactive ? g.interactive() : g
+    }
+}
+
+/// Groups nearby glass shapes so they blend and share one sampling pass on iOS 26.
+struct OttoGlassGroup<Content: View>: View {
+    var spacing: CGFloat = 12
+    @ViewBuilder var content: () -> Content
+    var body: some View {
+        if #available(iOS 26, *) {
+            GlassEffectContainer(spacing: spacing) { content() }
+        } else {
+            content()
+        }
+    }
+}
+
 // MARK: - Shared UI components
 
 struct OttoPillButton: View {
@@ -80,33 +115,34 @@ struct OttoPillButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 16, weight: .medium))
+                .font(.body.weight(.semibold))
                 .frame(maxWidth: isFullWidth ? .infinity : nil)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 14)
-                .background(background)
-                .foregroundStyle(foreground)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(borderColor, lineWidth: isDestructive || isSecondary ? 1 : 0)
-                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
         }
+        .modifier(PillStyle(isDestructive: isDestructive, isSecondary: isSecondary))
+        .controlSize(.large)
+        .buttonBorderShape(.capsule)
     }
 
-    private var background: Color {
-        if isDestructive { return .clear }
-        if isSecondary { return .clear }
-        return OttoColor.sage
-    }
-    private var foreground: Color {
-        if isDestructive { return OttoColor.wax }
-        if isSecondary { return OttoColor.ink }
-        return .white
-    }
-    private var borderColor: Color {
-        if isDestructive { return OttoColor.wax }
-        if isSecondary { return OttoColor.line }
-        return .clear
+    private struct PillStyle: ViewModifier {
+        let isDestructive: Bool
+        let isSecondary: Bool
+        func body(content: Content) -> some View {
+            if #available(iOS 26, *) {
+                if isDestructive || isSecondary {
+                    content.buttonStyle(.glass).tint(isDestructive ? OttoColor.wax : OttoColor.ink)
+                } else {
+                    content.buttonStyle(.glassProminent).tint(OttoColor.sage)
+                }
+            } else {
+                if isDestructive || isSecondary {
+                    content.buttonStyle(.bordered).tint(isDestructive ? OttoColor.wax : OttoColor.ink)
+                } else {
+                    content.buttonStyle(.borderedProminent).tint(OttoColor.sage)
+                }
+            }
+        }
     }
 }
 
@@ -117,11 +153,7 @@ struct OttoSectionCard<Content: View>: View {
     var body: some View {
         content
             .background(OttoColor.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 18))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18)
-                    .stroke(OttoColor.lineSoft, lineWidth: 0.5)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 }
 
@@ -148,8 +180,7 @@ struct OttoEyebrow: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .kerning(2)
+            .font(.footnote.weight(.semibold))
             .foregroundStyle(color)
     }
 }

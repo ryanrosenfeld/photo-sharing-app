@@ -13,40 +13,16 @@ struct FriendsView: View {
     @EnvironmentObject var enrollment: FaceEnrollmentSync
 
     var body: some View {
-        ZStack {
-            OttoColor.canvas.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                header
-
-                if vm.isLoading && vm.friends.isEmpty {
-                    Spacer()
-                    ProgressView().tint(OttoColor.sage)
-                    Spacer()
-                } else if vm.friends.isEmpty && reviewStore.items.isEmpty {
-                    emptyState
-                } else {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // photos waiting for approval (manual review)
-                            if !reviewStore.items.isEmpty {
-                                reviewCard
-                                    .padding(.horizontal, 16)
-                                    .padding(.bottom, 16)
-                            }
-                            if !vm.friends.isEmpty {
-                                friendsList
-                                    .padding(.horizontal, 16)
-                            }
-                            footer
-                                .padding(.top, 18)
-                        }
-                        .padding(.top, 8)
-                        .padding(.bottom, 110)
+        NavigationStack {
+            content
+                .navigationTitle("friends")
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showInvite = true } label: { Image(systemName: "plus") }
+                            .accessibilityLabel("add friend")
+                            .accessibilityIdentifier("friends.add")
                     }
-                    .refreshable { await vm.load() }
                 }
-            }
         }
         .alert("Error", isPresented: Binding(
             get: { vm.error != nil },
@@ -72,31 +48,40 @@ struct FriendsView: View {
         .sheet(item: $detailFriend) { friend in FriendDetailSheet(friendId: friend.friendId) }
     }
 
-    // MARK: - Header
+    private var content: some View {
+        ZStack {
+            OttoColor.canvas.ignoresSafeArea()
 
-    private var header: some View {
-        HStack(alignment: .bottom) {
-            VStack(alignment: .leading, spacing: 4) {
-                OttoEyebrow(text: "friends")
-                Text("your circle")
-                    .font(OttoFont.serifBold(size: 32))
-                    .foregroundStyle(OttoColor.ink)
+            VStack(spacing: 0) {
+                if vm.isLoading && vm.friends.isEmpty {
+                    Spacer()
+                    ProgressView().tint(OttoColor.sage)
+                    Spacer()
+                } else if vm.friends.isEmpty && reviewStore.items.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // photos waiting for approval (manual review)
+                            if !reviewStore.items.isEmpty {
+                                reviewCard
+                                    .padding(.horizontal, 16)
+                                    .padding(.bottom, 16)
+                            }
+                            if !vm.friends.isEmpty {
+                                friendsList
+                                    .padding(.horizontal, 16)
+                            }
+                            footer
+                                .padding(.top, 18)
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 8)
+                    }
+                    .refreshable { await vm.load() }
+                }
             }
-            Spacer()
-            Button { showInvite = true } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(OttoColor.sage)
-                    .clipShape(Circle())
-            }
-            .accessibilityLabel("add friend")
-            .accessibilityIdentifier("friends.add")
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 12)
     }
 
     // MARK: - Empty state
@@ -119,12 +104,9 @@ struct FriendsView: View {
             Button { showInvite = true } label: {
                 Label("add your first friend", systemImage: "plus")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 13)
-                    .background(OttoColor.sage)
-                    .clipShape(Capsule())
+                    .padding(.horizontal, 10)
             }
+            .modifier(ProminentGlassButton())
             .accessibilityIdentifier("friends.empty.invite")
             footer
             Spacer()
@@ -137,22 +119,12 @@ struct FriendsView: View {
 
     private var footer: some View {
         VStack(spacing: 10) {
-            if !vm.openInvites.isEmpty {
-                Button { showInvite = true } label: {
-                    Text(vm.openInvites.count == 1
-                         ? "1 invite waiting to be accepted"
-                         : "\(vm.openInvites.count) invites waiting to be accepted")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(OttoColor.bark)
-                }
-                .accessibilityIdentifier("friends.invitesWaiting")
-            }
             Button("find people in your photos") { showSuggestions = true }
                 .font(.system(size: 13))
                 .foregroundStyle(OttoColor.sage)
                 .accessibilityIdentifier("friends.findInPhotos")
             Button("have an invite link? paste it") { showPasteInvite = true }
-                .font(.system(size: 13))
+                .font(.footnote)
                 .foregroundStyle(OttoColor.sage)
                 .accessibilityIdentifier("friends.pasteInvite")
         }
@@ -199,8 +171,7 @@ struct FriendsView: View {
     private var friendsList: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("\(vm.friends.count) friend\(vm.friends.count != 1 ? "s" : "")")
-                .font(.system(size: 12, weight: .semibold))
-                .kerning(1.4)
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(OttoColor.barkSoft)
                 .padding(.horizontal, 4)
                 .padding(.bottom, 8)
@@ -510,7 +481,6 @@ struct AddFriendSheet: View {
     @State private var copied = false
     @State private var shared = false
 
-    private var others: [OpenInvite] { vm.openInvites.filter { $0.code != code } }
 
     var body: some View {
         ZStack {
@@ -591,7 +561,6 @@ struct AddFriendSheet: View {
                             ProgressView().tint(OttoColor.sage).frame(height: 200)
                         }
 
-                        if !others.isEmpty { waitingList }
                     }
                     .padding(.horizontal, 28)
                     .padding(.bottom, 16)
@@ -631,41 +600,6 @@ struct AddFriendSheet: View {
             }
         }
         .task { await load(fresh: false) }
-    }
-
-    /// Other links I've sent that nobody has used yet.
-    private var waitingList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("links you've sent, not used yet")
-                .font(.system(size: 12, weight: .semibold))
-                .kerning(1.2)
-                .foregroundStyle(OttoColor.barkSoft)
-                .accessibilityIdentifier("invite.waiting")
-            OttoSectionCard {
-                VStack(spacing: 0) {
-                    ForEach(others) { invite in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("sent \(invite.createdAt.formatted(.relative(presentation: .named)))")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(OttoColor.ink)
-                                Text("expires \(invite.expiresAt.formatted(.relative(presentation: .named)))")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(OttoColor.barkSoft)
-                            }
-                            Spacer()
-                            Button("cancel link") { Task { await vm.cancelInvite(invite.code) } }
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(OttoColor.wax)
-                                .accessibilityIdentifier("invite.cancel")
-                        }
-                        .padding(.horizontal, 16).padding(.vertical, 12)
-                        if invite != others.last { Divider().background(OttoColor.line) }
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func load(fresh: Bool) async {
@@ -767,6 +701,17 @@ struct InviteAcceptSheet: View {
         case "self": return "this is your own invite link. send it to a friend instead."
         case "already_friends": return "you and \(name) are already friends."
         default: return "this invite link isn't valid."
+        }
+    }
+}
+
+
+private struct ProminentGlassButton: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.buttonStyle(.glassProminent).tint(OttoColor.sage).controlSize(.large)
+        } else {
+            content.buttonStyle(.borderedProminent).tint(OttoColor.sage).buttonBorderShape(.capsule).controlSize(.large)
         }
     }
 }

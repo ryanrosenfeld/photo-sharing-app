@@ -72,27 +72,21 @@ final class OnboardingTests: XCTestCase {
         XCTAssertTrue(app.buttons["tab.photos"].waitForExistence(timeout: 20), "lands on main tabs")
         shot("10-home")
 
-        // --- Friends: the link from onboarding is waiting; Add Friend reuses nothing already handed out ---
+        // --- Friends: no list of pending invites; Add Friend (+) reuses nothing already handed out ---
         app.buttons["tab.friends"].tap()
-        let waiting = app.buttons["friends.invitesWaiting"]
-        XCTAssertTrue(waiting.waitForExistence(timeout: 10), "the onboarding invite shows as waiting")
-        XCTAssertTrue(app.buttons["friends.pasteInvite"].exists, "paste-an-invite entry on Friends")
-        shot("11-friends-waiting")
-        waiting.tap()
+        XCTAssertTrue(app.buttons["friends.pasteInvite"].waitForExistence(timeout: 10), "paste-an-invite entry on Friends")
+        XCTAssertFalse(app.buttons["friends.invitesWaiting"].exists, "pending invites are no longer listed")
+        shot("11-friends")
+        app.buttons["friends.add"].firstMatch.tap()
         XCTAssertTrue(app.images["invite.qr"].waitForExistence(timeout: 15), "Add Friend shows a QR code")
         XCTAssertTrue(app.buttons["invite.copy"].exists, "copy link")
         shot("12-add-friend")
         app.buttons["invite.copy"].tap()
         XCTAssertTrue(app.buttons["invite.another"].waitForExistence(timeout: 5), "after copying, offer a new link")
         app.buttons["invite.another"].tap()
-        XCTAssertTrue(app.buttons["invite.cancel"].waitForExistence(timeout: 15), "earlier links listed with Cancel")
-        shot("13-add-friend-links-waiting")
-        let before = app.buttons.matching(identifier: "invite.cancel").count
-        app.buttons["invite.cancel"].firstMatch.tap()
-        let deadline = Date().addingTimeInterval(10)
-        while Date() < deadline, app.buttons.matching(identifier: "invite.cancel").count >= before { Thread.sleep(forTimeInterval: 0.3) }
-        XCTAssertLessThan(app.buttons.matching(identifier: "invite.cancel").count, before, "Cancel removes the link")
-        shot("14-add-friend-cancelled")
+        XCTAssertTrue(app.images["invite.qr"].waitForExistence(timeout: 15), "a fresh link after \"new link\"")
+        XCTAssertFalse(app.buttons["invite.cancel"].exists, "earlier links are not listed")
+        shot("13-add-friend-new-link")
         app.buttons["invite.done"].tap()
     }
 
