@@ -12,6 +12,7 @@ struct FriendSuggestionsStep: View {
     var embedded = false
     let onFinished: () -> Void
 
+    @EnvironmentObject private var authManager: AuthManager
     @StateObject private var scanner = CameraRollScanner()
     @State private var selected: PersonCluster?
     @State private var invited = Set<UUID>()
@@ -66,7 +67,7 @@ struct FriendSuggestionsStep: View {
             if embedded, PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined {
                 _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
             }
-            scanner.start()
+            scanner.start(userId: authManager.currentProfile?.id)
         }
         .onDisappear { scanner.stop() }
         .sheet(item: $selected) { person in
@@ -159,6 +160,7 @@ private struct PersonInviteSheet: View {
     @State private var name: String?
     @State private var pickingContact = false
     @State private var sendPhotos = true
+    @State private var showShare = false
 
     var body: some View {
         ZStack {
@@ -194,21 +196,13 @@ private struct PersonInviteSheet: View {
                 Spacer()
 
                 if let code {
-                    ShareLink(
-                        item: InviteLink.url(code: code),
-                        message: Text(InviteMessage.text(from: authManager.currentProfile?.displayName))
-                    ) {
+                    Button { showShare = true } label: {
                         Text("send an invite")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity).frame(height: 52)
                             .background(OttoColor.sage).foregroundStyle(.white)
                             .clipShape(Capsule())
                     }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        FriendsViewModel.markShared(code)
-                        if sendPhotos { InvitedPhotosStore.add(code: code, assetIds: person.assetIds) }
-                        Task { try? await Task.sleep(for: .milliseconds(800)); onSent(code) }
-                    })
                     .accessibilityIdentifier("suggestions.send")
                 } else if failed {
                     Button("couldn't create a link. try again") { Task { await load() } }
@@ -227,6 +221,20 @@ private struct PersonInviteSheet: View {
         }
         .presentationDetents([.large])
         .task { await load() }
+        .sheet(isPresented: $showShare) {
+            if let code {
+                // The invite sheet stays up until the share sheet closes: closing it any earlier (as a timer did)
+                // took the share sheet down with it the moment it appeared.
+                ActivityView(items: [InviteMessage.text(from: authManager.currentProfile?.displayName), InviteLink.url(code: code)]) { completed in
+                    showShare = false
+                    guard completed else { return }
+                    FriendsViewModel.markShared(code)
+                    if sendPhotos { InvitedPhotosStore.add(code: code, assetIds: person.assetIds) }
+                    onSent(code)
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
         .sheet(isPresented: $pickingContact) {
             ContactPicker { name = $0 }.ignoresSafeArea()
         }
@@ -237,6 +245,19 @@ private struct PersonInviteSheet: View {
         code = await friends.inviteToShare()
         failed = code == nil
     }
+}
+
+/// The system share sheet with a completion callback (SwiftUI's ShareLink has none).
+private struct ActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+    let onFinish: (Bool) -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        vc.completionWithItemsHandler = { _, completed, _, _ in onFinish(completed) }
+        return vc
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 /// System contact picker. It runs out of process, so no contacts permission is needed; only the chosen name comes back.

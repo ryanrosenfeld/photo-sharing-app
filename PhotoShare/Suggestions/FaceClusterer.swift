@@ -31,6 +31,8 @@ struct FaceClusterer: Sendable {
     var mergeThreshold: Float = 0.40
     /// A person must appear in at least this many photos to be suggested.
     var minPhotos = 3
+    /// A cluster this close to the user's own face or a friend's is that person, so it is not suggested.
+    var knownThreshold: Float = 0.50
 
     private struct Working {
         var sum: [Float] { didSet { centroid = Self.normalized(sum) } }
@@ -49,7 +51,7 @@ struct FaceClusterer: Sendable {
     }
 
     /// Faces already unit-normalized or not: both work. Result is sorted by photo count, largest first.
-    func cluster(_ faces: [ScannedFace]) -> [PersonCluster] {
+    func cluster(_ faces: [ScannedFace], excluding known: [[Float]] = []) -> [PersonCluster] {
         var clusters: [Working] = []
         for face in faces {
             let v = Working.normalized(face.vector)
@@ -85,6 +87,8 @@ struct FaceClusterer: Sendable {
         }
 
         return clusters.compactMap { c -> PersonCluster? in
+            // The user and people already friends are not suggestions.
+            if known.contains(where: { Self.distance($0, c.centroid) < knownThreshold }) { return nil }
             var seen = Set<String>()
             let ordered = c.faces.sorted { ($0.takenAt ?? .distantPast) > ($1.takenAt ?? .distantPast) }
             let assets = ordered.map(\.assetId).filter { seen.insert($0).inserted }
@@ -101,5 +105,20 @@ struct FaceClusterer: Sendable {
         for i in a.indices { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
         let denom = sqrt(na) * sqrt(nb)
         return denom > 0 ? 1 - dot / denom : 2
+    }
+
+    /// Every pass builds fresh clusters with fresh ids. Reuse the id of the earlier cluster a new one mostly overlaps
+    /// (by photos), so tiles and an open invite sheet stay the same person while the scan keeps adding to them.
+    static func carryIds(into new: [PersonCluster], from old: [PersonCluster]) -> [PersonCluster] {
+        var taken = Set<UUID>()
+        return new.map { c in
+            let mine = Set(c.assetIds)
+            let match = old.filter { !taken.contains($0.id) }
+                .map { ($0, Set($0.assetIds).intersection(mine).count) }
+                .max { $0.1 < $1.1 }
+            guard let (prev, overlap) = match, overlap * 2 > min(prev.assetIds.count, c.assetIds.count) else { return c }
+            taken.insert(prev.id)
+            return PersonCluster(id: prev.id, assetIds: c.assetIds, crop: c.crop)
+        }
     }
 }

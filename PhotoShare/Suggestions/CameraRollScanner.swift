@@ -23,7 +23,10 @@ final class CameraRollScanner: ObservableObject {
     private var faces: [ScannedFace] = []
     private let clusterer = FaceClusterer()
 
-    func start() {
+    /// Embeddings of the user and their friends; clusters matching them are left out.
+    private var known: [[Float]] = []
+
+    func start(userId: UUID?) {
         guard task == nil else { return }
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         guard status == .authorized || status == .limited else { finished = true; return }
@@ -37,6 +40,8 @@ final class CameraRollScanner: ObservableObject {
 
         task = Task { [weak self] in
             let detector = FaceDetector()
+            let known = await Self.loadKnown(userId: userId, detector: detector)
+            self?.known = known
             var index = 0
             while index < result.count {
                 if Task.isCancelled { break }
@@ -73,16 +78,17 @@ final class CameraRollScanner: ObservableObject {
     @discardableResult
     private func regroup(wait: Bool = false) -> Task<Void, Never>? {
         if groupingBusy, !wait { return grouping }
-        let snapshot = faces, clusterer = clusterer
+        let snapshot = faces, clusterer = clusterer, known = known
         groupingBusy = true
         let t = Task { [weak self] in
-            let clusters = await Task.detached(priority: .utility) { clusterer.cluster(snapshot) }.value
+            let clusters = await Task.detached(priority: .utility) { clusterer.cluster(snapshot, excluding: known) }.value
             guard let self else { return }
             // Cluster ids are regenerated each pass, so remember dismissals by their photos instead.
             let hidden = self.hiddenAssets
-            self.people = clusters.filter { c in
+            let visible = clusters.filter { c in
                 !hidden.contains { $0.intersection(c.assetIds).count * 2 > c.assetIds.count }
             }
+            self.people = FaceClusterer.carryIds(into: visible, from: self.people)
             self.groupingBusy = false
         }
         grouping = t
@@ -96,6 +102,18 @@ final class CameraRollScanner: ObservableObject {
     func hide(_ person: PersonCluster) {
         hiddenAssets.append(Set(person.assetIds))
         people.removeAll { $0.id == person.id }
+    }
+
+    /// The user's own face profile (downloaded and embedded here) plus every friend's stored enrollment.
+    private nonisolated static func loadKnown(userId: UUID?, detector: FaceDetector) async -> [[Float]] {
+        var vectors = FaceEnrollmentStore().allEmbeddings().map(\.vector)
+        if let userId, let images = try? await FaceProfileManager().downloadPhotos(for: userId, viewer: userId) {
+            let own = await Task.detached(priority: .utility) {
+                images.compactMap { try? detector.largestFaceEmbedding(in: $0) }.map(\.vector)
+            }.value
+            vectors += own
+        }
+        return vectors
     }
 
     // MARK: - One photo

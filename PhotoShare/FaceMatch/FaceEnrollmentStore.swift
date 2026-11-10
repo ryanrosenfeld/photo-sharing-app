@@ -50,6 +50,15 @@ struct FaceEnrollmentStore: Sendable {
         }
     }
 
+    /// Every stored friend embedding, for "is this face someone I already know" checks.
+    func allEmbeddings() -> [FaceEmbedding] {
+        UserDefaults.standard.dictionaryRepresentation().keys
+            .filter { $0.hasPrefix(Self.keyPrefix) }
+            .compactMap { UserDefaults.standard.data(forKey: $0) }
+            .compactMap { try? JSONDecoder().decode([FaceEmbedding].self, from: $0) }
+            .flatMap { $0 }
+    }
+
     private func key(for friendId: UUID) -> String {
         "\(Self.keyPrefix)\(friendId.uuidString)"
     }
