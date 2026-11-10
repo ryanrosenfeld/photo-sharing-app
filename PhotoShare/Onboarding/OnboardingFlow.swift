@@ -6,10 +6,16 @@ import UserNotifications
 /// (face profile on the server, system permission status), so it resumes where the user left off after a
 /// force-quit or reinstall, and it never re-asks for something the user already answered.
 enum OnboardingStep: Int, CaseIterable {
-    case faceProfile, photoAccess, firstFriend, notifications
+    case faceProfile, photoAccess, friendSuggestions, firstFriend, notifications
 
     private static let notificationsOfferedKey = "onboarding.notificationsOffered"
     private static let firstFriendOfferedKey = "onboarding.firstFriendOffered"
+    private static let suggestionsOfferedKey = "onboarding.suggestionsOffered"
+
+    /// Shown once per device: continuing or skipping both count.
+    static func markSuggestionsOffered() {
+        UserDefaults.standard.set(true, forKey: suggestionsOfferedKey)
+    }
 
     /// Shown once: sharing or skipping both count.
     static func markFirstFriendOffered() {
@@ -28,6 +34,14 @@ enum OnboardingStep: Int, CaseIterable {
             return !profile.faceProfileEnabled
         case .photoAccess:
             return PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined
+        case .friendSuggestions:
+            // Needs the library, and is pointless for invitees (their friend is already waiting) or people with friends.
+            let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            guard status == .authorized || status == .limited else { return false }
+            if InviteRouter.hasStoredInvite() { return false }
+            if UserDefaults.standard.bool(forKey: Self.suggestionsOfferedKey) { return false }
+            if UserDefaults.standard.bool(forKey: Self.firstFriendOfferedKey) { return false }
+            return !(await Self.hasFriendsOrInvites())
         case .firstFriend:
             // Someone who arrived from an invite already has a friend waiting: the accept screen comes next instead.
             if InviteRouter.hasStoredInvite() { return false }
@@ -119,10 +133,15 @@ struct OnboardingFlow: View {
                     }
                 case .photoAccess:
                     PhotoAccessStep(step: 2, total: total) { Task { await advance() } }
+                case .friendSuggestions:
+                    FriendSuggestionsStep(step: 3, total: total) {
+                        OnboardingStep.markSuggestionsOffered()
+                        Task { await advance() }
+                    }
                 case .firstFriend:
-                    FirstFriendStep(step: 3, total: total) { Task { await advance() } }
+                    FirstFriendStep(step: 4, total: total) { Task { await advance() } }
                 case .notifications:
-                    NotificationStep(step: 4, total: total) { Task { await advance() } }
+                    NotificationStep(step: 5, total: total) { Task { await advance() } }
                 }
             }
             .id(step)

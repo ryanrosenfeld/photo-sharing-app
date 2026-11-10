@@ -83,7 +83,7 @@ final class ScenarioTests: XCTestCase {
             // iOS's "Save Password?" sheet (iOS 27) covers the app after sign-in; decline it.
             let notNow = XCUIApplication(bundleIdentifier: "com.apple.springboard").buttons["Not Now"]
             if notNow.exists { notNow.tap() }
-            for id in ["notifications.skip", "firstFriend.skip", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
+            for id in ["notifications.skip", "firstFriend.skip", "suggestions.continue", "photoAccess.continue", "photoAccess.skip"] where app.buttons[id].exists {
                 app.buttons[id].tap()
             }
             usleep(500_000)

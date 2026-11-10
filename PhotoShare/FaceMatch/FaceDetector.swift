@@ -84,6 +84,13 @@ struct FaceDetector: Sendable {
         try detectFaces(in: image).compactMap { try embedding(for: $0, in: image) }
     }
 
+    /// Every face with its box (image pixels, origin top-left) and embedding. Used to group the camera roll by person.
+    func facesWithEmbeddings(in image: CGImage) throws -> [(box: CGRect, embedding: FaceEmbedding)] {
+        try detectFaces(in: image).compactMap { face in
+            try embedding(for: face, in: image).map { (box: face.box, embedding: $0) }
+        }
+    }
+
     /// The 112x112 model input for the largest face (what the sandbox shows). Debug/test aid.
     func largestFaceCrop(in image: CGImage) throws -> CGImage? {
         guard let largest = try detectFaces(in: image).max(by: { $0.box.area < $1.box.area }) else { return nil }

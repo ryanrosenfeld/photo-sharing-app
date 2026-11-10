@@ -49,6 +49,11 @@ photo-sharing-app/
     │   ├── PhotoEncryption.swift   # AES-GCM seal of the photo + ECIES wrap of its key per recipient (pure, unit-tested)
     │   ├── PhotoLoader.swift       # actor: download + decrypt + ImageIO downsample received photos off the main thread, in-flight de-dup, prefetch, encrypted-blob-only disk cache (Caches); `PhotoImage` view replaces AsyncImage; also holds the `perf` os_log helper; thumbnails come from the sender's encrypted ~800px thumbnail (`photos.thumb_path`, sealed with the photo's own content key) when present, else the full photo
     │   └── FaceProfileCrypto.swift # Symmetric key generation, per-friend key wrapping, encrypt/decrypt reference photos
+    ├── Suggestions/                     # Onboarding "people you're in photos with"
+    │   ├── FaceClusterer.swift          # Pure: groups face embeddings into people (greedy centroid + merge, cosine); unit-tested
+    │   ├── CameraRollScanner.swift      # Newest-first library scan at utility priority, in memory only; publishes clusters
+    │   ├── FriendSuggestionsStep.swift  # Tiles, contact picker (label only), invite sheet
+    │   └── InvitedPhotosStore.swift     # Device-local invite code -> library ids to send once the invite is accepted
     ├── Review/                          # Manual review mode
     │   ├── ReviewSettings.swift         # Global + per-friend override policy (pure, unit-tested)
     │   ├── ReviewQueueStore.swift       # On-device queue (JSON in Application Support, per user) + approve/reject
@@ -97,8 +102,9 @@ App launch
                            │                  1. Profile setup
                            │                  2. Face profile setup (required — hard gate)
                            │                  3. Photo Library permission
-                           │                  4. First friend prompt
-                           │                  5. Notifications permission
+                           │                  4. Friend suggestions from the camera roll (skippable)
+                           │                  5. First friend prompt
+                           │                  6. Notifications permission
                            └─ complete   → MainTabView
 ```
 

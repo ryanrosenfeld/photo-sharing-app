@@ -44,6 +44,13 @@ final class OnboardingTests: XCTestCase {
         photoContinue.tap()
         tapSystemAlert(["Allow Full Access", "Allow Access to All Photos"])
 
+        // --- Suggestions from the camera roll: the simulator's landmark detector can't align faces, so expect the
+        // empty state here; skip is always offered. (Real tiles are checked on a device / with real photos.) ---
+        let suggestionsContinue = app.buttons["suggestions.continue"]
+        XCTAssertTrue(suggestionsContinue.waitForExistence(timeout: 30), "suggestions step after photo access")
+        shot("07b-suggestions")
+        suggestionsContinue.tap()
+
         // --- First friend: share a link, or show a QR code to someone in the room; skip is just as visible ---
         let share = app.buttons["firstFriend.share"]
         XCTAssertTrue(share.waitForExistence(timeout: 15), "first-friend step after photo access")
@@ -199,6 +206,8 @@ final class OnboardingTests: XCTestCase {
             if app.buttons["photoAccess.continue"].exists {
                 app.buttons["photoAccess.continue"].tap()
                 tapSystemAlert(["Allow Full Access", "Allow Access to All Photos"])
+            } else if app.buttons["suggestions.continue"].exists {
+                app.buttons["suggestions.continue"].tap()
             } else if app.buttons["firstFriend.skip"].exists {
                 app.buttons["firstFriend.skip"].tap()
             } else if app.buttons["notifications.skip"].exists {
