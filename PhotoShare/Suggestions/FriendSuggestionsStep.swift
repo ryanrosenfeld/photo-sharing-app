@@ -6,8 +6,10 @@ import SwiftUI
 /// people, and lets the user invite one with a tap. The app never learns who a face is: the user attaches a name by
 /// picking a contact (optional). Skipping is as visible as inviting; the link/QR step follows either way.
 struct FriendSuggestionsStep: View {
-    let step: Int
-    let total: Int
+    var step: Int = 0
+    var total: Int = 0
+    /// Opened from the friends tab after onboarding: no progress bar, and the button just closes the sheet.
+    var embedded = false
     let onFinished: () -> Void
 
     @StateObject private var scanner = CameraRollScanner()
@@ -18,9 +20,11 @@ struct FriendSuggestionsStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingProgress(step: step, total: total)
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
+            if !embedded {
+                OnboardingProgress(step: step, total: total)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+            }
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -50,7 +54,7 @@ struct FriendSuggestionsStep: View {
             }
 
             VStack(spacing: 10) {
-                Button(invited.isEmpty ? "skip for now" : "continue") { finish() }
+                Button(embedded ? "done" : invited.isEmpty ? "skip for now" : "continue") { finish() }
                     .buttonStyle(PrimaryButtonStyle())
                     .accessibilityIdentifier("suggestions.continue")
             }
@@ -58,7 +62,12 @@ struct FriendSuggestionsStep: View {
             .padding(.bottom, 24)
             .padding(.top, 8)
         }
-        .task { scanner.start() }
+        .task {
+            if embedded, PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined {
+                _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            }
+            scanner.start()
+        }
         .onDisappear { scanner.stop() }
         .sheet(item: $selected) { person in
             PersonInviteSheet(person: person) { _ in
@@ -100,7 +109,7 @@ struct FriendSuggestionsStep: View {
     }
 
     private func finish() {
-        if !invited.isEmpty { OnboardingStep.markFirstFriendOffered() }
+        if !invited.isEmpty && !embedded { OnboardingStep.markFirstFriendOffered() }
         onFinished()
     }
 }

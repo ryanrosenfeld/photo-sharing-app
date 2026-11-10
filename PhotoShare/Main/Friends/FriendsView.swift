@@ -7,6 +7,7 @@ struct FriendsView: View {
     @State private var showReview = false
     @State private var showInvite = false
     @State private var showPasteInvite = false
+    @State private var showSuggestions = false
     @State private var pastedCode: String?
     @State private var detailFriend: Friend?
     @EnvironmentObject var enrollment: FaceEnrollmentSync
@@ -60,6 +61,9 @@ struct FriendsView: View {
             reviewStore.prune(keeping: Set(friends.map(\.friendId)))
         }
         .sheet(isPresented: $showReview) { ReviewQueueView() }
+        .sheet(isPresented: $showSuggestions, onDismiss: { Task { await vm.loadOpenInvites() } }) {
+            FriendSuggestionsStep(embedded: true) { showSuggestions = false }
+        }
         .sheet(isPresented: $showInvite, onDismiss: { Task { await vm.loadOpenInvites() } }) { AddFriendSheet() }
         .sheet(isPresented: $showPasteInvite, onDismiss: {
             if let pastedCode { inviteRouter.pendingCode = pastedCode; self.pastedCode = nil }
@@ -143,6 +147,10 @@ struct FriendsView: View {
                 }
                 .accessibilityIdentifier("friends.invitesWaiting")
             }
+            Button("find people in your photos") { showSuggestions = true }
+                .font(.system(size: 13))
+                .foregroundStyle(OttoColor.sage)
+                .accessibilityIdentifier("friends.findInPhotos")
             Button("have an invite link? paste it") { showPasteInvite = true }
                 .font(.system(size: 13))
                 .foregroundStyle(OttoColor.sage)
