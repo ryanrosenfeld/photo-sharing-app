@@ -108,6 +108,8 @@ enum ShareUploader {
             NewRecipient(photoId: inserted.id, recipientId: $0, deliveredAt: isoNow, wrappedKey: wrappedKeys[$0]!)
         }
         try await supabase.from("photo_recipients").insert(recipients).execute()
+        // Remember who has this photo so a past-photos offer never repeats it.
+        for id in reachable { await FaceIndexer.shared.store.markSent(assetIds: [asset.localIdentifier], to: id) }
     }
 
     /// ~800px JPEG for the polaroid stack (matches the receiver's thumbnail size), orientation baked in.

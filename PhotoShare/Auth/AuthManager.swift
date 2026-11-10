@@ -165,6 +165,9 @@ final class AuthManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() async {
+        // The face index describes this phone's library for this account; it goes with the session.
+        FaceIndexer.shared.stop()
+        await FaceIndexer.shared.store.erase()
         do {
             try await supabase.auth.signOut()
         } catch {
