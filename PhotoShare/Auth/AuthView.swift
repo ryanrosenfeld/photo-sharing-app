@@ -42,7 +42,7 @@ struct AuthView: View {
                             .foregroundStyle(OttoColor.ink)
 
                         Text(isSignUp ? "just your name, an email, and a password. then a quick photo setup." : "welcome back.")
-                            .font(.system(size: 15))
+                            .font(OttoFont.ui(15))
                             .foregroundStyle(OttoColor.bark)
                             .lineSpacing(2)
                     }
@@ -58,7 +58,7 @@ struct AuthView: View {
 
                         if isSignUp {
                             Text("at least 8 characters")
-                                .font(.system(size: 12))
+                                .font(OttoFont.ui(12))
                                 .foregroundStyle(password.isEmpty || password.count >= 8 ? OttoColor.barkSoft : OttoColor.wax)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -71,7 +71,7 @@ struct AuthView: View {
                                     ProgressView().tint(.white)
                                 } else {
                                     Text(isSignUp ? "create account" : "sign in")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(OttoFont.ui(16, .semibold))
                                 }
                             }
                             .accessibilityIdentifier("emailAuth.submit")
@@ -89,10 +89,11 @@ struct AuthView: View {
                             Text(isSignUp ? "already have an account? " : "new to otto? ")
                                 .foregroundStyle(OttoColor.barkSoft) +
                             Text(isSignUp ? "sign in" : "create an account")
-                                .foregroundStyle(OttoColor.sage).fontWeight(.medium)
+                                .foregroundStyle(OttoColor.sageDark).fontWeight(.medium)
                         }
-                        .font(.system(size: 14))
-                        .padding(.top, 4)
+                        .font(OttoFont.ui(14))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityIdentifier("emailAuth.toggleMode")
                     }
                     .padding(.horizontal, 28)
@@ -101,7 +102,7 @@ struct AuthView: View {
                     HStack(spacing: 12) {
                         Rectangle().frame(height: 1).foregroundStyle(OttoColor.line)
                         Text("or continue with")
-                            .font(.system(size: 12))
+                            .font(OttoFont.ui(12))
                             .foregroundStyle(OttoColor.barkSoft)
                             .kerning(0.4)
                             .fixedSize()
@@ -119,8 +120,8 @@ struct AuthView: View {
                         } icon: {
                             // simple multi-color G
                             Text("G")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color(hex: "#4285F4"))
+                                .font(OttoFont.ui(16, .semibold))
+                                .foregroundStyle(OttoColor.ink)
                         }
                     }
                     .padding(.horizontal, 28)
@@ -128,7 +129,7 @@ struct AuthView: View {
                     termsLabel
                         .padding(.top, 28)
                 }
-                .font(.system(size: 13))
+                .font(OttoFont.ui(13))
                 .padding(.top, 0)
                 .padding(.bottom, 40)
                 .padding(.horizontal, 0)
@@ -185,12 +186,12 @@ struct AuthView: View {
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("name")
-                .font(.system(size: 11, weight: .semibold))
-                .kerning(1.2)
+                .font(OttoFont.ui(11, .semibold))
+                .tracking(1.2)
                 .foregroundStyle(OttoColor.barkSoft)
             HStack(spacing: 10) {
                 Image(systemName: "person")
-                    .font(.system(size: 14))
+                    .font(OttoFont.ui(14))
                     .foregroundStyle(OttoColor.barkSoft)
                 TextField("what friends call you", text: $displayName)
                     .accessibilityIdentifier("emailAuth.name")
@@ -199,7 +200,7 @@ struct AuthView: View {
                     .focused($focus, equals: .name)
                     .submitLabel(.next)
                     .onSubmit { focus = .email }
-                    .font(.system(size: 16))
+                    .font(OttoFont.ui(16))
                     .foregroundStyle(OttoColor.ink)
             }
             .padding(.horizontal, 16)
@@ -216,13 +217,13 @@ struct AuthView: View {
     private var emailField: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("email")
-                .font(.system(size: 11, weight: .semibold))
-                .kerning(1.2)
+                .font(OttoFont.ui(11, .semibold))
+                .tracking(1.2)
                 .foregroundStyle(OttoColor.barkSoft)
 
             HStack(spacing: 10) {
                 Image(systemName: "envelope")
-                    .font(.system(size: 14))
+                    .font(OttoFont.ui(14))
                     .foregroundStyle(OttoColor.barkSoft)
                 TextField("sam@example.com", text: $email)
                     .accessibilityIdentifier("emailAuth.email")
@@ -233,7 +234,7 @@ struct AuthView: View {
                     .focused($focus, equals: .email)
                     .submitLabel(.next)
                     .onSubmit { focus = .password }
-                    .font(.system(size: 16))
+                    .font(OttoFont.ui(16))
                     .foregroundStyle(OttoColor.ink)
             }
             .padding(.horizontal, 16)
@@ -251,8 +252,8 @@ struct AuthView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("password")
-                    .font(.system(size: 11, weight: .semibold))
-                    .kerning(1.2)
+                    .font(OttoFont.ui(11, .semibold))
+                    .tracking(1.2)
                     .foregroundStyle(OttoColor.barkSoft)
                 Spacer()
                 if !isSignUp {
@@ -260,15 +261,15 @@ struct AuthView: View {
                         resetEmail = trimmedEmail
                         showReset = true
                     }
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(OttoColor.sage)
+                        .font(OttoFont.ui(12, .medium))
+                        .foregroundStyle(OttoColor.sageDark)
                         .accessibilityIdentifier("emailAuth.forgot")
                 }
             }
 
             HStack(spacing: 10) {
                 Image(systemName: "lock")
-                    .font(.system(size: 14))
+                    .font(OttoFont.ui(14))
                     .foregroundStyle(OttoColor.barkSoft)
                 Group {
                     if showPassword {
@@ -284,15 +285,18 @@ struct AuthView: View {
                 .focused($focus, equals: .password)
                 .submitLabel(.go)
                 .onSubmit { if isFormValid { Task { await submit() } } }
-                .font(.system(size: 16))
+                .font(OttoFont.ui(16))
                 .foregroundStyle(OttoColor.ink)
                 Button {
                     showPassword.toggle()
                 } label: {
                     Image(systemName: showPassword ? "eye.slash" : "eye")
-                        .font(.system(size: 15))
+                        .font(OttoFont.ui(15))
                         .foregroundStyle(OttoColor.barkSoft)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel(showPassword ? "hide password" : "show password")
                 .accessibilityIdentifier("emailAuth.showPassword")
             }
             .padding(.horizontal, 16)
@@ -311,7 +315,7 @@ struct AuthView: View {
             HStack(spacing: 10) {
                 icon()
                 Text(label)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(OttoFont.ui(15, .medium))
                     .foregroundStyle(OttoColor.ink)
             }
             .frame(maxWidth: .infinity)
@@ -331,7 +335,7 @@ struct AuthView: View {
         Text("terms").foregroundStyle(OttoColor.bark) +
         Text(" and ").foregroundStyle(OttoColor.barkSoft) +
         Text("privacy policy").foregroundStyle(OttoColor.bark))
-            .font(.system(size: 13))
+            .font(OttoFont.ui(13))
             .multilineTextAlignment(.center)
             .padding(.horizontal, 32)
     }
