@@ -78,7 +78,11 @@ struct FriendsView: View {
                         .padding(.top, 8)
                         .padding(.bottom, 8)
                     }
-                    .refreshable { await vm.load() }
+                    .refreshable {
+                        // Unstructured on purpose: the load re-renders this view, and SwiftUI cancels the refreshable
+                        // task when that happens, which surfaced as an "Error: cancelled" alert on pull-to-refresh.
+                        await Task { await vm.load() }.value
+                    }
                 }
             }
         }
