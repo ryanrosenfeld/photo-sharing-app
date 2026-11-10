@@ -15,6 +15,10 @@ final class FriendsViewModel: ObservableObject {
         do {
             friends = try await supabase.rpc("list_friends").execute().value
             pruneEnrollments()
+        } catch is CancellationError {
+            // a superseded refresh, not a failure
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // same: the request was cancelled mid-flight
         } catch {
             self.error = error.localizedDescription
         }
