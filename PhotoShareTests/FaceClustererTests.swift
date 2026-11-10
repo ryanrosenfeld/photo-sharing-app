@@ -60,4 +60,21 @@ final class FaceClustererTests: XCTestCase {
         InvitedPhotosStore.remove(code: "c2", defaults: defaults)
         XCTAssertTrue(InvitedPhotosStore.all(defaults: defaults).isEmpty)
     }
+
+    func testCarryIdsKeepsIdWhenClusterGrows() {
+        let old = [PersonCluster(id: UUID(), assetIds: ["a", "b", "c"], crop: nil)]
+        let grown = [PersonCluster(id: UUID(), assetIds: ["a", "b", "c", "d"], crop: nil),
+                     PersonCluster(id: UUID(), assetIds: ["x", "y", "z"], crop: nil)]
+        let out = FaceClusterer.carryIds(into: grown, from: old)
+        XCTAssertEqual(out[0].id, old[0].id)
+        XCTAssertNotEqual(out[1].id, old[0].id)
+    }
+
+    func testKnownFacesAreNotSuggested() {
+        var faces: [ScannedFace] = []
+        for i in 0..<5 { faces.append(face("me\(i)", axis: 0, jitter: 0.02)) }
+        for i in 0..<3 { faces.append(face("pal\(i)", axis: 3)) }
+        let people = FaceClusterer().cluster(faces, excluding: [vector(axis: 0)])
+        XCTAssertEqual(people.map(\.photoCount), [3])
+    }
 }

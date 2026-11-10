@@ -6,10 +6,13 @@ import SwiftUI
 /// people, and lets the user invite one with a tap. The app never learns who a face is: the user attaches a name by
 /// picking a contact (optional). Skipping is as visible as inviting; the link/QR step follows either way.
 struct FriendSuggestionsStep: View {
-    let step: Int
-    let total: Int
+    var step: Int = 0
+    var total: Int = 0
+    /// Opened from the friends tab after onboarding: no progress bar, and the button just closes the sheet.
+    var embedded = false
     let onFinished: () -> Void
 
+    @EnvironmentObject private var authManager: AuthManager
     @StateObject private var scanner = CameraRollScanner()
     @State private var selected: PersonCluster?
     @State private var invited = Set<UUID>()
@@ -18,9 +21,11 @@ struct FriendSuggestionsStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            OnboardingProgress(step: step, total: total)
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
+            if !embedded {
+                OnboardingProgress(step: step, total: total)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 12)
+            }
 
             ScrollView {
                 VStack(spacing: 14) {
@@ -50,7 +55,7 @@ struct FriendSuggestionsStep: View {
             }
 
             VStack(spacing: 10) {
-                Button(invited.isEmpty ? "skip for now" : "continue") { finish() }
+                Button(embedded ? "done" : invited.isEmpty ? "skip for now" : "continue") { finish() }
                     .buttonStyle(PrimaryButtonStyle())
                     .accessibilityIdentifier("suggestions.continue")
             }
@@ -58,7 +63,12 @@ struct FriendSuggestionsStep: View {
             .padding(.bottom, 24)
             .padding(.top, 8)
         }
-        .task { scanner.start() }
+        .task {
+            if embedded, PHPhotoLibrary.authorizationStatus(for: .readWrite) == .notDetermined {
+                _ = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            }
+            scanner.start(userId: authManager.currentProfile?.id)
+        }
         .onDisappear { scanner.stop() }
         .sheet(item: $selected) { person in
             PersonInviteSheet(person: person) { _ in
@@ -100,7 +110,7 @@ struct FriendSuggestionsStep: View {
     }
 
     private func finish() {
-        if !invited.isEmpty { OnboardingStep.markFirstFriendOffered() }
+        if !invited.isEmpty && !embedded { OnboardingStep.markFirstFriendOffered() }
         onFinished()
     }
 }
@@ -150,6 +160,7 @@ private struct PersonInviteSheet: View {
     @State private var name: String?
     @State private var pickingContact = false
     @State private var sendPhotos = true
+    @State private var showShare = false
 
     var body: some View {
         ZStack {
@@ -185,21 +196,13 @@ private struct PersonInviteSheet: View {
                 Spacer()
 
                 if let code {
-                    ShareLink(
-                        item: InviteLink.url(code: code),
-                        message: Text(InviteMessage.text(from: authManager.currentProfile?.displayName))
-                    ) {
+                    Button { showShare = true } label: {
                         Text("send an invite")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity).frame(height: 52)
                             .background(OttoColor.sage).foregroundStyle(.white)
                             .clipShape(Capsule())
                     }
-                    .simultaneousGesture(TapGesture().onEnded {
-                        FriendsViewModel.markShared(code)
-                        if sendPhotos { InvitedPhotosStore.add(code: code, assetIds: person.assetIds) }
-                        Task { try? await Task.sleep(for: .milliseconds(800)); onSent(code) }
-                    })
                     .accessibilityIdentifier("suggestions.send")
                 } else if failed {
                     Button("couldn't create a link. try again") { Task { await load() } }
@@ -218,6 +221,20 @@ private struct PersonInviteSheet: View {
         }
         .presentationDetents([.large])
         .task { await load() }
+        .sheet(isPresented: $showShare) {
+            if let code {
+                // The invite sheet stays up until the share sheet closes: closing it any earlier (as a timer did)
+                // took the share sheet down with it the moment it appeared.
+                ActivityView(items: [InviteMessage.text(from: authManager.currentProfile?.displayName), InviteLink.url(code: code)]) { completed in
+                    showShare = false
+                    guard completed else { return }
+                    FriendsViewModel.markShared(code)
+                    if sendPhotos { InvitedPhotosStore.add(code: code, assetIds: person.assetIds) }
+                    onSent(code)
+                }
+                .presentationDetents([.medium, .large])
+            }
+        }
         .sheet(isPresented: $pickingContact) {
             ContactPicker { name = $0 }.ignoresSafeArea()
         }
@@ -228,6 +245,19 @@ private struct PersonInviteSheet: View {
         code = await friends.inviteToShare()
         failed = code == nil
     }
+}
+
+/// The system share sheet with a completion callback (SwiftUI's ShareLink has none).
+private struct ActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+    let onFinish: (Bool) -> Void
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let vc = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        vc.completionWithItemsHandler = { _, completed, _, _ in onFinish(completed) }
+        return vc
+    }
+    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
 }
 
 /// System contact picker. It runs out of process, so no contacts permission is needed; only the chosen name comes back.
