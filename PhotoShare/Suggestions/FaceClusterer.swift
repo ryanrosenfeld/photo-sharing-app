@@ -9,6 +9,10 @@ struct ScannedFace: Sendable {
     let areaFraction: Float
     /// Small JPEG of the face for the tile.
     let crop: Data?
+    /// Face box in the scanned image's pixels, with that image's size, so a tile picture can be cut later (faces read from
+    /// the persistent index carry no crop).
+    var box: CGRect? = nil
+    var imageSize: CGSize? = nil
 }
 
 /// A person who shows up repeatedly in the library.
@@ -17,7 +21,15 @@ struct PersonCluster: Identifiable, Sendable {
     /// Photos they appear in, newest first, without duplicates.
     var assetIds: [String]
     var crop: Data?
+    /// Where to cut `crop` from when it is missing: the clearest face's photo and box.
+    var cropSource: CropSource? = nil
     var photoCount: Int { assetIds.count }
+}
+
+struct CropSource: Sendable, Equatable {
+    let assetId: String
+    let box: CGRect
+    let imageSize: CGSize
 }
 
 /// Groups face embeddings into people, with no names: the app can tell two faces are the same person, not who it is.
@@ -94,7 +106,11 @@ struct FaceClusterer: Sendable {
             let assets = ordered.map(\.assetId).filter { seen.insert($0).inserted }
             guard assets.count >= minPhotos else { return nil }
             let best = c.faces.max { $0.areaFraction < $1.areaFraction }
-            return PersonCluster(id: UUID(), assetIds: assets, crop: best?.crop)
+            var source: CropSource?
+            if let f = best, f.crop == nil, let box = f.box, let size = f.imageSize {
+                source = CropSource(assetId: f.assetId, box: box, imageSize: size)
+            }
+            return PersonCluster(id: UUID(), assetIds: assets, crop: best?.crop, cropSource: source)
         }
         .sorted { $0.photoCount > $1.photoCount }
     }
@@ -118,7 +134,7 @@ struct FaceClusterer: Sendable {
                 .max { $0.1 < $1.1 }
             guard let (prev, overlap) = match, overlap * 2 > min(prev.assetIds.count, c.assetIds.count) else { return c }
             taken.insert(prev.id)
-            return PersonCluster(id: prev.id, assetIds: c.assetIds, crop: c.crop)
+            return PersonCluster(id: prev.id, assetIds: c.assetIds, crop: c.crop ?? prev.crop, cropSource: (c.crop ?? prev.crop) == nil ? c.cropSource : nil)
         }
     }
 }

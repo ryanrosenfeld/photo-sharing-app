@@ -417,3 +417,6 @@ Note: face enrollment of friends is now fully automatic on friendship acceptance
 ## Copy style
 
 All user-facing text is lowercase: titles, buttons, labels, alerts, errors, onboarding, empty states, tab names, and the Info.plist permission strings. Exceptions: user-provided data (names, emails), invite codes, and text supplied by iOS (system permission buttons, share sheet). New copy must follow this.
+
+## Past photos with a new friend
+Once a friend's face profile can be read on this phone, otto looks through the whole camera roll (indexed on the device in the background, newest first) and finds every past photo of them, including ones from before the app was installed. With review on for that friend the photos go to the review queue; otherwise otto offers "send them all" and nothing is sent until the user taps. Photos already sent to that friend are never offered again.

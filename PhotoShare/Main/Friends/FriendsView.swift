@@ -11,6 +11,7 @@ struct FriendsView: View {
     @State private var pastedCode: String?
     @State private var detailFriend: Friend?
     @EnvironmentObject var enrollment: FaceEnrollmentSync
+    @EnvironmentObject var pastPhotos: PastPhotosOffers
 
     var body: some View {
         ZStack {
@@ -34,6 +35,9 @@ struct FriendsView: View {
                                     .padding(.horizontal, 16)
                                     .padding(.bottom, 16)
                             }
+                            PastPhotosCard()
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, pastPhotos.offers.isEmpty ? 0 : 16)
                             if !vm.friends.isEmpty {
                                 friendsList
                                     .padding(.horizontal, 16)

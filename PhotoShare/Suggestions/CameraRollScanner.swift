@@ -47,7 +47,7 @@ final class CameraRollScanner: ObservableObject {
                 if Task.isCancelled { break }
                 let asset = result.object(at: index)
                 index += 1
-                let found = await Self.scan(asset: asset, detector: detector)
+                let found = await Self.clusterable(await FaceIndexer.shared.faces(for: asset))
                 guard let self else { return }
                 self.faces += found
                 // Each published change re-renders the screen, so update the counter in steps.
@@ -84,8 +84,9 @@ final class CameraRollScanner: ObservableObject {
             let clusters = await Task.detached(priority: .utility) { clusterer.cluster(snapshot, excluding: known) }.value
             guard let self else { return }
             // Cluster ids are regenerated each pass, so remember dismissals by their photos instead.
+            let withCrops = await self.fillCrops(clusters)
             let hidden = self.hiddenAssets
-            let visible = clusters.filter { c in
+            let visible = withCrops.filter { c in
                 !hidden.contains { $0.intersection(c.assetIds).count * 2 > c.assetIds.count }
             }
             self.people = FaceClusterer.carryIds(into: visible, from: self.people)
@@ -118,36 +119,37 @@ final class CameraRollScanner: ObservableObject {
 
     // MARK: - One photo
 
-    private nonisolated static func scan(asset: PHAsset, detector: FaceDetector) async -> [ScannedFace] {
-        guard let image = await load(asset) else { return [] }
-        let id = asset.localIdentifier, date = asset.creationDate
-        return await Task.detached(priority: .utility) { () -> [ScannedFace] in
-            guard let cg = image.preparedCGImage(maxDimension: imageSide),
-                  let found = try? detector.facesWithEmbeddings(in: cg) else { return [] }
-            let area = CGFloat(cg.width * cg.height)
-            return found.compactMap { box, embedding in
-                // Aligned faces only: box-crop fallbacks are too noisy to group people on.
-                guard embedding.aligned, box.width >= 40 else { return nil }
-                return ScannedFace(
-                    assetId: id, takenAt: date, vector: embedding.vector,
-                    areaFraction: Float(box.width * box.height / area),
-                    crop: crop(of: cg, box: box)
-                )
-            }
-        }.value
+    /// Aligned, reasonably large faces only: box-crop fallbacks and tiny faces are too noisy to group people on.
+    /// Photos already in the face index are not scanned again.
+    private static func clusterable(_ faces: [IndexedFace]) -> [ScannedFace] {
+        faces.compactMap { f in
+            guard f.embedding.aligned, f.box.width >= 40 else { return nil }
+            return ScannedFace(assetId: f.assetId, takenAt: f.takenAt, vector: f.embedding.vector,
+                               areaFraction: f.areaFraction, crop: nil, box: f.box, imageSize: f.imageSize)
+        }
     }
 
-    private nonisolated static func load(_ asset: PHAsset) async -> UIImage? {
-        await withCheckedContinuation { continuation in
-            let options = PHImageRequestOptions()
-            options.deliveryMode = .highQualityFormat
-            options.resizeMode = .fast
-            options.isNetworkAccessAllowed = false   // don't pull iCloud originals just to look for faces
-            PHImageManager.default().requestImage(
-                for: asset, targetSize: CGSize(width: imageSide, height: imageSide),
-                contentMode: .aspectFit, options: options
-            ) { image, _ in continuation.resume(returning: image) }
+    /// Tile pictures are cut on demand, so the index never stores face thumbnails.
+    private func fillCrops(_ people: [PersonCluster]) async -> [PersonCluster] {
+        var out: [PersonCluster] = []
+        for var p in people {
+            if p.crop == nil, let src = p.cropSource {
+                if let cached = cropCache[src.assetId + "\(src.box)"] { p.crop = cached }
+                else if let asset = PHAsset.fetchAssets(withLocalIdentifiers: [src.assetId], options: nil).firstObject,
+                        let data = await Self.cropData(asset: asset, source: src) {
+                    cropCache[src.assetId + "\(src.box)"] = data
+                    p.crop = data
+                }
+            }
+            out.append(p)
         }
+        return out
+    }
+    private var cropCache: [String: Data] = [:]
+
+    private nonisolated static func cropData(asset: PHAsset, source: CropSource) async -> Data? {
+        guard let image = await FaceIndexer.loadForCrop(asset), let cg = image.preparedCGImage(maxDimension: imageSide) else { return nil }
+        return crop(of: cg, box: source.box)
     }
 
     private nonisolated static func crop(of image: CGImage, box: CGRect) -> Data? {

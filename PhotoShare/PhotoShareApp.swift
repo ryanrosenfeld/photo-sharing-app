@@ -5,6 +5,7 @@ import SwiftUI
 @main
 struct PhotoShareApp: App {
     init() {
+        FaceIndexer.registerBackgroundTask()
         #if DEBUG
         // Line-buffer stdout so [AutoShare] logs survive when the harness kills the app (simctl --stdout=file).
         setvbuf(stdout, nil, _IOLBF, 0)
