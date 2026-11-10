@@ -262,6 +262,8 @@ A share is triggered when:
 
 ### Pricing
 
+> **Current state:** no paywall, trial banner or plan UI is shown; everyone is treated as free with no friend-send limit enforced in the UI. The tiers below are the deferred design.
+
 - Monthly and annual subscription options (prices TBD)
 - Free trial: 7 days of Pro on new account creation
 - Subscription managed via Apple In-App Purchase (StoreKit 2)
@@ -350,9 +352,9 @@ Note: face enrollment of friends is now fully automatic on friendship acceptance
 
 ## App Structure
 
-- **Photos** — chronological feed of received photos; bulk save UX; expiry warnings (default tab)
+- **Photos** — received photos grouped by sender, one horizontally paging shelf per sender (native scroll paging; tap opens full size, press and hold saves, pull to refresh); expiry warnings (default tab)
 - **Friends** — full friends list with toggle state; pending friend requests card; manual review queue
-- **Profile** — account settings, plan status, permissions, reference photo management, manual review global setting
+- **Profile** — display name, reference photos, manual review global setting, permissions status, sign out. No plan or trial UI: the app is free for everyone for now (paywall deferred, see Pricing).
 
 ---
 

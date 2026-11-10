@@ -22,8 +22,10 @@ struct PhotoDetailView: View {
                 .padding()
             }
         }
+        .background(OttoColor.canvas.ignoresSafeArea())
         .navigationTitle(detail.sender.displayName)
         .navigationBarTitleDisplayMode(.inline)
+        .task { await vm.markViewed(photo) }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 saveButton
@@ -40,6 +42,8 @@ struct PhotoDetailView: View {
                 image
                     .resizable()
                     .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                    .padding(.horizontal, 12)
             case .failure:
                 imagePlaceholder
             case .empty:
@@ -72,7 +76,7 @@ struct PhotoDetailView: View {
             if photo.isSaved {
                 Label("saved", systemImage: "checkmark.circle.fill")
                     .font(.subheadline)
-                    .foregroundStyle(.green)
+                    .foregroundStyle(OttoColor.sageDark)
             }
         }
     }
@@ -83,11 +87,7 @@ struct PhotoDetailView: View {
             Text("expires \(detail.expiresAt.formatted(.relative(presentation: .named)))")
                 .font(.subheadline)
         }
-        .foregroundStyle(.orange)
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.orange.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .foregroundStyle(OttoColor.wax)
     }
 
     private var saveButton: some View {

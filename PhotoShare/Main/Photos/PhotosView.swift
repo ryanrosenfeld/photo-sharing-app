@@ -5,53 +5,25 @@ struct PhotosView: View {
     @EnvironmentObject var authManager: AuthManager
 
     var body: some View {
-        ZStack {
-            OttoColor.canvas.ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // header
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        OttoEyebrow(text: "photos")
-                        Text("for you")
-                            .font(OttoFont.serifBold(size: 32))
-                            .foregroundStyle(OttoColor.ink)
-                    }
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 12)
-
-                // content
+        NavigationStack {
+            Group {
                 if vm.isLoading && vm.photos.isEmpty {
-                    Spacer()
                     ProgressView().tint(OttoColor.sage)
                         .accessibilityIdentifier("photos.loading")
-                    Spacer()
                 } else if vm.photos.isEmpty && vm.loadFailed {
                     errorState
                 } else if vm.photos.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(groupedPhotos, id: \.senderName) { group in
-                                PolaroidStackGroupView(group: group) {
-                                    Task { await vm.saveAll(group.photos) }
-                                }
-                                    .accessibilityElement(children: .contain)
-                                    .accessibilityIdentifier("photos.stack.\(group.senderName)")
-                                    .padding(.bottom, 26)
-                            }
-                        }
-                        .padding(.top, 4)
-                        .padding(.bottom, 110)   // clear the floating tab bar
-                    }
-                    .refreshable {
-                        // Unstructured so SwiftUI cancelling the refresh task (it does when the list re-renders) doesn't abort the request.
-                        await Task { await reload() }.value
-                    }
+                    shelves
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(OttoColor.canvas.ignoresSafeArea())
+            .navigationTitle("photos")
+            .navigationDestination(for: UUID.self) { id in
+                if let photo = vm.photos.first(where: { $0.id == id }) {
+                    PhotoDetailView(photo: photo)
                 }
             }
         }
@@ -65,6 +37,26 @@ struct PhotosView: View {
         }
     }
 
+    /// One shelf per sender: swipe sideways (native paging), tap for full size, press and hold to save.
+    private var shelves: some View {
+        ScrollView {
+            LazyVStack(spacing: 28) {
+                ForEach(groupedPhotos, id: \.senderName) { group in
+                    SenderShelf(group: group) {
+                        Task { await vm.saveAll(group.photos) }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier("photos.stack.\(group.senderName)")
+                }
+            }
+            .padding(.vertical, 8)
+        }
+        .refreshable {
+            // Unstructured so SwiftUI cancelling the refresh task (it does when the list re-renders) doesn't abort the request.
+            await Task { await reload() }.value
+        }
+    }
+
     private func reload() async {
         guard let userId = authManager.session?.user.id else { return }
         await vm.load(userId: userId)
@@ -72,21 +64,19 @@ struct PhotosView: View {
 
     private var errorState: some View {
         VStack(spacing: 20) {
-            Spacer()
             OttoMascot(pose: .sleeping, width: 160)
             VStack(spacing: 8) {
                 Text("couldn't load your photos.")
                     .font(OttoFont.serifBoldItalic(size: 22))
                     .foregroundStyle(OttoColor.ink)
                 Text("check your connection and try again.")
-                    .font(.system(size: 15))
+                    .font(.subheadline)
                     .foregroundStyle(OttoColor.bark)
             }
             OttoPillButton(title: "try again", isFullWidth: false) {
                 Task { await reload() }
             }
             .accessibilityIdentifier("photos.retry")
-            Spacer()
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("photos.error")
@@ -94,7 +84,6 @@ struct PhotosView: View {
 
     private var emptyState: some View {
         VStack(spacing: 24) {
-            Spacer()
             OttoMascot(pose: .sleeping, width: 200)
                 .accessibilityIdentifier("photos.empty")
             VStack(spacing: 8) {
@@ -102,13 +91,11 @@ struct PhotosView: View {
                     .font(OttoFont.serifBoldItalic(size: 24))
                     .foregroundStyle(OttoColor.ink)
                 Text("when friends share photos with you, they'll arrive here.")
-                    .font(.system(size: 15))
+                    .font(.subheadline)
                     .foregroundStyle(OttoColor.bark)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(2)
                     .padding(.horizontal, 40)
             }
-            Spacer()
         }
     }
 
@@ -135,268 +122,127 @@ struct SenderGroup {
     var photos: [ReceivedPhoto]
 }
 
-// MARK: - Polaroid Stack Group
+// MARK: - Sender shelf
 
-struct PolaroidStackGroupView: View {
+struct SenderShelf: View {
     let group: SenderGroup
     var onSaveAll: () -> Void = {}
 
-    @State private var topIndex: Int = 0
-    @State private var dragOffset: CGFloat = 0
-    @State private var isFlying: Bool = false
-    @State private var flyDirection: CGFloat = 1
-    @GestureState private var isDragging: Bool = false
-
-    private let cardWidth: CGFloat = 220
-    private let stackHeight: CGFloat = 320
-
-    private var total: Int { group.photos.count }
+    @EnvironmentObject private var vm: PhotosViewModel
+    private var unsaved: Int { group.photos.filter { !$0.isSaved }.count }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // sender header
-            HStack(spacing: 10) {
-                OttoAvatarCircle(name: group.senderName, size: 32)
+        VStack(alignment: .leading, spacing: 12) {
+            header
+                .padding(.horizontal, 20)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    HStack(spacing: 6) {
-                        Text(group.senderName)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(OttoColor.ink)
-                        if group.photos.contains(where: { !$0.isSaved }) {
-                            Text("\(group.photos.filter { !$0.isSaved }.count) new")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 2)
-                                .background(OttoColor.sage)
-                                .clipShape(Capsule())
+            // Native horizontal paging: the next photo peeks in, no arrows, counters or hints.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 12) {
+                    ForEach(group.photos) { photo in
+                        NavigationLink(value: photo.id) {
+                            PhotoCard(photo: photo)
+                        }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            if !photo.isSaved {
+                                Button("save to photos", systemImage: "arrow.down.circle") {
+                                    Task { await vm.saveToLibrary(photo) }
+                                }
+                            }
+                        }
+                        .scrollTransition(axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(phase.isIdentity ? 1 : 0.92)
+                                .opacity(phase.isIdentity ? 1 : 0.7)
                         }
                     }
-                    Text(group.photos.first?.photos.takenAt.formatted(.relative(presentation: .named)) ?? "")
-                        .font(.system(size: 12))
-                        .foregroundStyle(OttoColor.barkSoft)
                 }
-
-                Spacer()
-
-                if group.photos.contains(where: { !$0.isSaved }) {
-                    Button("save all", action: onSaveAll)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(OttoColor.sage)
-                        .accessibilityIdentifier("photos.saveAll.\(group.senderName)")
-                } else {
-                    Label("saved", systemImage: "checkmark")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(OttoColor.barkSoft)
-                }
+                .scrollTargetLayout()
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 8)
-
-            // polaroid stack
-            ZStack {
-                ForEach(stackIndices, id: \.self) { stackPos in
-                    let photoIndex = (topIndex + stackPos) % total
-                    let photo = group.photos[photoIndex]
-                    let isTop = stackPos == 0
-                    let tilt = tiltForIndex(photoIndex)
-
-                    PolaroidCard(
-                        photo: photo,
-                        showCaption: isTop,
-                        tilt: isTop ? tilt + (dragOffset + (isFlying ? flyDirection * 360 : 0)) * 0.05 : tilt * 0.6,
-                        offsetX: isTop ? dragOffset + (isFlying ? flyDirection * 360 : 0) : 0,
-                        offsetY: CGFloat(stackPos) * 6,
-                        scale: 1.0 - CGFloat(stackPos) * 0.04,
-                        opacity: opacityForPosition(stackPos),
-                        isInteractive: isTop
-                    )
-                    .zIndex(Double(100 - stackPos))
-                    .animation(
-                        (isDragging && isTop) ? nil : .spring(response: 0.26, dampingFraction: 0.85),
-                        value: dragOffset
-                    )
-                    .animation(
-                        .spring(response: 0.26, dampingFraction: 0.85),
-                        value: isFlying
-                    )
-                }
-
-                // counter pill
-                HStack(spacing: 8) {
-                    Text("\(topIndex + 1) / \(total)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(OttoColor.barkSoft)
-                    Text("·")
-                        .foregroundStyle(OttoColor.lineSoft)
-                    Text("swipe")
-                        .font(OttoFont.serifBold(size: 11))
-                        .italic()
-                        .foregroundStyle(OttoColor.barkSoft)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(OttoColor.surface)
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(OttoColor.lineSoft, lineWidth: 0.5))
-                .offset(y: stackHeight / 2 - 18)
-                .zIndex(200)
-
-                // nav arrows
-                HStack {
-                    Button { advance(dir: -1) } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(OttoColor.bark)
-                            .frame(width: 30, height: 30)
-                            .background(OttoColor.surface)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(OttoColor.lineSoft, lineWidth: 0.5))
-                    }
-                    Spacer()
-                    Button { advance(dir: 1) } label: {
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(OttoColor.bark)
-                            .frame(width: 30, height: 30)
-                            .background(OttoColor.surface)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(OttoColor.lineSoft, lineWidth: 0.5))
-                    }
-                }
-                .padding(.horizontal, 6)
-                .offset(y: -20)
-                .zIndex(200)
-            }
-            .frame(height: stackHeight)
-            .contentShape(Rectangle())
-            .highPriorityGesture(
-                DragGesture(minimumDistance: 10)
-                    .updating($isDragging) { _, state, _ in state = true }
-                    .onChanged { value in
-                        dragOffset = value.translation.width
-                    }
-                    .onEnded { value in
-                        if abs(value.translation.width) > 70 {
-                            advance(dir: value.translation.width > 0 ? 1 : -1)
-                        } else {
-                            withAnimation(.spring(response: 0.2)) { dragOffset = 0 }
-                        }
-                    }
-            )
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.viewAligned)
+            .contentMargins(.horizontal, 20, for: .scrollContent)
         }
     }
 
-    private var stackIndices: [Int] {
-        (0..<min(total, 4)).map { $0 }
-    }
-
-    private func tiltForIndex(_ idx: Int) -> CGFloat {
-        let tilts: [CGFloat] = [-4, 3, -2.5, 4, -3.5, 2, -4.5]
-        return tilts[idx % tilts.count]
-    }
-
-    private func opacityForPosition(_ pos: Int) -> Double {
-        switch pos {
-        case 0: return 1.0
-        case 1: return 0.95
-        case 2: return 0.75
-        case 3: return 0.45
-        default: return 0
-        }
-    }
-
-    private func advance(dir: CGFloat) {
-        guard !isFlying else { return }
-        flyDirection = dir
-        withAnimation(.spring(response: 0.26, dampingFraction: 0.85)) {
-            isFlying = true
-        } completion: {
-            topIndex = (topIndex + 1) % total
-            dragOffset = 0
-            isFlying = false
+    private var header: some View {
+        HStack(spacing: 10) {
+            OttoAvatarCircle(name: group.senderName, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(group.senderName)
+                        .font(.headline)
+                        .foregroundStyle(OttoColor.ink)
+                    if unsaved > 0 {
+                        Text("\(unsaved) new")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(OttoColor.sage, in: Capsule())
+                    }
+                }
+                Text(group.photos.first?.photos.takenAt.formatted(.relative(presentation: .named)) ?? "")
+                    .font(.footnote)
+                    .foregroundStyle(OttoColor.barkSoft)
+            }
+            Spacer()
+            if unsaved > 0 {
+                Button("save all", action: onSaveAll)
+                    .font(.subheadline.weight(.semibold))
+                    .modifier(GlassSmallButton())
+                    .accessibilityIdentifier("photos.saveAll.\(group.senderName)")
+            } else {
+                Label("saved", systemImage: "checkmark")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(OttoColor.barkSoft)
+            }
         }
     }
 }
 
-// MARK: - Single Polaroid Card
+private struct GlassSmallButton: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.buttonStyle(.glass).tint(OttoColor.sageDark).buttonBorderShape(.capsule)
+        } else {
+            content.buttonStyle(.bordered).tint(OttoColor.sageDark).buttonBorderShape(.capsule)
+        }
+    }
+}
 
-struct PolaroidCard: View {
+// MARK: - Single photo card
+
+struct PhotoCard: View {
     let photo: ReceivedPhoto
-    let showCaption: Bool
-    let tilt: CGFloat
-    let offsetX: CGFloat
-    let offsetY: CGFloat
-    let scale: CGFloat
-    let opacity: Double
-    let isInteractive: Bool
 
     var body: some View {
-        VStack(spacing: 0) {
-            // top polaroid border
-            Color.clear.frame(height: 10)
-
-            // photo area
-            Group {
-                PhotoImage(photo: photo) { phase in
-                    switch phase {
-                    case .success(let img):
-                        img.resizable().scaledToFill().accessibilityIdentifier("photos.image.loaded")
-                    case .failure:
-                        Rectangle().fill(OttoColor.cream)
-                            .overlay(Image(systemName: "photo").font(.title2).foregroundStyle(OttoColor.barkSoft))
-                    case .empty:
-                        Rectangle().fill(OttoColor.cream)
-                            .overlay(ProgressView().tint(OttoColor.barkSoft))
-                    }
-                }
-            }
-            .frame(width: 200, height: 200)
-            .clipped()
-            .clipShape(Rectangle())
-            .overlay(
-                LinearGradient(
-                    colors: [Color(hex: "#FFF0D2").opacity(0.06), Color(hex: "#46281A").opacity(0.10)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            // caption area
-            ZStack {
-                if showCaption {
-                    Text(photo.photos.takenAt.formatted(.relative(presentation: .named)))
-                        .font(OttoFont.serifBold(size: 14))
-                        .italic()
-                        .foregroundStyle(Color(hex: "#6B533A"))
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                }
-            }
-            .frame(height: 36)
-
-            // expiry warning
-            if photo.photos.isExpiringSoon && showCaption {
-                Text("expires soon — save it")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(OttoColor.wax)
-                    .clipShape(Capsule())
-                    .padding(.bottom, 6)
+        PhotoImage(photo: photo) { phase in
+            switch phase {
+            case .success(let img):
+                img.resizable().scaledToFill().accessibilityIdentifier("photos.image.loaded")
+            case .failure:
+                OttoColor.cream
+                    .overlay(Image(systemName: "photo").font(.title2).foregroundStyle(OttoColor.barkSoft))
+            case .empty:
+                OttoColor.cream
+                    .overlay(ProgressView().tint(OttoColor.barkSoft))
             }
         }
-        .frame(width: 220)
-        .background(Color(hex: "#FBF6E9"))
-        .clipShape(RoundedRectangle(cornerRadius: 3))
-        .shadow(color: Color(hex: "#3C2814").opacity(0.30), radius: 14, x: 0, y: 10)
-        .shadow(color: Color(hex: "#3C2814").opacity(0.10), radius: 4, x: 0, y: 2)
-        .rotationEffect(.degrees(tilt))
-        .offset(x: offsetX, y: offsetY)
-        .scaleEffect(scale)
-        .opacity(opacity)
-        .allowsHitTesting(isInteractive)
+        .frame(width: 280, height: 360)
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(alignment: .bottomLeading) {
+            if photo.photos.isExpiringSoon && !photo.isSaved {
+                Text("expires soon")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(OttoColor.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .ottoGlass(Capsule(), tint: OttoColor.wax.opacity(0.35))
+                    .padding(12)
+            }
+        }
+        .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
     }
 }
