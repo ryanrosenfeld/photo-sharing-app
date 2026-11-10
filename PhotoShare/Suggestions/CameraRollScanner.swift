@@ -45,12 +45,15 @@ final class CameraRollScanner: ObservableObject {
                 let found = await Self.scan(asset: asset, detector: detector)
                 guard let self else { return }
                 self.faces += found
-                self.scanned = index
+                // Each published change re-renders the screen, so update the counter in steps.
+                if index % 10 == 0 || index == result.count { self.scanned = index }
                 // Refresh the tiles after the first batch, then every 100 photos.
                 if index == Self.firstBatch || index % 100 == 0 { self.regroup() }
             }
             guard let self else { return }
-            self.regroup()
+            self.scanned = index
+            await self.grouping?.value
+            await self.regroup(wait: true)?.value
             self.isScanning = false
             self.finished = true
         }
@@ -58,17 +61,34 @@ final class CameraRollScanner: ObservableObject {
 
     func stop() {
         task?.cancel()
+        grouping?.cancel()
         task = nil
         isScanning = false
     }
 
-    private func regroup() {
-        // Cluster ids are regenerated each pass, so remember dismissals by their photos instead.
-        let hidden = hiddenAssets
-        people = clusterer.cluster(faces).filter { c in
-            !hidden.contains { $0.intersection(c.assetIds).count * 2 > c.assetIds.count }
+    private var grouping: Task<Void, Never>?
+
+    /// Clustering thousands of faces is heavy, so it runs off the main thread on a snapshot; the main thread only
+    /// swaps in the result. A pass still running when the next is due is left to finish (the next one catches up).
+    @discardableResult
+    private func regroup(wait: Bool = false) -> Task<Void, Never>? {
+        if groupingBusy, !wait { return grouping }
+        let snapshot = faces, clusterer = clusterer
+        groupingBusy = true
+        let t = Task { [weak self] in
+            let clusters = await Task.detached(priority: .utility) { clusterer.cluster(snapshot) }.value
+            guard let self else { return }
+            // Cluster ids are regenerated each pass, so remember dismissals by their photos instead.
+            let hidden = self.hiddenAssets
+            self.people = clusters.filter { c in
+                !hidden.contains { $0.intersection(c.assetIds).count * 2 > c.assetIds.count }
+            }
+            self.groupingBusy = false
         }
+        grouping = t
+        return t
     }
+    private var groupingBusy = false
 
     private var hiddenAssets: [Set<String>] = []
 

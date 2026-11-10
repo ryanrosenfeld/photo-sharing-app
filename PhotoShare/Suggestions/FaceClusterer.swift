@@ -33,10 +33,15 @@ struct FaceClusterer: Sendable {
     var minPhotos = 3
 
     private struct Working {
-        var sum: [Float]
+        var sum: [Float] { didSet { centroid = Self.normalized(sum) } }
         var count: Int
         var faces: [ScannedFace]
-        var centroid: [Float] { Self.normalized(sum) }
+        /// Cached: recomputing it for every comparison made clustering thousands of faces very slow.
+        private(set) var centroid: [Float]
+        init(sum: [Float], count: Int, faces: [ScannedFace]) {
+            self.sum = sum; self.count = count; self.faces = faces
+            self.centroid = Self.normalized(sum)
+        }
         static func normalized(_ v: [Float]) -> [Float] {
             let n = sqrt(v.reduce(0) { $0 + $1 * $1 })
             return n > 0 ? v.map { $0 / n } : v
