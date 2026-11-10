@@ -75,9 +75,9 @@ Every user is required to upload reference photos of themselves as part of accou
 ### Face Profile Setup (required)
 
 - During onboarding (hard gate — cannot proceed without completing this step)
-- User selects 3–5 photos of themselves from their photo library using the standard iOS photo picker
-- Guidance: "Choose clear photos of your face, from different angles if possible"
-- Quality nudge: 3 photos = Good, 4 = Better, 5 = Best — minimum 3 required
+- Main path: guided selfies with the front camera. Three poses in a row (straight on, a slight turn to one side, a slight turn the other way), each taken automatically once the face is centered, close enough and held still for a moment; a shutter button is always available. Takes about 10 seconds. Selfies are kept in memory only, never saved to the camera roll
+- Fallback: choose 3–5 photos from the library with the standard iOS photo picker (no camera, camera access denied, or the person prefers it). After selfies, the person can optionally add library photos from other days for variety (up to 5 total)
+- Minimum 3 usable photos
 - On-device processing: MobileFaceNet pipeline runs on selected photos to validate a face is detectable in each; photos without a detectable face are rejected with guidance
 - The reference photos themselves (not embeddings) are encrypted and uploaded to server (see Encryption section)
 - This step can be deferred until first friend request is sent, but is required before any friend request can be sent or accepted

@@ -1,8 +1,9 @@
 import PhotosUI
 import SwiftUI
 
-/// Onboarding step: choose 3-5 photos of yourself. Each photo is checked on-device as soon as it is picked
-/// so the user knows immediately which ones count; only photos that pass are uploaded.
+/// Onboarding step: your reference photos. The main path is three guided selfies (SelfieCaptureView); choosing
+/// 3-5 photos from the library is the fallback, and library photos can also be added after selfies for variety.
+/// Each photo is checked on-device as soon as it is taken or picked; only photos that pass are uploaded.
 struct FaceProfileStep: View {
     let userId: UUID
     let step: Int?          // nil when reused from the Profile tab (no progress bar)
@@ -13,6 +14,7 @@ struct FaceProfileStep: View {
 
     private struct Candidate: Identifiable {
         let id = UUID()
+        var fromCamera = false
         var image: UIImage?
         var verdict: FaceProfileValidator.Verdict?   // nil while checking
     }
@@ -25,6 +27,9 @@ struct FaceProfileStep: View {
     @State private var generation = 0
     @State private var isUploading = false
     @State private var uploadError: String?
+    @State private var showCamera = false
+
+    private let canUseCamera = SelfieCaptureModel.canCapture
 
     private let manager = FaceProfileManager()
 
@@ -33,6 +38,7 @@ struct FaceProfileStep: View {
     }
     private var isChecking: Bool { candidates.contains { $0.verdict == nil } }
     private var canContinue: Bool { validImages.count >= Self.minPhotos && !isChecking && !isUploading }
+    private var selfieCount: Int { candidates.filter(\.fromCamera).count }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,39 +54,62 @@ struct FaceProfileStep: View {
                         .font(OttoFont.serifBold(size: 28))
                         .foregroundStyle(OttoColor.ink)
                         .padding(.top, 24)
-                    Text(showsUploadedNote
-                         ? "pick 3 to 5 new photos to replace your current set. your current photos stay until you finish."
-                         : "choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos.")
+                    Text(intro)
                         .font(.system(size: 16))
                         .foregroundStyle(OttoColor.bark)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        tip("just you, facing the camera")
-                        tip("good light, nothing covering your face")
-                        tip("mix it up: different days, angles, or glasses on and off")
+                        if canUseCamera {
+                            tip("takes about 10 seconds: straight on, then a little to each side")
+                            tip("good light, nothing covering your face")
+                            tip("glasses on if you usually wear them")
+                        } else {
+                            tip("just you, facing the camera")
+                            tip("good light, nothing covering your face")
+                            tip("mix it up: different days, angles, or glasses on and off")
+                        }
                     }
                     .font(.system(size: 14))
 
-                    PhotosPicker(
-                        selection: $selection,
-                        maxSelectionCount: Self.maxPhotos,
-                        selectionBehavior: .ordered,
-                        matching: .images
-                    ) {
-                        Label(candidates.isEmpty ? "choose photos" : "change photos",
-                              systemImage: "photo.badge.plus")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                            .background(OttoColor.surface)
-                            .foregroundStyle(OttoColor.ink)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(OttoColor.line, lineWidth: 1))
-                    }
-                    .disabled(isUploading)
-                    .accessibilityIdentifier("faceProfile.choose")
-                    .onChange(of: selection) { _, items in
-                        Task { await load(items) }
+                    if canUseCamera {
+                        Button { showCamera = true } label: {
+                            Label(selfieCount > 0 ? "retake selfies" : "take selfies", systemImage: "camera")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(selfieCount > 0 ? OttoColor.surface : OttoColor.sage)
+                                .foregroundStyle(selfieCount > 0 ? OttoColor.ink : .white)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(selfieCount > 0 ? OttoColor.line : .clear, lineWidth: 1))
+                        }
+                        .disabled(isUploading)
+                        .accessibilityIdentifier("faceProfile.selfie")
+
+                        PhotosPicker(selection: $selection, maxSelectionCount: max(1, Self.maxPhotos - selfieCount),
+                                     selectionBehavior: .ordered, matching: .images) {
+                            Text(libraryTitle)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(OttoColor.bark)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                        }
+                        .disabled(isUploading)
+                        .accessibilityIdentifier("faceProfile.choose")
+                    } else {
+                        PhotosPicker(selection: $selection, maxSelectionCount: Self.maxPhotos,
+                                     selectionBehavior: .ordered, matching: .images) {
+                            Label(candidates.isEmpty ? "choose photos" : "change photos",
+                                  systemImage: "photo.badge.plus")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(OttoColor.surface)
+                                .foregroundStyle(OttoColor.ink)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(OttoColor.line, lineWidth: 1))
+                        }
+                        .disabled(isUploading)
+                        .accessibilityIdentifier("faceProfile.choose")
                     }
 
                     if !candidates.isEmpty { grid }
@@ -118,14 +147,51 @@ struct FaceProfileStep: View {
             .padding(.bottom, 24)
             .padding(.top, 8)
         }
+        .onChange(of: selection) { _, items in
+            Task { await load(items) }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            SelfieCaptureView(onFinished: { photos in
+                showCamera = false
+                if !photos.isEmpty { useSelfies(photos) }
+            }, onUseLibrary: {
+                showCamera = false   // the library button is right under "take selfies"
+            })
+        }
+    }
+
+    private var intro: String {
+        switch (showsUploadedNote, canUseCamera) {
+        case (true, true):
+            "take new selfies to replace your current set. your current photos stay until you finish."
+        case (true, false):
+            "pick 3 to 5 new photos to replace your current set. your current photos stay until you finish."
+        case (false, true):
+            "take three quick selfies so friends' phones can recognize you in their photos."
+        case (false, false):
+            "choose 3 to 5 photos of yourself so friends' phones can recognize you in their photos."
+        }
+    }
+
+    private var libraryTitle: String {
+        selfieCount > 0 ? "add a photo from another day (optional)" : "choose from your photos instead"
+    }
+
+    /// Selfies replace earlier selfies and keep library picks, up to the maximum.
+    private func useSelfies(_ photos: [UIImage]) {
+        uploadError = nil
+        let library = candidates.filter { !$0.fromCamera }
+        let shots = photos.map { Candidate(fromCamera: true, image: $0, verdict: .ok) }   // checked during capture
+        candidates = Array((shots + library).prefix(Self.maxPhotos))
     }
 
     private var buttonTitle: String {
         if uploadError != nil { return "try again" }
         if isChecking { return "checking photos…" }
         let n = validImages.count
-        if n >= Self.minPhotos { return "Continue" }
-        return "choose \(Self.minPhotos - n) more good photo\(Self.minPhotos - n == 1 ? "" : "s")"
+        if n >= Self.minPhotos { return "continue" }
+        if canUseCamera && candidates.isEmpty { return "take selfies to continue" }
+        return "add \(Self.minPhotos - n) more good photo\(Self.minPhotos - n == 1 ? "" : "s")"
     }
 
     private func tip(_ text: String) -> some View {
@@ -193,9 +259,12 @@ struct FaceProfileStep: View {
         generation += 1
         let gen = generation
         uploadError = nil
-        candidates = items.map { _ in Candidate() }
+        let shots = candidates.filter(\.fromCamera)
+        candidates = shots + items.map { _ in Candidate() }
+        let offset = shots.count
         let validator = FaceProfileValidator()
-        for (i, item) in items.enumerated() {
+        for (n, item) in items.enumerated() {
+            let i = offset + n
             let data = try? await item.loadTransferable(type: Data.self)
             let result: (UIImage?, FaceProfileValidator.Verdict) = await Task.detached {
                 guard let data, let image = UIImage(data: data) else { return (nil, .unreadable) }
