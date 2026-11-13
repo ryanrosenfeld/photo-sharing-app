@@ -48,6 +48,7 @@ Follow Apple's accessibility guidance on every screen, and run `make verify`, wh
 - **Reduce Motion / Transparency / Increase Contrast:** read `accessibilityReduceMotion`, `accessibilityReduceTransparency`, and `colorSchemeContrast`. With Reduce Motion, replace movement with a fade or nothing. With Reduce Transparency or Increase Contrast, Liquid Glass and translucent materials must fall back to opaque surfaces with solid text. Do not put text over glass without verifying contrast in light and dark.
 - **Other:** support Dark Mode, Bold Text, Button Shapes, and Voice Control (labels match visible text). Copy stays lowercase.
 - Adopt Liquid Glass only for controls and navigation, gated with `#available(iOS 26, *)` and a fallback.
+- The `swiftui-expert` skill in `.claude/skills/` (MIT, from SwiftyJourney/swiftui-expert-skill) has detailed SwiftUI, accessibility, and Liquid Glass patterns; use it when writing or reviewing UI.
 
 ---
 
