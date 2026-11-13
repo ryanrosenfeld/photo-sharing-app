@@ -5,13 +5,14 @@
 #   make scenario-review per-friend manual review: queued until approved, auto-send when off (2 sims, local Supabase)
 #   make scenario-friends  invite link / deep link / accept / Send+Receive toggles / unfriend (2 sims, local Supabase)
 #   make verify-friends-api  friends backend (invites, toggles, RLS) against local Supabase, no simulator
+#   make sims-pair     two sims side by side: Ryan + a friend (Bob), both signed in against local Supabase (see scripts/verify/README.md)
 #   make scenario      2-persona e2e on simulators vs local Supabase (slow, ~10 min; needs Docker/colima)
 SIM_NAME ?= iPhone 17 Pro
 DEST     := platform=iOS Simulator,name=$(SIM_NAME)
 OUT      := verification-output
 XCB      := xcodebuild -project PhotoShare.xcodeproj -scheme PhotoShare -destination '$(DEST)' -derivedDataPath $(OUT)/DerivedData
 
-.PHONY: scenario-review scenario-friends verify-friends-api verify facematch generate test-unit test-ui scenario onboarding
+.PHONY: sims-pair sims-pair-down scenario-review scenario-friends verify-friends-api verify facematch generate test-unit test-ui scenario onboarding
 
 generate:
 	xcodegen generate
@@ -44,3 +45,10 @@ scenario-friends:
 
 verify-friends-api:
 	scripts/verify/check_friends_api.sh
+
+# two iOS 27 simulators side by side (Ryan + Bob) on the local DB; ME_EMAIL=/FRIEND_EMAIL=/SKIP_BUILD=1/FRESH=1 supported
+sims-pair:
+	scripts/verify/sims_pair.sh up
+
+sims-pair-down:
+	scripts/verify/sims_pair.sh down
