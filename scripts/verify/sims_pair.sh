@@ -22,14 +22,15 @@ mkdir -p "$STATE"
 log() { echo "[sims-pair $(date +%T)] $*"; }
 die() { log "ERROR: $*"; exit 1; }
 
-runtime_id() { # newest iOS 27.x (or $RUNTIME)
-  local v=${RUNTIME:-$(xcrun simctl list runtimes available | grep -oE 'iOS 27\.[0-9]+' | sed 's/iOS //' | sort -V | tail -1)}
-  [ -n "$v" ] || die "no iOS 27 simulator runtime installed"
-  echo "com.apple.CoreSimulator.SimRuntime.iOS-${v//./-}"
-}
-sim_udid() { # name -> udid, creating it on the iOS 27 runtime if missing
-  local u; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
-  [ -n "$u" ] || u=$(xcrun simctl create "$1" "com.apple.CoreSimulator.SimDeviceType.$DEVICE_TYPE" "$(runtime_id)")
+sim_udid() { # name -> udid, creating it on the newest iOS 27.x runtime that supports the device type if missing
+  local u v; u=$(xcrun simctl list devices | grep "    $1 (" | grep -oE '[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}' | head -1)
+  if [ -z "$u" ]; then
+    for v in ${RUNTIME:-$(xcrun simctl list runtimes available | grep -oE 'iOS 27\.[0-9]+' | sed 's/iOS //' | sort -rV)}; do
+      u=$(xcrun simctl create "$1" "com.apple.CoreSimulator.SimDeviceType.$DEVICE_TYPE" "com.apple.CoreSimulator.SimRuntime.iOS-${v//./-}" 2>/dev/null) && break
+      u=""
+    done
+  fi
+  [ -n "$u" ] || die "could not create $1 on any iOS 27 runtime"
   echo "$u"
 }
 
