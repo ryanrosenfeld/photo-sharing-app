@@ -37,6 +37,21 @@
 
 ---
 
+## Accessibility (required for every UI change)
+
+Follow Apple's accessibility guidance on every screen, and run `make verify`, which includes `PhotoShareUITests/AccessibilityAuditTests` (Apple's `performAccessibilityAudit()`). Fix findings; do not ignore audit issue types to make it pass. When you add a screen, add it to that test.
+
+- **Contrast:** text and meaningful icons need at least 4.5:1 against their background (3:1 for large text 18pt+ or bold 14pt+, and for UI component borders). Check `OttoTheme` pairings, including text on photos, on tinted surfaces, and on Liquid Glass. Never convey state by color alone.
+- **Dynamic Type:** use text styles or `OttoTheme` fonts that scale (`relativeTo:`); no fixed-size text frames. Layouts must hold at the largest accessibility sizes (wrap, scroll, or switch with `ViewThatFits`; never truncate essential text).
+- **VoiceOver:** every control and meaningful image has a concise label (`accessibilityLabel`), value, and hint where needed; decorative images are hidden; group related elements (`accessibilityElement(children: .combine)`); keep a logical reading order; announce async state changes. Keep `accessibilityIdentifier`s for tests separate from labels.
+- **Hit targets:** at least 44x44pt for everything tappable (`contentShape` / `frame(minWidth:minHeight:)` if the visual is smaller).
+- **Reduce Motion / Transparency / Increase Contrast:** read `accessibilityReduceMotion`, `accessibilityReduceTransparency`, and `colorSchemeContrast`. With Reduce Motion, replace movement with a fade or nothing. With Reduce Transparency or Increase Contrast, Liquid Glass and translucent materials must fall back to opaque surfaces with solid text. Do not put text over glass without verifying contrast in light and dark.
+- **Other:** support Dark Mode, Bold Text, Button Shapes, and Voice Control (labels match visible text). Copy stays lowercase.
+- Adopt Liquid Glass only for controls and navigation, gated with `#available(iOS 26, *)` and a fallback.
+- The `swiftui-expert` skill in `.claude/skills/` (MIT, from SwiftyJourney/swiftui-expert-skill) has detailed SwiftUI, accessibility, and Liquid Glass patterns; use it when writing or reviewing UI.
+
+---
+
 ## Key files
 
 | File | Purpose |

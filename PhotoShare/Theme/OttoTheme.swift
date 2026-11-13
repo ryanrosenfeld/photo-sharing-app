@@ -13,14 +13,14 @@ enum OttoColor {
     // Text
     static let ink       = Color(hex: "#1A2A1F")
     static let bark      = Color(hex: "#5A4030")
-    static let barkSoft  = Color(hex: "#8A6F58")
+    static let barkSoft  = Color(hex: "#6F5844")   // 5.3:1+ on canvas/surface (was #8A6F58, 4.0:1)
 
-    // Brand
+    // Brand. sage (3.4:1 on canvas) is for fills and decoration only; use sageDark for text and for fills behind white text.
     static let sage      = Color(hex: "#5A8A6B")
     static let sageDark  = Color(hex: "#456D54")
     static let pelt      = Color(hex: "#9B7A55")
     static let cream     = Color(hex: "#E8D4B0")
-    static let wax       = Color(hex: "#C8543A")
+    static let wax       = Color(hex: "#A8452C")   // 4.7:1+ as text on canvas (was #C8543A, 3.8:1)
 
     // Lines / chips
     static let line      = Color(hex: "#1A2A1F").opacity(0.10)
@@ -29,18 +29,36 @@ enum OttoColor {
 }
 
 enum OttoFont {
+    /// Georgia that scales with Dynamic Type, relative to the text style closest to `size`.
     static func serif(size: CGFloat, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
-        var descriptor = UIFontDescriptor(name: "Georgia", size: size)
-        var traits: [UIFontDescriptor.TraitKey: Any] = [.weight: weight == .bold ? UIFont.Weight.bold : UIFont.Weight.regular]
-        if italic {
-            let existing = descriptor.symbolicTraits
-            descriptor = descriptor.withSymbolicTraits(existing.union(.traitItalic)) ?? descriptor
-        }
-        return Font(UIFont(descriptor: descriptor, size: size))
+        let name = weight == .bold
+            ? (italic ? "Georgia-BoldItalic" : "Georgia-Bold")
+            : (italic ? "Georgia-Italic" : "Georgia")
+        return .custom(name, size: size, relativeTo: textStyle(for: size))
     }
 
     static func serifBold(size: CGFloat) -> Font { serif(size: size, weight: .bold) }
     static func serifBoldItalic(size: CGFloat) -> Font { serif(size: size, weight: .bold, italic: true) }
+
+    /// System font that scales with Dynamic Type. Use instead of `.system(size:)`.
+    static func ui(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
+        .system(textStyle(for: size), design: .default, weight: weight)
+    }
+
+    static func textStyle(for size: CGFloat) -> Font.TextStyle {
+        switch size {
+        case ..<11.5: return .caption2
+        case ..<12.5: return .caption
+        case ..<13.5: return .footnote
+        case ..<15.5: return .subheadline
+        case ..<16.5: return .callout
+        case ..<18.5: return .body
+        case ..<20.5: return .title3
+        case ..<24: return .title2
+        case ..<30: return .title
+        default: return .largeTitle
+        }
+    }
 }
 
 // MARK: - Hex color helper
@@ -133,13 +151,14 @@ struct OttoPillButton: View {
                 if isDestructive || isSecondary {
                     content.buttonStyle(.glass).tint(isDestructive ? OttoColor.wax : OttoColor.ink)
                 } else {
-                    content.buttonStyle(.glassProminent).tint(OttoColor.sage)
+                    // Opaque fill: translucent glass lowers white-text contrast below 4.5:1.
+                    content.buttonStyle(.borderedProminent).tint(OttoColor.sageDark)
                 }
             } else {
                 if isDestructive || isSecondary {
                     content.buttonStyle(.bordered).tint(isDestructive ? OttoColor.wax : OttoColor.ink)
                 } else {
-                    content.buttonStyle(.borderedProminent).tint(OttoColor.sage)
+                    content.buttonStyle(.borderedProminent).tint(OttoColor.sageDark)
                 }
             }
         }

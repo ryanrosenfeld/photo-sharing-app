@@ -13,6 +13,8 @@ struct WelcomeView: View {
             ZStack {
                 OttoColor.canvas.ignoresSafeArea()
 
+                GeometryReader { geo in
+                ScrollView {
                 VStack(spacing: 0) {
                     Spacer()
 
@@ -27,10 +29,9 @@ struct WelcomeView: View {
                                 .foregroundStyle(OttoColor.ink)
 
                             Text("when you're in the photo,\nyou get the photo.")
-                                .font(.system(size: 17))
+                                .font(OttoFont.ui(17))
                                 .multilineTextAlignment(.center)
                                 .foregroundStyle(OttoColor.bark)
-                                .lineSpacing(2)
                         }
                     }
 
@@ -42,7 +43,7 @@ struct WelcomeView: View {
                             .padding(.bottom, 20)
                     } else if invite?.usable == false {
                         Text("that invite link has expired or was already used. you can still join, and ask for a new link.")
-                            .font(.system(size: 13))
+                            .font(OttoFont.ui(13))
                             .foregroundStyle(OttoColor.wax)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 36)
@@ -62,21 +63,29 @@ struct WelcomeView: View {
                             Text("already have an account? ")
                                 .foregroundStyle(OttoColor.barkSoft) +
                             Text("sign in")
-                                .foregroundStyle(OttoColor.sage)
+                                .foregroundStyle(OttoColor.sageDark)
                                 .fontWeight(.medium)
                         }
-                        .font(.system(size: 14))
+                        .font(OttoFont.ui(14))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                         .accessibilityIdentifier("welcome.signIn")
 
                         if inviteRouter.pendingCode == nil {
                             Button("have an invite link?") { showPasteInvite = true }
-                                .font(.system(size: 14))
+                                .font(OttoFont.ui(14))
                                 .foregroundStyle(OttoColor.barkSoft)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                                 .accessibilityIdentifier("welcome.haveInvite")
                         }
                     }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 48)
+                }
+                .frame(minHeight: geo.size.height)
+                }
+                .scrollBounceBehavior(.basedOnSize)
                 }
             }
             .navigationDestination(isPresented: $showGetStarted) {
@@ -105,10 +114,10 @@ private struct InvitedBanner: View {
             OttoAvatarCircle(name: name, size: 40)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(name) invited you")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(OttoFont.ui(16, .semibold))
                     .foregroundStyle(OttoColor.ink)
                 Text("create your account to start sharing photos with \(name).")
-                    .font(.system(size: 13))
+                    .font(OttoFont.ui(13))
                     .foregroundStyle(OttoColor.bark)
             }
             Spacer(minLength: 0)
