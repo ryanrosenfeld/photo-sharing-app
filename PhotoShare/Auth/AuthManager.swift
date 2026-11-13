@@ -22,6 +22,16 @@ final class AuthManager: ObservableObject {
     // MARK: - Session
 
     private func loadSession() async {
+        #if DEBUG
+        // Verification harness (scripts/verify/sims_pair.sh): sign in with tokens minted by the local auth API, no UI taps.
+        // Only used when the simulator has no session yet; the session then persists in the keychain as usual.
+        let env = ProcessInfo.processInfo.environment
+        if (try? await supabase.auth.session) == nil,
+           let access = env["PHOTOSHARE_ACCESS_TOKEN"], !access.isEmpty,
+           let refresh = env["PHOTOSHARE_REFRESH_TOKEN"], !refresh.isEmpty {
+            _ = try? await supabase.auth.setSession(accessToken: access, refreshToken: refresh)
+        }
+        #endif
         session = try? await supabase.auth.session
         if let session {
             await fetchProfile(userId: session.user.id)
