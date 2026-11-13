@@ -151,7 +151,8 @@ struct OttoPillButton: View {
                 if isDestructive || isSecondary {
                     content.buttonStyle(.glass).tint(isDestructive ? OttoColor.wax : OttoColor.ink)
                 } else {
-                    content.buttonStyle(.glassProminent).tint(OttoColor.sageDark)
+                    // Opaque fill: translucent glass lowers white-text contrast below 4.5:1.
+                    content.buttonStyle(.borderedProminent).tint(OttoColor.sageDark)
                 }
             } else {
                 if isDestructive || isSecondary {
