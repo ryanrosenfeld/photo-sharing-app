@@ -87,6 +87,7 @@ launch_as() { # udid email
 
 tile() { # side by side, left = me, right = friend, top-aligned on the main display
   [ "${TILE:-1}" = 0 ] && return
+  open -Ra Simulator 2>/dev/null || { log "Simulator.app is not installed here, so there are no windows to tile; view the sims in the Claude desktop simulator panel (attach pair-me / pair-friend)"; return; }
   open -a Simulator --args -CurrentDeviceUDID "$ME"; sleep 2
   open -a Simulator --args -CurrentDeviceUDID "$FRIEND"; sleep 3
   osascript <<'OSA' 2>"$STATE/tile.log" || log "could not tile windows (grant Accessibility to your terminal app); drag them manually - see $STATE/tile.log"

@@ -4,6 +4,7 @@
 make verify      # unit tests (face-match pipeline) + UI launch smoke test, ~2 min
 make verify-friends-api  # friends backend (invites, toggles, RLS) against local Supabase, no simulator, ~1 min
 make scenario-friends    # Dan invites Carol: invite link, simctl openurl deep link, accept, toggles, unfriend (2 sims), ~10 min
+make sims-pair   # two sims side by side, signed in as Ryan + Bob on the local DB, no taps (see below)
 make scenario    # Alice/Bob end-to-end on 2 simulators vs local Supabase, ~10 min
 ```
 
@@ -31,3 +32,9 @@ an EXIF-rotated photo and a 4032x3024 frame). Re-run it after editing. Verify th
 
 ## Recordings
 `recording-lib.sh` (`run_recorded`, `join_clips`) makes tight walkthrough videos: it records only while a UI test runs, stops when the test case reports passed/failed, cuts the home-screen wait before launch and compresses (needs ffmpeg). `run_onboarding.sh` (RECORD=0 to skip), `record_review_walkthrough.sh` and `record_photos_walkthrough.sh` use it and write one clip per step plus a joined video. Every scenario script passes `-collect-test-diagnostics never`: without it xcodebuild idled ~10 minutes after each UI test collecting simulator diagnostics.
+
+## Side-by-side pair (`make sims-pair`)
+`scripts/verify/sims_pair.sh` boots two named simulators on the newest iOS 27.x runtime that can host an iPhone 17 Pro (27.1 cannot on this Mac, so 27.0): `pair-me` signed in as `ME_EMAIL` (default `ryro003@gmail.com`) and `pair-friend` signed in as `FRIEND_EMAIL` (default `bob@test.local`, already Ryan's friend). It builds the current tree, installs it, grants Photos, then launches each with a one-off access/refresh token pair minted from the local auth admin API (magic-link exchange): no password, no UI taps, and no other session (e.g. Ryan's phone) is touched. The app consumes them in `AuthManager.loadSession` (DEBUG builds only, only when the sim has no session; afterwards the keychain keeps it). It then tiles the windows left/right with AppleScript when Simulator.app exists (needs Accessibility for the terminal); otherwise view them in the Claude desktop simulator panel.
+- Never resets the database and never touches other simulators; takes the shared sim lock. Stop with `make sims-pair-down` (shuts down only these two).
+- Options: `SKIP_BUILD=1`, `FRESH=1` (erase both sims first), `ME_EMAIL=`, `FRIEND_EMAIL=`, `RUNTIME=27.0`, `TILE=0`. Any local user works, e.g. `FRIEND_EMAIL=troy@example.com`.
+- Both sims land on the notifications onboarding step ("not now"); there is no CLI way to pre-grant notifications.
