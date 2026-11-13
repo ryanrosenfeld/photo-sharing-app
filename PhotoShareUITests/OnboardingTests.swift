@@ -269,9 +269,14 @@ final class OnboardingTests: XCTestCase {
         }
         XCTAssertEqual(tapped, 4, "tapped 4 distinct photos")
         shot("\(prefix)5-picker-selected")
-        let done = app.buttons["done"].firstMatch
-        XCTAssertTrue(done.waitForExistence(timeout: 5) && done.isEnabled, "picker Done enabled")
-        done.tap()
+        // The confirm button's label differs by OS: "Done" (older) or "Add"/"Add (4)" (iOS 26, ordered selection).
+        let confirm = app.buttons.matching(NSPredicate(
+            format: "label ==[c] 'done' OR label ==[c] 'add' OR label BEGINSWITH[c] 'add (' OR identifier IN {'done', 'add'}"
+        )).firstMatch
+        let found = confirm.waitForExistence(timeout: 5) && confirm.isEnabled
+        if !found { print("PICKER HIERARCHY:\n\(app.debugDescription)") }
+        XCTAssertTrue(found, "picker confirm (Done/Add) enabled")
+        confirm.tap()
 
         let ok = app.descendants(matching: .any).matching(identifier: "faceProfile.tile.ok")
         let bad = app.descendants(matching: .any).matching(identifier: "faceProfile.tile.bad")
